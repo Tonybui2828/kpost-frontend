@@ -65,7 +65,7 @@ export default function Sidebar() {
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-100">
             <div className="w-4 h-4 bg-white rounded-sm rotate-45"></div>
         </div>
-        SaaS AI
+        KPOST AI
       </div>
 
       {/* HUY HIỆU GÓI CƯỚC */}
