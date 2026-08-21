@@ -6,7 +6,7 @@ import {
   Users, ShoppingBag, Truck, Sparkles 
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; // Thêm useRouter
+import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import { io } from "socket.io-client";
 
@@ -32,64 +32,32 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter(); 
   const [plan, setPlan] = useState("FREE");
-
-  // --- SỬA TẠI ĐÂY: BIẾN ĐỘNG CHO WORKSPACE ID ---
   const [workspaceId, setWorkspaceId] = useState<string>("");
 
-  // Lấy ID thật của khách từ bộ nhớ máy ngay khi mở trang
+  // 1. Lấy ID thật của khách từ bộ nhớ máy ngay khi mở trang
   useEffect(() => {
     const savedId = localStorage.getItem("workspaceId");
     if (savedId) {
       setWorkspaceId(savedId);
     } else {
-      setWorkspaceId("workspace-01"); // Dự phòng nếu chưa login
+      setWorkspaceId("workspace-01"); // Dự phòng
     }
   }, []);
 
-  // --- HÀM LẤY THÔNG TIN GÓI CƯỚC (Cập nhật để dùng workspaceId động) ---
+  // 2. HÀM LẤY THÔNG TIN GÓI CƯỚC (CHỈ GIỮ LẠI 1 HÀM DUY NHẤT)
   const fetchPlan = useCallback(async () => {
-    if (!workspaceId) return; // Đợi lấy xong ID mới gọi API
+    if (!workspaceId) return; 
     try {
       const res = await axios.get(`${API_URL}/dashboard/stats?workspaceId=${workspaceId}`);
       if (res.data?.stats?.plan) {
         setPlan(res.data.stats.plan.toUpperCase());
       }
     } catch (e) {
-      console.error("Lỗi cập nhật gói cước");
+      console.error("Lỗi cập nhật gói cước từ API");
     }
   }, [workspaceId]);
 
-  // Tự động gọi lấy gói cước khi đã có ID hoặc khi chuyển trang
-  useEffect(() => {
-    if (workspaceId) {
-      fetchPlan();
-    }
-  }, [fetchPlan, workspaceId, pathname]);
-
-  // ... (Các phần socket.on và phần return bên dưới giữ nguyên)
-
-  // --- HÀM ĐĂNG XUẤT ---
-  const handleLogout = () => {
-    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
-      // 1. Xóa toàn bộ dữ liệu đăng nhập trong máy
-      localStorage.clear(); 
-      // 2. Chuyển hướng về trang chủ hoặc trang login
-      window.location.href = "/"; 
-    }
-  };
-
-  // --- LẤY THÔNG TIN GÓI CƯỚC ---
-  const fetchPlan = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API_URL}/dashboard/stats?workspaceId=${workspaceId}`);
-      if (res.data?.stats?.plan) {
-        setPlan(res.data.stats.plan.toUpperCase());
-      }
-    } catch (e) {
-      console.error("Lỗi cập nhật gói cước từ API:", API_URL);
-    }
-  }, [workspaceId]);
-
+  // 3. EFFECT ĐIỀU KHIỂN CẬP NHẬT GÓI CƯỚC VÀ SOCKET (DUY NHẤT 1 CÁI)
   useEffect(() => {
     fetchPlan();
 
@@ -102,6 +70,14 @@ export default function Sidebar() {
       socket.off("paymentSuccess");
     };
   }, [fetchPlan, pathname]);
+
+  // 4. HÀM ĐĂNG XUẤT (DUY NHẤT 1 HÀM)
+  const handleLogout = () => {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+      localStorage.clear(); 
+      window.location.href = "/"; 
+    }
+  };
 
   return (
     <div className="w-64 bg-white h-screen border-r border-slate-200 flex flex-col fixed left-0 top-0 z-[100] font-sans">
@@ -148,7 +124,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Nút Đăng xuất - ĐÃ GẮN LOGIC */}
+      {/* Nút Đăng xuất */}
       <div className="p-4 border-t border-slate-100">
         <button 
           onClick={handleLogout}
