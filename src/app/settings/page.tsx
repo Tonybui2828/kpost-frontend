@@ -6,7 +6,7 @@ import {
   User, Lock, Shield, CreditCard, Gift, 
   BookOpen, Scale, Bell, Globe, ChevronRight,
   X, Copy, Smartphone, PartyPopper, Rocket, Loader2, Sparkles, CheckCircle2,
-  Mail, KeyRound, UserPlus, LogIn, LogOut
+  Mail, KeyRound, UserPlus, LogIn, LogOut, ShieldCheck 
 } from "lucide-react";
 
 // --- 1. KẾT NỐI SOCKET ĐỘNG ---
