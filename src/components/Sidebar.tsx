@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
   LayoutDashboard, PenTool, Package, MessageSquare, 
-  Settings, Share2, LogOut, Clock, MessageCircle, 
+  Settings, Share2, LogOut, LogIn, Clock, MessageCircle, 
   Users, ShoppingBag, Truck, Sparkles 
 } from "lucide-react";
 import Link from "next/link";
@@ -31,49 +31,47 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter(); 
-  const [plan, setPlan] = useState("FREE");
-  const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [user, setUser] = useState<any>(null);
+  const [plan, setPlan] = useState("GUEST");
 
-  // 1. Lấy ID thật của khách từ bộ nhớ máy ngay khi mở trang
-  useEffect(() => {
-    const savedId = localStorage.getItem("workspaceId");
-    if (savedId) {
-      setWorkspaceId(savedId);
-    } else {
-      setWorkspaceId("workspace-01"); // Dự phòng
+  // --- 2. HÀM LẤY THÔNG TIN NGƯỜI DÙNG & GÓI CƯỚC THẬT ---
+  const fetchUserStatus = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUser(null);
+      setPlan("GUEST");
+      return;
     }
-  }, []);
 
-  // 2. HÀM LẤY THÔNG TIN GÓI CƯỚC (CHỈ GIỮ LẠI 1 HÀM DUY NHẤT)
-  const fetchPlan = useCallback(async () => {
-    if (!workspaceId) return; 
     try {
-      const res = await axios.get(`${API_URL}/dashboard/stats?workspaceId=${workspaceId}`);
-      if (res.data?.stats?.plan) {
-        setPlan(res.data.stats.plan.toUpperCase());
-      }
+      const res = await axios.get(`${API_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(res.data);
+      setPlan(res.data.plan || "FREE");
     } catch (e) {
-      console.error("Lỗi cập nhật gói cước từ API");
+      console.error("Phiên đăng nhập hết hạn");
+      setUser(null);
+      setPlan("GUEST");
     }
-  }, [workspaceId]);
+  }, [API_URL]);
 
-  // 3. EFFECT ĐIỀU KHIỂN CẬP NHẬT GÓI CƯỚC VÀ SOCKET (DUY NHẤT 1 CÁI)
   useEffect(() => {
-    fetchPlan();
+    fetchUserStatus();
 
-    socket.on("paymentSuccess", (data) => {
-      console.log("🚀 Sidebar nhận tín hiệu nâng cấp gói!");
-      fetchPlan(); 
+    // Lắng nghe tín hiệu nạp tiền thành công để cập nhật gói cước ngay lập tức
+    socket.on("paymentSuccess", () => {
+      console.log("🚀 Cập nhật gói cước mới...");
+      fetchUserStatus(); 
     });
 
     return () => {
       socket.off("paymentSuccess");
     };
-  }, [fetchPlan, pathname]);
+  }, [fetchUserStatus, pathname]);
 
-  // 4. HÀM ĐĂNG XUẤT (DUY NHẤT 1 HÀM)
   const handleLogout = () => {
-    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất?")) {
       localStorage.clear(); 
       window.location.href = "/"; 
     }
@@ -81,15 +79,15 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-white h-screen border-r border-slate-200 flex flex-col fixed left-0 top-0 z-[100] font-sans">
-      {/* Phần Logo Hệ thống */}
+      {/* Logo */}
       <div className="p-6 pb-2 text-2xl font-black text-blue-600 flex items-center gap-2 italic uppercase tracking-tighter">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-100">
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg">
             <div className="w-4 h-4 bg-white rounded-sm rotate-45"></div>
         </div>
         KPOST AI
       </div>
 
-      {/* HUY HIỆU GÓI CƯỚC */}
+      {/* HUY HIỆU GÓI CƯỚC THẬT */}
       <div className="px-6 mb-6 mt-2">
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 font-black text-[10px] uppercase italic tracking-widest transition-all duration-700 shadow-sm ${
             plan === 'DIAMOND' ? 'bg-purple-600 text-white border-purple-400 shadow-purple-200' :
@@ -99,10 +97,10 @@ export default function Sidebar() {
         }`}>
             <Sparkles 
               size={12} 
-              fill={plan === 'FREE' ? 'none' : 'currentColor'} 
-              className={plan !== 'FREE' ? 'animate-pulse text-white' : ''} 
+              fill={plan === 'GUEST' ? 'none' : 'currentColor'} 
+              className={plan !== 'GUEST' ? 'animate-pulse text-white' : ''} 
             />
-            {plan} MEMBER
+            {plan} {plan === 'GUEST' ? '' : 'MEMBER'}
         </div>
       </div>
 
@@ -124,15 +122,25 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Nút Đăng xuất */}
+      {/* Nút Đăng xuất / Đăng nhập linh hoạt */}
       <div className="p-4 border-t border-slate-100">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-slate-400 font-black uppercase tracking-widest hover:text-red-600 transition-colors text-[10px]"
-        >
-          <LogOut size={18} />
-          <span>Đăng xuất</span>
-        </button>
+        {user ? (
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 w-full text-slate-400 font-black uppercase tracking-widest hover:text-red-600 transition-colors text-[10px]"
+          >
+            <LogOut size={18} />
+            <span>Đăng xuất</span>
+          </button>
+        ) : (
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 px-4 py-3 w-full text-blue-600 font-black uppercase tracking-widest hover:bg-blue-50 rounded-xl transition-all text-[10px]"
+          >
+            <LogIn size={18} />
+            <span>Đăng nhập</span>
+          </Link>
+        )}
       </div>
     </div>
   );
