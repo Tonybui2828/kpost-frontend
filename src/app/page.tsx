@@ -99,7 +99,7 @@ function AiMarketingContent() {
     } catch (e) { alert("AI đang bận!"); } finally { setLoading(false); }
   };
 
-  // --- LOGIC ĐĂNG HOẶC HẸN GIỜ ---
+  // --- LOGIC ĐĂNG HOẶC HẸN GIỜ CÓ BẮT LỖI CHI TIẾT ---
   const handlePostAction = async () => {
     if (!editableContent || selectedPageIds.length === 0) return alert("Chưa chọn nội dung hoặc Page!");
     if (selectedImages.length === 0) return alert("Hãy chọn ít nhất 1 tấm ảnh/video đẹp nhé!");
@@ -134,8 +134,13 @@ function AiMarketingContent() {
         }
         alert(`🚀 Thành công! Đã xuất bản lên ${selectedPageIds.length} Page.`);
       }
-    } catch (error) { 
-      alert("Lỗi khi đẩy bài. Hãy kiểm tra hệ thống!"); 
+    } catch (error: any) { 
+      // In lỗi chi tiết ra console để dễ debug
+      console.error("CHI TIẾT LỖI GỌI API ĐĂNG BÀI:", error);
+      
+      // Báo lỗi chi tiết lên màn hình cho người dùng
+      const errorMessage = error?.response?.data?.message || error?.message || "Lỗi không xác định";
+      alert(`Lỗi API: ${errorMessage}\nHãy mở tab Console (F12) để xem chi tiết.`); 
     } finally { setPosting(false); }
   };
 
