@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { 
   Clock, 
@@ -8,10 +8,7 @@ import {
   Loader2, 
   Trash2, 
   RefreshCw, 
-  ChevronLeft, 
-  ChevronRight,
   Edit,
-  CheckCircle2
 } from "lucide-react";
 
 export default function SchedulePage() {
@@ -19,9 +16,6 @@ export default function SchedulePage() {
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Calendar State
-  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     const savedId = localStorage.getItem("workspaceId");
@@ -33,7 +27,6 @@ export default function SchedulePage() {
     if (!workspaceId) return; 
     setLoading(true);
     try {
-      // Sửa lại endpoint nếu cần. Giả định API trả về mảng các bài viết có trường `scheduledAt` hoặc `createdAt`
       const res = await axios.get(`${API_URL}/social/scheduled-posts?workspaceId=${workspaceId}`);
       setPosts(res.data || []);
     } catch (error) {
@@ -47,53 +40,44 @@ export default function SchedulePage() {
     if (workspaceId) fetchPosts();
   }, [workspaceId, fetchPosts]);
 
-  // --- LOGIC CALENDAR ---
-  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-
-  const calendarDays = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    
-    // Tìm ngày bắt đầu của tuần (Chủ nhật = 0)
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - startDate.getDay());
-    
-    // Tìm ngày kết thúc của calendar lưới (luôn đủ 35 hoặc 42 ô)
-    const endDate = new Date(lastDay);
-    if (endDate.getDay() !== 6) {
-      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-    }
-
-    const days = [];
-    const d = new Date(startDate);
-    while (d <= endDate) {
-      days.push(new Date(d));
-      d.setDate(d.getDate() + 1);
-    }
-    return days;
-  }, [currentDate]);
-
-  const monthYearString = currentDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-  const today = new Date();
-
   // Handle Delete Action
   const handleDelete = async (postId: string) => {
     if(!confirm("Bạn có chắc chắn muốn xóa lịch đăng bài này?")) return;
     try {
-      // Giả định API delete:
-      // await axios.delete(`${API_URL}/social/scheduled-posts/${postId}`);
-      
-      // Update local state temporarily (remove this if you want to refetch instead)
+      // Gọi API xóa thực tế
+      await axios.delete(`${API_URL}/social/scheduled-posts/${postId}`);
       setPosts(posts.filter(p => p.id !== postId));
       alert("Xóa thành công!");
     } catch (error) {
       console.error("Lỗi xóa bài:", error);
-      alert("Không thể xóa bài viết. Vui lòng thử lại.");
+      alert("Không thể xóa bài viết. Có thể API Delete chưa được định nghĩa ở Backend.");
+      // Fallback xoá tạm trên giao diện nếu API chưa có
+      setPosts(posts.filter(p => p.id !== postId));
     }
   };
+
+  const handleEdit = (post: any) => {
+    alert("Chức năng chỉnh sửa đang được phát triển!");
+  };
+
+  // --- LOGIC GỘP NHÓM THEO NGÀY (EXCEL FORM) ---
+  const sortedPosts = [...posts].sort((a, b) => {
+    const dateA = new Date(a.scheduledAt || a.createdAt).getTime();
+    const dateB = new Date(b.scheduledAt || b.createdAt).getTime();
+    return dateA - dateB; // Sắp xếp từ bài gần nhất đến xa nhất
+  });
+
+  const groupedPosts: Record<string, any[]> = {};
+  
+  sortedPosts.forEach(post => {
+    const d = new Date(post.scheduledAt || post.createdAt);
+    // Format DD/MM/YYYY
+    const dateKey = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    if (!groupedPosts[dateKey]) {
+      groupedPosts[dateKey] = [];
+    }
+    groupedPosts[dateKey].push(post);
+  });
 
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen text-slate-900 font-sans">
@@ -107,121 +91,95 @@ export default function SchedulePage() {
             </div>
             Quản lý lịch đăng bài
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Theo dõi các bài viết đã lên lịch và đã đăng</p>
+          <p className="text-xs text-slate-500 mt-1">Danh sách trực quan, dễ dàng theo dõi hàng loạt</p>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1 border border-slate-200">
-            <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-md text-slate-600 transition-colors shadow-sm"><ChevronLeft size={18} /></button>
-            <span className="px-4 text-sm font-semibold capitalize w-36 text-center">{monthYearString}</span>
-            <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-md text-slate-600 transition-colors shadow-sm"><ChevronRight size={18} /></button>
-          </div>
-          
-          <button onClick={fetchPosts} className="p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm group">
-            <RefreshCw size={18} className={`text-slate-500 group-hover:text-blue-600 ${loading ? "animate-spin" : ""}`} />
+          <button onClick={fetchPosts} className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm group flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <RefreshCw size={16} className={`text-slate-500 group-hover:text-blue-600 ${loading ? "animate-spin" : ""}`} />
+            Làm mới danh sách
           </button>
         </div>
       </div>
 
-      {/* Main Content - Calendar Grid */}
-      <div className="flex-1 p-8 overflow-y-auto">
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col h-full min-h-[600px]">
+      {/* Main Content - Excel Layout */}
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-5xl mx-auto pb-20">
           
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 shrink-0">
-            {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-slate-500 border-r border-slate-200 last:border-0">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Loading State Overlay */}
-          {loading && calendarDays.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+          {loading && posts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Loader2 className="animate-spin mb-4 text-blue-600" size={32} />
               <p className="text-sm font-medium">Đang tải lịch trình...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-7 flex-1 auto-rows-[minmax(120px,1fr)]">
-              {calendarDays.map((date, i) => {
-                const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                
-                // Lọc bài viết cho ngày này
-                // LƯU Ý: Phải parse chính xác trường date từ DB của bạn (createdAt hoặc scheduledAt)
-                const dayPosts = posts.filter(p => {
-                  const postDate = new Date(p.scheduledAt || p.createdAt); // Ưu tiên scheduledAt nếu có
-                  return postDate.getDate() === date.getDate() && 
-                         postDate.getMonth() === date.getMonth() && 
-                         postDate.getFullYear() === date.getFullYear();
-                });
+            <>
+              {Object.entries(groupedPosts).map(([dateKey, dailyPosts]) => (
+                <div key={dateKey} className="mb-10 bg-white p-6 rounded-[24px] border shadow-sm">
+                   
+                   <div className="flex items-center justify-between border-b pb-4 mb-4">
+                      <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                         <Calendar size={20} className="text-blue-600" /> Ngày đăng: {dateKey}
+                      </h2>
+                      <div className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                         Số bài chờ đăng: {dailyPosts.length}
+                      </div>
+                   </div>
+                   
+                   <div className="mb-3 text-xs font-black uppercase text-slate-400 tracking-widest px-2">Danh sách bài đăng:</div>
+                   
+                   <div className="flex flex-col gap-3">
+                      {dailyPosts.map((post) => {
+                         const d = new Date(post.scheduledAt || post.createdAt);
+                         const timeString = `${d.getHours().toString().padStart(2, '0')}h:${d.getMinutes().toString().padStart(2, '0')}`;
+                         
+                         // Vì backend chưa trả về Tên Page cụ thể ở hàm getScheduledPosts, ta tạm để "Fanpage Mục Tiêu" 
+                         // (Nếu backend bạn có trả về, bạn đổi `post.pageName` ở đây nhé)
+                         const pageName = post.pageName || "Fanpage Mục Tiêu";
 
-                return (
-                  <div key={i} className={`border-r border-b border-slate-200 last:border-r-0 p-2 group transition-colors ${
-                    isCurrentMonth ? 'bg-white hover:bg-slate-50/80' : 'bg-slate-50 text-slate-400'
-                  }`}>
-                    
-                    <div className="flex justify-between items-start mb-2">
-                      <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full ${
-                        isToday ? 'bg-blue-600 text-white shadow-md' : (isCurrentMonth ? 'text-slate-700' : 'text-slate-400')
-                      }`}>
-                        {date.getDate()}
-                      </span>
-                    </div>
-
-                    {/* Danh sách bài trong ngày */}
-                    <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[140px] scrollbar-hide">
-                      {dayPosts.map(post => {
-                        const postDate = new Date(post.scheduledAt || post.createdAt);
-                        // Logic xác định trạng thái: Đã qua (published) hay Tương lai (scheduled)
-                        const isPublished = postDate < new Date(); 
-
-                        return (
-                          <div key={post.id} className={`group/item text-xs p-2 rounded-md border leading-snug flex flex-col gap-1 transition-all ${
-                            isPublished 
-                              ? 'bg-slate-100 border-slate-200 hover:bg-slate-200' // Đã đăng (Xám)
-                              : 'bg-blue-50 border-blue-200 hover:bg-blue-100' // Chờ đăng (Xanh)
-                          }`}>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className={`font-semibold flex items-center gap-1.5 ${isPublished ? 'text-slate-600' : 'text-blue-700'}`}>
-                                {isPublished ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                {postDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                         return (
+                           <div key={post.id} className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 hover:border-blue-200 transition-colors gap-4">
+                              
+                              {/* CỘT 1: Nội dung bài & Nút */}
+                              <div className="flex-1 min-w-0">
+                                 <p className="text-sm font-bold text-slate-800 line-clamp-2" title={post.content}>
+                                   {post.content}
+                                 </p>
+                                 <div className="flex gap-2 mt-2">
+                                    <button onClick={() => handleEdit(post)} className="text-[10px] bg-white border border-slate-200 px-3 py-1 rounded-lg font-black text-blue-600 hover:bg-blue-50 transition-colors uppercase flex items-center gap-1">
+                                      <Edit size={12}/> Chỉnh sửa
+                                    </button>
+                                    <button onClick={() => handleDelete(post.id)} className="text-[10px] bg-white border border-slate-200 px-3 py-1 rounded-lg font-black text-red-500 hover:bg-red-50 transition-colors uppercase flex items-center gap-1">
+                                      <Trash2 size={12}/> Xóa
+                                    </button>
+                                 </div>
                               </div>
                               
-                              {/* Actions (Hiện khi hover vào item) */}
-                              <div className="opacity-0 group-hover/item:opacity-100 flex items-center gap-1 transition-opacity">
-                                <button className="p-1 hover:bg-white/60 rounded text-slate-500 hover:text-blue-600">
-                                  <Edit size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDelete(post.id)}
-                                  className="p-1 hover:bg-white/60 rounded text-slate-500 hover:text-red-600"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                              {/* CỘT 2: Tên Fanpage */}
+                              <div className="md:w-48 shrink-0 flex items-center gap-2 text-slate-600 text-sm font-medium border-l border-slate-200 pl-4">
+                                  <div className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                    {pageName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="truncate" title={pageName}>{pageName}</span>
                               </div>
-                            </div>
-
-                            <div className={`line-clamp-2 mt-0.5 ${isPublished ? 'text-slate-500' : 'text-slate-700'}`}>
-                              {post.content}
-                            </div>
-                            
-                            {post.userId && ( // Placeholder cho việc có ảnh đính kèm
-                               <div className="text-[9px] mt-0.5 flex items-center gap-1 text-slate-500 font-medium">
-                                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> Có đính kèm ảnh
-                               </div>
-                            )}
-
-                          </div>
-                        );
+                              
+                              {/* CỘT 3: Thời gian đăng */}
+                              <div className="md:w-40 shrink-0 flex items-center gap-2 text-slate-900 text-sm font-black border-l border-slate-200 pl-4">
+                                  <Clock size={16} className="text-orange-500" /> Thời gian đăng: {timeString}
+                              </div>
+                           </div>
+                         );
                       })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                   </div>
+                </div>
+              ))}
+              
+              {sortedPosts.length === 0 && (
+                 <div className="text-center py-20 text-slate-500">
+                     <Calendar size={48} className="mx-auto mb-4 text-slate-300 opacity-50" />
+                     <p className="font-medium">Chưa có bài viết nào được lên lịch.</p>
+                 </div>
+              )}
+            </>
           )}
         </div>
       </div>
