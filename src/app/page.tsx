@@ -97,14 +97,16 @@ function AiMarketingContent() {
       if (isScheduling) {
         if (!scheduleDate) return alert("Vui lòng chọn ngày giờ hẹn lịch!");
         
-        // Gửi cờ spinContent: true lên để kích hoạt con AI trong schedule-batch
+        // 🚀 ĐÃ SỬA LỖI MÚI GIỜ CHỖ NÀY: Ép sang chuẩn UTC trước khi gửi
+        const isoDate = new Date(scheduleDate).toISOString();
+
         await axios.post(`${API_URL}/social/schedule-batch`, {
           workspaceId,
           baseContent: editableContent,
           pageIds: selectedPageIds,
           imageUrls: selectedImages,
           productUrl: productUrl,
-          scheduledAt: scheduleDate,
+          scheduledAt: isoDate, // Gửi biến đã ép chuẩn ISO
           spinContent: spinContent 
         });
         
