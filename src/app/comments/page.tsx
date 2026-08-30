@@ -25,11 +25,16 @@ export default function CommentsPage() {
       await axios.post(`${API_URL}/social/sync-inbox`, { workspaceId });
       const res = await axios.get(`${API_URL}/social/inbox?workspaceId=${workspaceId}`);
       
-      // 🚀 LỌC BỎ INBOX: Chỉ lấy những tin có type là 'comment'
-      const onlyComments = (res.data || []).filter((c: any) => c.type === 'comment');
+      // 🚀 LỌC BỎ INBOX & LỌC BÌNH LUẬN CỦA CHÍNH PAGE (Dọn rác cũ)
+      const validComments = (res.data || []).filter((c: any) => {
+          const isComment = c.type === 'comment';
+          const isNotFromPage = c.senderName !== c.pageName; // Tên người gửi khác tên Page
+          const isNotAutoLink = !c.content.includes("Link mua sản phẩm"); // Lọc cái auto link cũ
+          return isComment && isNotFromPage && isNotAutoLink;
+      });
       
-      // Sắp xếp bình luận mới nhất lên đầu (hoặc cũ nhất tùy bạn, ở đây xếp mới nhất)
-      const sortedComments = onlyComments.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Sắp xếp bình luận mới nhất lên đầu
+      const sortedComments = validComments.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       setComments(sortedComments);
     } catch (e) { 
