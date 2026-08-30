@@ -1,17 +1,17 @@
 "use client";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { 
-  Loader2, Sparkles, Image as ImageIcon, 
-  Globe, Edit3, CheckCircle2, 
-  Square, Clock, ShoppingCart, FolderCheck, Trash2, Shuffle, Plus
+  Loader2, Sparkles, Globe, Edit3, 
+  Clock, ShoppingCart, FolderCheck, Trash2, Shuffle, Square, CheckCircle2
 } from "lucide-react";
 
 function AiMarketingContent() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   const searchParams = useSearchParams();
 
+  // --- STATE DỮ LIỆU ---
   const [topic, setTopic] = useState("");
   const [result, setResult] = useState<any>(null);
   const [editableContent, setEditableContent] = useState(""); 
@@ -19,26 +19,16 @@ function AiMarketingContent() {
   const [posting, setPosting] = useState(false); 
   const [isEditing, setIsEditing] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  // Vẫn giữ state mảng ảnh để ngầm nhận dữ liệu từ trang Sản phẩm truyền sang (qua URL)
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newMediaUrls = Array.from(files).map(file => URL.createObjectURL(file));
-    setAvailableImages(prev => [...newMediaUrls, ...prev]);
-    setSelectedImages(prev => {
-      const combined = [...newMediaUrls, ...prev];
-      return combined.slice(0, 10);
-    });
-  };
-
+  // --- QUẢN LÝ PAGE & FOLDER ---
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
   const [pageGroups, setPageGroups] = useState<{name: string, ids: string[]}[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
 
+  // --- HẸN GIỜ & SPIN CONTENT ---
   const [isScheduling, setIsScheduling] = useState(false);
   const [spinContent, setSpinContent] = useState(true); 
   const [scheduleDate, setScheduleDate] = useState("");
@@ -67,7 +57,6 @@ function AiMarketingContent() {
     if (t) setTopic(t);
     if (imgs) {
         const imgList = imgs.split(',');
-        setAvailableImages(imgList);
         setSelectedImages(imgList); 
     }
   }, [searchParams, API_URL, workspaceId]);
@@ -84,15 +73,13 @@ function AiMarketingContent() {
 
   const handlePostAction = async () => {
     if (!editableContent || selectedPageIds.length === 0) return alert("Chưa chọn nội dung hoặc Page!");
-    if (selectedImages.length === 0) return alert("Hãy chọn ít nhất 1 tấm ảnh/video đẹp nhé!");
 
     setPosting(true);
     try {
       if (isScheduling) {
         if (!scheduleDate) return alert("Vui lòng chọn ngày giờ hẹn lịch!");
         
-        // 🚀 FIX LỖI TIMEZONE: Ép cứng chuẩn giờ Việt Nam (GMT+7)
-        // scheduleDate lấy từ thẻ input có dạng "2026-08-30T14:50", ta nối thêm giây và +07:00
+        // Ép múi giờ chuẩn VN
         const exactVnTime = `${scheduleDate}:00+07:00`;
         const isoDate = new Date(exactVnTime).toISOString();
 
@@ -127,22 +114,7 @@ function AiMarketingContent() {
       <div className="max-w-5xl mx-auto">
         <h1 className="text-4xl font-black text-center mb-10 italic uppercase text-slate-900 tracking-tighter">AI CONTENT CREATOR</h1>
 
-        <div className="mb-10 bg-white p-6 rounded-[32px] border shadow-sm text-black">
-            <p className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2"><ImageIcon size={14} className="text-blue-600" /> Bộ sưu tập ảnh sản phẩm ({selectedImages.length}/10)</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div onClick={() => fileInputRef.current?.click()} className="relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all bg-slate-50">
-                  <Plus size={32} className="mb-2" />
-                  <span className="text-[10px] font-black uppercase tracking-wider">Thêm Media</span>
-                  <input type="file" multiple accept="image/*,video/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload}/>
-                </div>
-                {availableImages.map((url, idx) => (
-                    <div key={idx} onClick={() => setSelectedImages(prev => prev.includes(url) ? prev.filter(u => u !== url) : (prev.length < 10 ? [...prev, url] : prev))} className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all ${selectedImages.includes(url) ? 'border-blue-600 scale-95 shadow-md' : 'border-white opacity-40'}`}>
-                        <img src={url} className="w-full h-full object-cover" alt="media" />
-                        {selectedImages.includes(url) && <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-1"><CheckCircle2 size={16} /></div>}
-                    </div>
-                ))}
-            </div>
-        </div>
+        {/* ĐÃ XÓA Ô THÊM MEDIA Ở ĐÂY CHO GỌN GÀNG */}
 
         <div className="bg-white p-8 rounded-[40px] shadow-2xl border mb-10 text-black">
           <textarea className="w-full p-6 bg-slate-50 border-none rounded-[32px] outline-none text-xl min-h-[140px] text-slate-900 font-bold focus:bg-white transition-all" placeholder="Mô tả ý tưởng của bạn..." value={topic} onChange={(e) => setTopic(e.target.value)} />
