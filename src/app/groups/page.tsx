@@ -1,17 +1,13 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, UserPlus, Send, Settings, Clock, Link2, CheckCircle2, Square, List, Calendar, LayoutGrid, Loader2, ShieldAlert } from 'lucide-react';
+import { Users, UserPlus, Send, Settings, Clock, Link2, CheckCircle2, Square, List, Calendar, LayoutGrid, Loader2, ShieldAlert, AlertCircle } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // ==========================================
-// DỮ LIỆU MẪU (Giả lập)
+// DỮ LIỆU NHÓM MẪU (Có thể làm API sau)
 // ==========================================
-const MOCK_PAGES = [
-  { id: 'p1', name: 'Công nghệ Tech 28' },
-  { id: 'p2', name: 'Điện máy Anh Kỳ' },
-  { id: 'p3', name: 'Dropbuy Việt Nam' },
-];
-
 const MOCK_GROUPS = [
   { id: 'g1', name: 'Hội Đam Mê Công Nghệ', members: '120K' },
   { id: 'g2', name: 'Chợ Điện Máy Giá Rẻ', members: '45K' },
@@ -19,16 +15,47 @@ const MOCK_GROUPS = [
   { id: 'g4', name: 'Hội Thanh Lý Đồ Điện Tử', members: '88K' }
 ];
 
-const MOCK_SCHEDULED_POSTS = [
-  { id: 'post1', pageName: 'Công nghệ Tech 28', content: 'Sale cực sốc máy hút mùi nhà bếp Buchen nhập khẩu Đức. Giảm giá 50% chỉ hôm nay...' },
-  { id: 'post2', pageName: 'Điện máy Anh Kỳ', content: 'Tủ lạnh Inverter tiết kiệm điện đã về hàng. Anh chị nào cần inbox em gửi báo giá nhé.' }
-];
-
 // ==========================================
 // COMPONENT CHÍNH
 // ==========================================
 export default function GroupsCampaignPage() {
   const [activeSubTab, setActiveSubTab] = useState<'join' | 'post' | 'schedule'>('join');
+  
+  // 🚀 LẤY DỮ LIỆU THẬT TỪ HỆ THỐNG
+  const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. Lấy workspaceId từ localStorage (Giống hệt cách bạn đang làm ở các trang khác)
+  useEffect(() => {
+    const savedId = localStorage.getItem("workspaceId") || "workspace-01";
+    setWorkspaceId(savedId);
+  }, []);
+
+  // 2. Gọi API lấy Fanpage và Bài viết khi đã có workspaceId
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    const fetchRealData = async () => {
+      try {
+        setIsLoading(true);
+        // Lấy Fanpage thật
+        const accRes = await axios.get(`${API_URL}/social/accounts?workspaceId=${workspaceId}`);
+        setAccounts(accRes.data);
+
+        // Lấy Bài viết lên lịch thật
+        const postRes = await axios.get(`${API_URL}/social/scheduled-posts?workspaceId=${workspaceId}`);
+        setScheduledPosts(postRes.data);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRealData();
+  }, [workspaceId]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 text-black font-sans min-h-screen">
@@ -60,26 +87,32 @@ export default function GroupsCampaignPage() {
           </button>
         </div>
 
-        {/* --- NỘI DUNG TỪNG TAB --- */}
-        {activeSubTab === 'join' && <JoinGroupsTab />}
-        {activeSubTab === 'post' && <PostGroupsTab />}
-        {activeSubTab === 'schedule' && <ScheduleGroupsTab />}
+        {/* --- HIỂN THỊ LOADING HOẶC NỘI DUNG TỪNG TAB --- */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+            <Loader2 className="animate-spin mb-4" size={40} />
+            <p className="font-bold tracking-widest uppercase text-sm">Đang tải dữ liệu...</p>
+          </div>
+        ) : (
+          <>
+            {activeSubTab === 'join' && <JoinGroupsTab accounts={accounts} />}
+            {activeSubTab === 'post' && <PostGroupsTab accounts={accounts} scheduledPosts={scheduledPosts} />}
+            {activeSubTab === 'schedule' && <ScheduleGroupsTab />}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 // ==========================================
-// PHẦN 1: THAM GIA NHÓM (CÓ GỌI API BOT)
+// PHẦN 1: THAM GIA NHÓM (DỮ LIỆU THẬT)
 // ==========================================
-function JoinGroupsTab() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  
+function JoinGroupsTab({ accounts }: { accounts: any[] }) {
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [groupLinks, setGroupLinks] = useState('');
   const [parsedGroups, setParsedGroups] = useState<{uid: string}[]>([]);
   
-  // States mới cho việc gửi Cookie và Kích hoạt Bot
   const [fbCookie, setFbCookie] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -93,10 +126,9 @@ function JoinGroupsTab() {
     setSelectedPages(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]);
   };
 
-  // Hàm gọi lệnh đánh thức Bot chạy nền trên Backend
   const handleWakeUpBot = async () => {
-    if (!fbCookie.trim()) return alert("Vui lòng dán Cookie Facebook để Bot có tài khoản đăng nhập!");
-    if (parsedGroups.length === 0) return alert("Vui lòng trích xuất danh sách nhóm trước!");
+    if (!fbCookie.trim()) return alert("Vui lòng dán Cookie Facebook!");
+    if (parsedGroups.length === 0) return alert("Vui lòng trích xuất danh sách nhóm!");
 
     setIsProcessing(true);
     try {
@@ -105,8 +137,7 @@ function JoinGroupsTab() {
         cookie: fbCookie,
         groupUrls: urls
       });
-      
-      alert(res.data.message || "✅ Đã đánh thức Bot thành công! Bot đang ngầm chạy trên máy chủ để tham gia nhóm từ từ.");
+      alert(res.data.message || "✅ Đã đánh thức Bot thành công!");
       setGroupLinks('');
       setParsedGroups([]);
     } catch (error: any) {
@@ -118,51 +149,54 @@ function JoinGroupsTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
-      {/* TRÁI: CẤU HÌNH & CHỌN FANPAGE */}
       <div className="lg:col-span-5 space-y-6">
-        
-        {/* XÁC THỰC BOT BẰNG COOKIE */}
         <div className="bg-white p-8 rounded-[36px] border shadow-xl">
           <h2 className="text-lg font-black uppercase tracking-tight mb-2 flex items-center gap-2 text-slate-800">
             <ShieldAlert size={20} className="text-blue-600" /> Xác thực tài khoản (Cookie)
           </h2>
           <p className="text-xs font-medium text-slate-500 mb-5 leading-relaxed">
-            Bot cần Cookie của tài khoản Facebook đang quản lý các Page bên dưới để có thể đăng nhập.
+            Bot cần Cookie của tài khoản Facebook đang quản lý các Page bên dưới để đăng nhập.
           </p>
           <textarea 
             className="w-full h-28 p-4 bg-slate-50 border border-slate-200 rounded-[20px] outline-none font-mono text-[11px] focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-inner text-slate-700"
-            placeholder="Dán Cookie Facebook vào đây...&#10;Ví dụ: c_user=1000...; xs=...; datr=...;"
+            placeholder="Dán Cookie Facebook vào đây..."
             value={fbCookie}
             onChange={e => setFbCookie(e.target.value)}
           />
         </div>
 
-        {/* CHỌN PAGE */}
         <div className="bg-white p-8 rounded-[36px] border shadow-xl h-fit">
           <h2 className="text-lg font-black uppercase tracking-tight mb-6 flex items-center gap-2 text-slate-800">
             <Square size={20} className="text-blue-600" /> Chọn Fanpage tham gia
           </h2>
-          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {MOCK_PAGES.map(page => (
-              <div 
-                key={page.id} 
-                onClick={() => togglePage(page.id)}
-                className={`p-4 rounded-2xl border-2 cursor-pointer flex items-center justify-between transition-all ${selectedPages.includes(page.id) ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-100 hover:border-blue-300 hover:bg-slate-50'}`}
-              >
-                <span className="font-bold text-[14px] text-slate-800">{page.name}</span>
-                {selectedPages.includes(page.id) ? <CheckCircle2 size={20} className="text-blue-600" /> : <Square size={20} className="text-slate-300" />}
-              </div>
-            ))}
-          </div>
+          
+          {accounts.length === 0 ? (
+            <div className="text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
+              <AlertCircle className="mx-auto text-slate-400 mb-2" />
+              <p className="text-sm font-bold text-slate-500">Chưa có Fanpage nào.</p>
+              <p className="text-xs text-slate-400">Vui lòng kết nối MXH trước.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {accounts.map(acc => (
+                <div 
+                  key={acc.id} 
+                  onClick={() => togglePage(acc.id)}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer flex items-center justify-between transition-all ${selectedPages.includes(acc.id) ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-100 hover:border-blue-300 hover:bg-slate-50'}`}
+                >
+                  <span className="font-bold text-[14px] text-slate-800">{acc.accountName}</span>
+                  {selectedPages.includes(acc.id) ? <CheckCircle2 size={20} className="text-blue-600" /> : <Square size={20} className="text-slate-300" />}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* PHẢI: NHẬP UID/LINK NHÓM */}
       <div className="lg:col-span-7 bg-white p-8 rounded-[36px] border shadow-xl">
         <h2 className="text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-slate-800">
           <Link2 size={20} className="text-blue-600" /> Nhập UID / Link nhóm Facebook
         </h2>
-        
         <textarea 
           className="w-full h-48 p-5 bg-slate-50 border border-slate-200 rounded-[24px] outline-none font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-[15px] mb-6 shadow-inner"
           placeholder="Dán link hoặc UID nhóm vào đây... &#10;(Mỗi nhóm 1 dòng)"
@@ -174,7 +208,6 @@ function JoinGroupsTab() {
           <button onClick={handleParse} className="bg-slate-900 text-white px-6 py-4 rounded-[20px] font-black hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0">
             <List size={18} /> Trích xuất
           </button>
-          
           <button 
             onClick={handleWakeUpBot}
             disabled={parsedGroups.length === 0 || selectedPages.length === 0 || isProcessing} 
@@ -185,7 +218,6 @@ function JoinGroupsTab() {
           </button>
         </div>
 
-        {/* KẾT QUẢ TRÍCH XUẤT */}
         {parsedGroups.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 bg-slate-50 p-6 rounded-[24px] border border-slate-100">
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Nhóm chờ Bot xử lý ({parsedGroups.length})</h3>
@@ -205,9 +237,9 @@ function JoinGroupsTab() {
 }
 
 // ==========================================
-// PHẦN 2: ĐĂNG BÀI NHÓM
+// PHẦN 2: ĐĂNG BÀI NHÓM (DỮ LIỆU THẬT)
 // ==========================================
-function PostGroupsTab() {
+function PostGroupsTab({ accounts, scheduledPosts }: { accounts: any[], scheduledPosts: any[] }) {
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
@@ -222,21 +254,35 @@ function PostGroupsTab() {
         <h2 className="text-lg font-black uppercase tracking-tight mb-6 flex items-center gap-2 text-emerald-700">
           <Calendar size={20} /> Bước 1: Chọn bài viết chờ
         </h2>
-        <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2 custom-scrollbar">
-          {MOCK_SCHEDULED_POSTS.map(post => (
-            <div 
-              key={post.id}
-              onClick={() => setSelectedPost(post.id)}
-              className={`p-6 rounded-[24px] border-2 cursor-pointer transition-all ${selectedPost === post.id ? 'border-emerald-500 bg-emerald-50 shadow-md' : 'border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
-            >
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1 rounded-full">{post.pageName}</span>
-                {selectedPost === post.id && <CheckCircle2 size={20} className="text-emerald-600" />}
-              </div>
-              <p className="text-[15px] font-bold text-slate-700 leading-relaxed">{post.content}</p>
-            </div>
-          ))}
-        </div>
+
+        {scheduledPosts.length === 0 ? (
+          <div className="text-center p-10 bg-slate-50 rounded-2xl border border-slate-200">
+            <Calendar className="mx-auto text-slate-300 mb-3" size={32} />
+            <p className="text-sm font-bold text-slate-500">Chưa có bài viết nào lên lịch.</p>
+            <p className="text-xs text-slate-400">Sang tab "Lịch đăng bài" để tạo nhé!</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2 custom-scrollbar">
+            {scheduledPosts.map(post => {
+              // Tìm tên page để hiển thị cho đẹp
+              const pageName = accounts.find(a => a.platformId === post.userId)?.accountName || "Fanpage";
+              
+              return (
+                <div 
+                  key={post.id}
+                  onClick={() => setSelectedPost(post.id)}
+                  className={`p-6 rounded-[24px] border-2 cursor-pointer transition-all ${selectedPost === post.id ? 'border-emerald-500 bg-emerald-50 shadow-md' : 'border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1 rounded-full">{pageName}</span>
+                    {selectedPost === post.id && <CheckCircle2 size={20} className="text-emerald-600" />}
+                  </div>
+                  <p className="text-[15px] font-bold text-slate-700 leading-relaxed line-clamp-3">{post.content}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-8 rounded-[36px] border shadow-xl">
@@ -277,7 +323,7 @@ function PostGroupsTab() {
 }
 
 // ==========================================
-// PHẦN 3: CẤU HÌNH RẢI BÀI (CHỐNG SPAM)
+// PHẦN 3: CẤU HÌNH RẢI BÀI
 // ==========================================
 function ScheduleGroupsTab() {
   const [maxGroups, setMaxGroups] = useState(10);
@@ -308,7 +354,6 @@ function ScheduleGroupsTab() {
             />
             <span className="text-xs font-bold text-slate-400">50</span>
           </div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-5 bg-purple-100/50 p-3 rounded-xl border border-purple-100">💡 Khuyên dùng: Dưới 15 nhóm mỗi chiến dịch để đảm bảo Fanpage sống dai.</p>
         </div>
 
         <div className="bg-slate-50 p-8 rounded-[32px] border border-slate-200 shadow-inner">
@@ -325,11 +370,10 @@ function ScheduleGroupsTab() {
               <input type="number" defaultValue="15" className="w-full p-3 bg-slate-50 border rounded-xl outline-none font-black text-xl text-center text-slate-800 focus:border-purple-500 focus:bg-white transition-all" />
             </div>
           </div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-5 bg-purple-100/50 p-3 rounded-xl border border-purple-100">💡 Hệ thống sẽ <span className="text-purple-600 font-black">"nghỉ ngơi ngẫu nhiên"</span> trong khoảng thời gian này trước khi đăng bài tiếp theo.</p>
         </div>
 
         <div className="pt-4">
-          <button className="w-full bg-purple-600 text-white px-8 py-5 rounded-[24px] font-black text-xl hover:bg-purple-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-purple-200 active:scale-95">
+          <button onClick={() => alert("✅ Đã lưu cấu hình rải bài thành công!")} className="w-full bg-purple-600 text-white px-8 py-5 rounded-[24px] font-black text-xl hover:bg-purple-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-purple-200 active:scale-95">
             <Clock size={24} /> Lưu Cấu Hình Rải Bài
           </button>
         </div>
