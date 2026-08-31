@@ -1,230 +1,192 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { useSearchParams } from "next/navigation";
 import { 
-  Loader2, Sparkles, Globe, Edit3, 
-  Clock, ShoppingCart, FolderCheck, Trash2, Shuffle, Square, CheckCircle2
+  Plus, Package, Tag, Loader2, X, UploadCloud, 
+  PenTool, Edit3, Trash2, Film, Image as ImageIcon, FileText, Video
 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
-function AiMarketingContent() {
+// Khởi tạo Supabase Client
+const supabase = createClient("https://wsgjryobqfayxhdhujki.supabase.co", "sb_publishable__cTnEl5USBaraE6p6P0WDw_Q37Hmye7");
+
+export default function ProductsPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  const searchParams = useSearchParams();
+  const workspaceId = "workspace-01";
 
-  // --- STATE DỮ LIỆU ---
-  const [topic, setTopic] = useState("");
-  const [result, setResult] = useState<any>(null);
-  const [editableContent, setEditableContent] = useState(""); 
+  const [products, setProducts] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [posting, setPosting] = useState(false); 
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Vẫn giữ state mảng ảnh để ngầm nhận dữ liệu từ trang Sản phẩm truyền sang
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
-  // --- QUẢN LÝ PAGE & FOLDER ---
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
-  const [pageGroups, setPageGroups] = useState<{name: string, ids: string[]}[]>([]);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [newProduct, setNewProduct] = useState({
+    name: "", description: "", price: "", skuInternal: "", 
+    totalStock: "", images: [] as string[], productUrl: ""
+  });
 
-  // --- HẸN GIỜ & SPIN CONTENT ---
-  const [isScheduling, setIsScheduling] = useState(false);
-  const [spinContent, setSpinContent] = useState(true); 
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [productUrl, setProductUrl] = useState(""); 
-  const [workspaceId, setWorkspaceId] = useState<string>("");
-
-  // 🚀 ĐÃ SỬA: LẤY DỮ LIỆU TỪ LOCAL STORAGE ĐỂ TRÁNH LỖI 431
-  useEffect(() => {
-    // 1. Lấy workspaceId
-    const savedId = localStorage.getItem("workspaceId") || "workspace-01";
-    setWorkspaceId(savedId);
-
-    // 2. KIỂM TRA DỮ LIỆU TỪ TRANG SẢN PHẨM TRUYỀN SANG
-    const savedTopic = localStorage.getItem("pendingAIPost_topic");
-    const savedImgs = localStorage.getItem("pendingAIPost_imgs");
-
-    if (savedTopic) {
-      setTopic(savedTopic);
-      localStorage.removeItem("pendingAIPost_topic"); // Xóa ngay sau khi đọc
-    }
-
-    if (savedImgs) {
-      const imgList = savedImgs.split(',');
-      setSelectedImages(imgList);
-      localStorage.removeItem("pendingAIPost_imgs");
-    }
-
-    // 3. Load Folder
-    const savedGroups = localStorage.getItem("kpost_page_groups");
-    if (savedGroups) setPageGroups(JSON.parse(savedGroups));
-  }, []);
-
-  // Lấy dữ liệu Fanpage & Fallback lấy params cũ từ URL (nếu có)
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      if (!workspaceId) return;
-      try {
-        const res = await axios.get(`${API_URL}/social/accounts?workspaceId=${workspaceId}`);
-        setAccounts(res.data || []);
-      } catch (e) { console.error("Lỗi lấy danh sách Page"); }
-    };
-    fetchAccounts();
-
-    // Vẫn giữ lại dự phòng nếu ai đó truy cập bằng link cũ
-    const t = searchParams.get("topic");
-    const imgs = searchParams.get("imgs");
-    if (t && !topic) setTopic(t); // Chỉ gán nếu chưa có topic từ localStorage
-    if (imgs && selectedImages.length === 0) {
-        const imgList = imgs.split(',');
-        setSelectedImages(imgList); 
-    }
-  }, [searchParams, API_URL, workspaceId]);
-
-  const handleGenerateContent = async () => {
-    if (!topic) return alert("Nhập chủ đề!");
-    setLoading(true);
+  const fetchProducts = useCallback(async () => {
     try {
-      const res = await axios.post(`${API_URL}/ai-content/generate`, { topic, userId: "admin-01", workspaceId });
-      setResult(res.data);
-      setEditableContent(res.data.content);
-    } catch (e) { alert("AI đang bận!"); } finally { setLoading(false); }
+      const res = await axios.get(`${API_URL}/products?workspaceId=${workspaceId}`);
+      setProducts(res.data || []);
+    } catch (error) { console.error("Lỗi lấy sản phẩm:", error); }
+  }, [API_URL, workspaceId]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const isVideo = (url: string) => url ? url.match(/\.(mp4|mov|webm|mkv)(\?.*)?$/i) !== null : false;
+
+  const handleUploadMultiple = async (e: any) => {
+    const files = Array.from(e.target.files);
+    if (newProduct.images.length + files.length > 10) return alert("Tối đa 10 file!");
+    setUploading(true);
+    const newUrls = [...newProduct.images];
+    for (const file of files as File[]) {
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+      const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+      if (!error) {
+        const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        newUrls.push(data.publicUrl);
+      }
+    }
+    setNewProduct({ ...newProduct, images: newUrls });
+    setUploading(false);
   };
 
-  const handlePostAction = async () => {
-    if (!editableContent || selectedPageIds.length === 0) return alert("Chưa chọn nội dung hoặc Page!");
-
-    setPosting(true);
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
     try {
-      if (isScheduling) {
-        if (!scheduleDate) return alert("Vui lòng chọn ngày giờ hẹn lịch!");
-        
-        // Ép múi giờ chuẩn VN
-        const exactVnTime = `${scheduleDate}:00+07:00`;
-        const isoDate = new Date(exactVnTime).toISOString();
-
-        await axios.post(`${API_URL}/social/schedule-batch`, {
-          workspaceId,
-          baseContent: editableContent,
-          pageIds: selectedPageIds,
-          imageUrls: selectedImages,
-          productUrl: productUrl,
-          scheduledAt: isoDate,
-          spinContent: spinContent 
-        });
-        
-        alert(`🚀 Thành công! Đã đưa ${selectedPageIds.length} bài viết vào lịch chờ đăng.`);
+      const payload = { ...newProduct, price: Number(newProduct.price), totalStock: Number(newProduct.totalStock), workspaceId };
+      if (editingId) {
+        await axios.patch(`${API_URL}/products/${editingId}`, payload);
+        alert("Cập nhật thành công!");
       } else {
-        const pagesToPost = accounts.filter((acc: any) => selectedPageIds.includes(acc.platformId));
-        for (const acc of pagesToPost) {
-          await axios.post(`${API_URL}/social/facebook/post`, {
-            pageId: acc.platformId, accessToken: acc.accessToken, message: editableContent, imageUrls: selectedImages, productUrl 
-          });
-        }
-        alert(`🚀 Thành công! Đã xuất bản lên ${selectedPageIds.length} Page.`);
+        await axios.post(`${API_URL}/products`, payload);
+        alert("Đã thêm sản phẩm!");
       }
-    } catch (error: any) { 
-      const errorMessage = error?.response?.data?.message || error?.message || "Lỗi không xác định";
-      alert(`Lỗi API: ${errorMessage}`); 
-    } finally { setPosting(false); }
+      setNewProduct({ name: "", description: "", price: "", skuInternal: "", totalStock: "", images: [], productUrl: "" });
+      setEditingId(null);
+      setShowForm(false);
+      fetchProducts();
+    } catch (e: any) { alert("Lỗi lưu sản phẩm!"); } finally { setLoading(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Xóa sản phẩm này?")) {
+      await axios.delete(`${API_URL}/products/${id}`);
+      fetchProducts();
+    }
+  };
+
+  const startEdit = (p: any) => {
+    setEditingId(p.id);
+    setNewProduct({
+      name: p.name, description: p.description || "", price: p.price, skuInternal: p.skuInternal, 
+      totalStock: p.totalStock, images: p.images || (p.imageUrl ? [p.imageUrl] : []), productUrl: p.productUrl || ""
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // NÚT CHUYỂN DỮ LIỆU SANG AI
+  const handleGoToAI = (p: any) => {
+    const imagesStr = (p.images && p.images.length > 0) ? p.images.join(',') : (p.imageUrl || "");
+    const topic = `${p.name}. ${p.description || ''}`;
+    
+    localStorage.setItem('pendingAIPost_topic', topic);
+    if (imagesStr) localStorage.setItem('pendingAIPost_imgs', imagesStr);
+    
+    window.location.href = `/`; // Chuyển sang trang chủ (Trang AI)
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 text-black font-sans">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-black text-center mb-10 italic uppercase text-slate-900 tracking-tighter">AI CONTENT CREATOR</h1>
+    <div className="p-8 bg-slate-50 min-h-screen text-slate-800 font-sans">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-black flex items-center gap-3 italic text-black uppercase tracking-tighter">
+            <Package className="text-blue-600" size={32} /> QUẢN LÝ KHO HÀNG
+        </h1>
+        <button onClick={() => { setShowForm(!showForm); if(showForm) setEditingId(null); }} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-blue-700 shadow-xl transition-all">
+          {showForm ? <X size={20} /> : <Plus size={20} />} {showForm ? "ĐÓNG FORM" : "THÊM SẢN PHẨM MỚI"}
+        </button>
+      </div>
 
-        <div className="bg-white p-8 rounded-[40px] shadow-2xl border mb-10 text-black">
-          <textarea className="w-full p-6 bg-slate-50 border-none rounded-[32px] outline-none text-xl min-h-[140px] text-slate-900 font-bold focus:bg-white transition-all" placeholder="Mô tả ý tưởng của bạn..." value={topic} onChange={(e) => setTopic(e.target.value)} />
-          <button onClick={handleGenerateContent} disabled={loading} className="w-full mt-6 bg-black text-white font-black py-5 rounded-3xl shadow-lg flex items-center justify-center gap-3 hover:bg-slate-800 transition-all">
-             {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={22} />} SÁNG TẠO BÀI VIẾT VỚI AI
-          </button>
-        </div>
-
-        {result && (
-          <div className="bg-white p-8 rounded-[45px] shadow-2xl border-l-[16px] border-blue-600 mb-10 text-black animate-in fade-in slide-in-from-bottom-10">
-             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-black uppercase italic">Nội dung đề xuất gốc</h2>
-                <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl ${isEditing ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}><Edit3 size={18}/></button>
-             </div>
-             <textarea className={`w-full p-6 rounded-[24px] text-lg leading-relaxed outline-none border-2 transition-all mb-8 ${isEditing ? 'border-orange-200 bg-orange-50/10' : 'border-transparent bg-slate-50'}`} rows={6} value={editableContent} readOnly={!isEditing} onChange={(e) => setEditableContent(e.target.value)} />
-             
-             <label className="flex items-center gap-2 cursor-pointer bg-orange-50 p-4 rounded-2xl border border-orange-100 mb-6 hover:bg-orange-100 transition-colors">
-                  <input type="checkbox" className="w-5 h-5 rounded text-orange-600 focus:ring-orange-500" checked={spinContent} onChange={(e) => setSpinContent(e.target.checked)} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black uppercase text-orange-700 flex items-center gap-1"><Shuffle size={16} /> Bật AI Spin Trộn nội dung (Chống Spam)</span>
-                    <span className="text-xs text-orange-600 font-medium mt-1">Khi Lên Lịch, Hệ thống sẽ dùng AI viết lại nhiều phiên bản nội dung hoàn toàn khác nhau cho từng Page.</span>
-                  </div>
-             </label>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-black">
-                <div className="p-6 bg-blue-50/50 rounded-[35px] border-2 border-dashed border-blue-200">
-                    <div className="flex items-center gap-2 mb-3"><ShoppingCart size={16} className="text-blue-600" /><span className="text-[10px] font-black uppercase text-blue-900">Link chèn tự động dưới comment</span></div>
-                    <input className="w-full px-6 py-4 bg-white rounded-2xl outline-none font-bold text-blue-600 shadow-sm" placeholder="Dán link sản phẩm của bạn..." value={productUrl} onChange={(e) => setProductUrl(e.target.value)} />
-                </div>
-
-                <div className="p-6 bg-slate-50 rounded-[35px] border border-slate-100 flex flex-col justify-center">
-                    <label className="flex items-center justify-between cursor-pointer mb-3">
-                        <span className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2"><Clock size={14} /> Chế độ hẹn giờ đăng</span>
-                        <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-blue-600" checked={isScheduling} onChange={(e) => setIsScheduling(e.target.checked)} />
-                    </label>
-                    {isScheduling && (
-                        <div className="animate-in fade-in slide-in-from-top-2">
-                          <input type="datetime-local" className="w-full bg-white border-2 border-blue-100 px-4 py-3 rounded-2xl text-xs font-bold text-blue-600 outline-none" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
-                        </div>
-                    )}
-                </div>
-             </div>
-
-             <div className="mb-8 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 text-black"><FolderCheck size={14} /> Nhóm Fanpage theo Folder</h3>
-                    <div className="flex gap-2 text-black">
-                        <input placeholder="Tên Folder..." className="px-4 py-2 rounded-xl text-xs bg-white border outline-none font-bold text-black" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} />
-                        <button onClick={() => {
-                            if(!newGroupName || selectedPageIds.length === 0) return alert("Nhập tên và chọn Page!");
-                            const updated = [...pageGroups, { name: newGroupName, ids: selectedPageIds }];
-                            setPageGroups(updated);
-                            localStorage.setItem("kpost_page_groups", JSON.stringify(updated));
-                            setNewGroupName("");
-                        }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-black hover:bg-black transition-all">LƯU FOLDER</button>
-                    </div>
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                    {pageGroups.map((group, idx) => (
-                        <div key={idx} className="flex items-center gap-1 shrink-0">
-                            <button onClick={() => setSelectedPageIds(group.ids)} className="bg-white border-2 border-blue-500 text-blue-600 px-5 py-2.5 rounded-2xl text-[10px] font-black whitespace-nowrap hover:bg-blue-50 transition-colors">📁 {group.name.toUpperCase()}</button>
-                            <button onClick={() => {
-                                const updated = pageGroups.filter(g => g.name !== group.name);
-                                setPageGroups(updated);
-                                localStorage.setItem("kpost_page_groups", JSON.stringify(updated));
-                            }} className="text-slate-300 hover:text-red-500"><Trash2 size={12}/></button>
+      {showForm && (
+        <div className="mb-10 bg-white p-8 rounded-[40px] shadow-2xl border-2 border-blue-500">
+          <form onSubmit={handleSaveProduct} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 flex justify-between">
+                   <span>Media (Ảnh/Video) ({newProduct.images.length}/10)</span>
+                   {uploading && <span className="text-blue-600 animate-pulse italic">Đang tải...</span>}
+                </label>
+                <div className="grid grid-cols-5 gap-3 p-4 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200 min-h-[200px]">
+                    {newProduct.images.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden shadow-md group border-2 border-white bg-slate-900">
+                            {isVideo(url) ? <video src={url} className="w-full h-full object-cover opacity-90" muted loop autoPlay playsInline /> : <img src={url} className="w-full h-full object-cover" alt="product" />}
+                            {isVideo(url) && <Film className="absolute bottom-1 left-1 text-white shadow-sm" size={14} />}
+                            <button type="button" onClick={() => setNewProduct({...newProduct, images: newProduct.images.filter((_, i) => i !== idx)})} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 z-10"><X size={10}/></button>
                         </div>
                     ))}
+                    {newProduct.images.length < 10 && (
+                        <label className="aspect-square rounded-2xl bg-white border-2 border-dashed border-blue-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition-all text-blue-400 group relative">
+                            <UploadCloud size={24} className="group-hover:scale-110 transition-transform mb-1" />
+                            <span className="text-[8px] font-bold">Thêm Media</span>
+                            <input type="file" multiple className="hidden" accept="image/*,video/*" onChange={handleUploadMultiple} />
+                        </label>
+                    )}
                 </div>
-             </div>
+              </div>
+              <div className="space-y-4 text-black">
+                <div className="space-y-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tên sản phẩm</label>
+                   <input placeholder="Nhập tên sản phẩm..." className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" required value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})}/>
+                </div>
+                <div className="space-y-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Mô tả chi tiết</label>
+                   <textarea placeholder="Chất liệu, tính năng..." className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 h-32 resize-none font-medium" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 text-black">
+              <input type="number" placeholder="Giá bán" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-blue-600" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})}/>
+              <input placeholder="Mã SKU" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-mono" value={newProduct.skuInternal} onChange={e => setNewProduct({...newProduct, skuInternal: e.target.value})}/>
+              <input type="number" placeholder="Tồn kho" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold" value={newProduct.totalStock} onChange={e => setNewProduct({...newProduct, totalStock: e.target.value})}/>
+              <button className="w-full text-white bg-blue-600 font-black py-4 rounded-2xl shadow-xl">{loading ? "ĐANG LƯU..." : "LƯU VÀO KHO"}</button>
+            </div>
+          </form>
+        </div>
+      )}
 
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-10 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar text-black">
-                {accounts.map((acc: any) => (
-                    <div key={acc.platformId} onClick={() => setSelectedPageIds(prev => prev.includes(acc.platformId) ? prev.filter(id => id !== acc.platformId) : [...prev, acc.platformId])} 
-                         className={`p-4 rounded-[20px] border-2 cursor-pointer transition-all flex items-center justify-between ${selectedPageIds.includes(acc.platformId) ? 'border-blue-500 bg-white shadow-md' : 'border-transparent bg-slate-50 opacity-40 hover:opacity-100'}`}>
-                        <p className="font-bold text-xs truncate pr-2 text-black">{acc.accountName}</p>
-                        {selectedPageIds.includes(acc.platformId) ? <CheckCircle2 size={18} className="text-blue-600" /> : <Square size={18} className="text-slate-200" />}
-                    </div>
-                ))}
-             </div>
-
-             <button onClick={handlePostAction} disabled={posting} className="w-full bg-blue-600 text-white font-black py-6 rounded-[30px] shadow-xl text-xl hover:bg-blue-700 active:scale-95 transition-all flex justify-center items-center gap-2">
-                {posting ? <Loader2 className="animate-spin" /> : <><Globe size={24} /> {isScheduling ? (spinContent ? 'LÊN LỊCH & SPIN NỘI DUNG 🚀' : 'ĐƯA VÀO HÀNG CHỜ ĐĂNG 🚀') : 'XUẤT BẢN NGAY 🚀'}</>}
-             </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-black">
+        {products.map((p: any) => {
+          const firstMedia = p.images?.[0] || p.imageUrl || "";
+          const hasVideo = p.images?.some((url: string) => isVideo(url)) || isVideo(p.imageUrl);
+          return (
+          <div key={p.id} className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden group hover:shadow-2xl transition-all relative">
+            <div className="absolute top-4 right-4 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button onClick={() => startEdit(p)} className="p-2 bg-white/90 text-orange-500 rounded-xl shadow-md border hover:bg-orange-500 hover:text-white"><Edit3 size={18}/></button>
+               <button onClick={() => handleDelete(p.id)} className="p-2 bg-white/90 text-red-500 rounded-xl shadow-md border hover:bg-red-500 hover:text-white"><Trash2 size={18}/></button>
+            </div>
+            <div className="h-64 bg-slate-900 relative overflow-hidden">
+                {isVideo(firstMedia) ? <video src={firstMedia} className="w-full h-full object-cover opacity-90" muted loop autoPlay playsInline /> : <img src={firstMedia} className="w-full h-full object-cover" alt={p.name} />}
+                <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-2">
+                    {hasVideo ? <Film size={12} className="text-pink-400" /> : <ImageIcon size={12} />} {p.images?.length || 1} FILE
+                </div>
+            </div>
+            <div className="p-8">
+              <h3 className="font-black text-xl text-slate-800 uppercase truncate mb-1">{p.name}</h3>
+              <p className="text-blue-600 font-black text-2xl tracking-tighter">{Number(p.price).toLocaleString()}đ</p>
+              <div className="mt-4 p-3 bg-slate-50 rounded-2xl border border-slate-100 min-h-[60px]">
+                 <p className="text-[11px] text-slate-500 font-medium line-clamp-2 italic">"{p.description || 'Chưa có mô tả chi tiết...'}"</p>
+              </div>
+              <button onClick={() => handleGoToAI(p)} className="w-full mt-6 bg-slate-900 text-white font-black py-4 rounded-[20px] flex items-center justify-center gap-2 hover:bg-blue-600 transition-all shadow-lg">
+                <PenTool size={18} /> ĐĂNG BÀI VỚI AI 🚀
+              </button>
+            </div>
           </div>
-        )}
+        )})}
       </div>
     </div>
   );
-}
-
-export default function AiMarketingPage() {
-  return (<Suspense fallback={<div className="p-20 text-center font-black animate-pulse text-slate-300">LOADING AI SYSTEM...</div>}><AiMarketingContent /></Suspense>);
 }
