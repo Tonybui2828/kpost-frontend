@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation'; // 🚀 Import thêm để đ
 import { 
   Share2, Plus, Trash2, 
   Loader2, Globe, Edit3, X,
-  Sparkles, Facebook 
-} from "lucide-react"; // 🚀 Import thêm icon Facebook
+  Sparkles 
+} from "lucide-react"; 
 
 export default function SocialPage() {
   // --- 1. CẤU HÌNH API ĐỘNG ---
@@ -141,7 +141,6 @@ export default function SocialPage() {
             }}
             className="bg-[#1877F2] text-white px-8 py-4 rounded-[20px] font-black flex items-center justify-center gap-3 hover:bg-[#166FE5] transition-all shadow-lg shadow-blue-200 active:scale-95 w-full md:w-auto uppercase tracking-wide text-sm"
           >
-            <Facebook size={22} fill="currentColor" /> 
             Đăng nhập Facebook
           </button>
         </div>
