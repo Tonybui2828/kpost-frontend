@@ -71,19 +71,22 @@ export default function ShippingPage() {
         payload.vtpPassword = config.vtpPassword;
       }
 
-      // ĐÃ SỬA LẠI ĐƯỜNG DẪN API CHUẨN
       const response = await fetch(`${API_URL}/shipping/${workspaceId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
+      // 🚀 BƯỚC QUAN TRỌNG: Lấy dữ liệu (bao gồm cả lỗi) từ Backend trả về
+      const data = await response.json().catch(() => ({})); 
+
       if (response.ok) {
         setSaved(true);
         alert("✅ Kết nối Viettel Post đã được lưu thành công!");
         setTimeout(() => setSaved(false), 3000);
       } else {
-        alert("❌ Lỗi lưu cấu hình! Vui lòng kiểm tra lại tài khoản Viettel Post.");
+        // 🚀 IN THẲNG CÂU LỖI CỦA BACKEND LÊN MÀN HÌNH (Ví dụ: "Username or password is not valid")
+        alert(`❌ THẤT BẠI: ${data.message || "Tài khoản hoặc mật khẩu Viettel Post không đúng!"}`);
       }
     } catch (error) {
       alert("❌ Lỗi kết nối đến hệ thống xử lý.");
