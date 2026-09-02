@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Truck, Save, ShieldCheck, Info } from 'lucide-react';
 
 export default function ShippingPage() {
-  // --- 1. LẤY URL API ĐỘNG ---
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   
   const [workspaceId, setWorkspaceId] = useState<string>("");
@@ -17,17 +16,15 @@ export default function ShippingPage() {
     vtpShopId: '',
   });
 
-  // Lấy Workspace ID từ máy người dùng khi vừa mở trang
   useEffect(() => {
     const savedId = localStorage.getItem("workspaceId");
     if (savedId) {
       setWorkspaceId(savedId);
     } else {
-      setWorkspaceId("workspace-01"); // Dự phòng nếu chưa login
+      setWorkspaceId("workspace-01"); 
     }
   }, []);
 
-  // Hàm lấy cấu hình cũ
   const fetchConfig = async () => {
     if (!workspaceId) return;
     try {
@@ -37,7 +34,7 @@ export default function ShippingPage() {
         if (data) {
           setConfig({
             vtpPhone: data.vtpPhone || '',
-            vtpPassword: data.vtpPassword || '', // Backend có thể trả về chuỗi rỗng để bảo mật pass
+            vtpPassword: data.vtpPassword || '', 
             vtpShopId: data.vtpShopId || '',
           });
         }
@@ -49,7 +46,6 @@ export default function ShippingPage() {
     }
   };
 
-  // Tự động tải cấu hình khi đã xác định được workspaceId
   useEffect(() => {
     if (workspaceId) {
       fetchConfig();
