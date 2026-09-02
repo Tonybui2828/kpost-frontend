@@ -62,13 +62,15 @@ export default function ShippingPage() {
 
     setLoading(true);
     try {
-      // TẠO PAYLOAD RIÊNG: NẾU PASS LÀ *** THÌ KHÔNG GỬI LÊN DB ĐỂ TRÁNH GHI ĐÈ LỖI
+      // TẠO PAYLOAD CƠ BẢN
       const payload: any = {
-        vtpPhone: config.vtpPhone,
-        vtpShopId: config.vtpShopId,
+        vtpPhone: config.vtpPhone.trim(),
+        vtpShopId: config.vtpShopId.trim(),
       };
-      if (config.vtpPassword !== '********') {
-        payload.vtpPassword = config.vtpPassword;
+      
+      // 🚀 BƯỚC QUYẾT ĐỊNH: NẾU KHÁCH XÓA CHUỖI ******** VÀ GÕ PASS MỚI, TA SẼ GỬI PASS ĐÓ LÊN
+      if (config.vtpPassword && config.vtpPassword !== '********') {
+        payload.vtpPassword = config.vtpPassword.trim();
       }
 
       const response = await fetch(`${API_URL}/shipping/${workspaceId}`, {
@@ -77,15 +79,13 @@ export default function ShippingPage() {
         body: JSON.stringify(payload),
       });
 
-      // 🚀 BƯỚC QUAN TRỌNG: Lấy dữ liệu (bao gồm cả lỗi) từ Backend trả về
       const data = await response.json().catch(() => ({})); 
 
       if (response.ok) {
         setSaved(true);
-        alert("✅ Kết nối Viettel Post đã được lưu thành công!");
+        alert("✅ Kết nối Viettel Post đã được cập nhật bằng MẬT KHẨU MỚI thành công!");
         setTimeout(() => setSaved(false), 3000);
       } else {
-        // 🚀 IN THẲNG CÂU LỖI CỦA BACKEND LÊN MÀN HÌNH (Ví dụ: "Username or password is not valid")
         alert(`❌ THẤT BẠI: ${data.message || "Tài khoản hoặc mật khẩu Viettel Post không đúng!"}`);
       }
     } catch (error) {
