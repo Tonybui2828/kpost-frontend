@@ -32,11 +32,31 @@ export default function SettingsPage() {
   const [paymentStatus, setPaymentStatus] = useState("pending");
   const [paymentInfo, setPaymentInfo] = useState({ qr: "", memo: "", amount: 0, plan: "" });
   const [workspaceId, setWorkspaceId] = useState<string>("");
+  
+  // --- QUẢN LÝ DỮ LIỆU USER CHUNG CHO TOÀN BỘ TRANG ---
+  const [user, setUser] = useState<any>(null);
+  const [isFetchingUser, setIsFetchingUser] = useState(true);
 
   useEffect(() => {
-    const savedId = localStorage.getItem("workspaceId");
-    if (savedId) setWorkspaceId(savedId);
+    // 1. Lấy thông tin User
+    const fetchProfile = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) { setIsFetchingUser(false); return; }
+            const res = await axios.get(`${API_URL}/auth/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setUser(res.data);
+            setWorkspaceId(res.data.currentWorkspaceId || res.data.wid || "");
+        } catch (e) { 
+            console.log("Guest mode active"); 
+        } finally { 
+            setIsFetchingUser(false); 
+        }
+    };
+    fetchProfile();
 
+    // 2. Logic Thanh toán Socket
     socket.on("paymentSuccess", (data: any) => {
       if (data.billCode === paymentInfo.memo) {
         setPaymentStatus("success");
@@ -80,8 +100,14 @@ export default function SettingsPage() {
     } catch (e) { alert("Lỗi hệ thống thanh toán!"); }
   };
 
+  const handleLogout = () => {
+      localStorage.clear();
+      window.location.reload();
+  };
+
   return (
     <div className="p-8 bg-slate-50 min-h-screen text-slate-800 font-sans relative">
+      {/* POPUP THANH TOÁN */}
       {showQR && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
             <div className="bg-white rounded-[50px] p-10 max-w-md w-full text-center shadow-2xl relative border border-white/20 text-black">
@@ -115,11 +141,26 @@ export default function SettingsPage() {
       )}
 
       <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-10">
+        
+        {/* ================= SIDEBAR ================= */}
         <div className="w-full lg:w-72 space-y-2">
            <div className="mb-10 px-4 text-black text-center lg:text-left">
               <h1 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Settings</h1>
-              <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">Tô Hiểu Minh - <span className="text-blue-600">KP00001</span></p>
+              
+              {/* HIỂN THỊ DỮ LIỆU USER ĐỘNG */}
+              {isFetchingUser ? (
+                  <div className="h-4 w-32 bg-slate-200 animate-pulse rounded mt-2 mx-auto lg:mx-0"></div>
+              ) : user ? (
+                  <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                    {user.name} - <span className="text-blue-600">{workspaceId || "KP_GUEST"}</span>
+                  </p>
+              ) : (
+                  <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                    Chưa đăng nhập
+                  </p>
+              )}
            </div>
+
            {tabs.map((tab) => (
              <button
                key={tab.id}
@@ -134,14 +175,18 @@ export default function SettingsPage() {
                {activeTab === tab.id && <ChevronRight size={16} />}
              </button>
            ))}
-           <button className="w-full flex items-center gap-4 px-6 py-4 mt-4 rounded-[24px] font-black transition-all text-slate-400 hover:text-red-500 hover:bg-white">
-             <LogOut size={18} /> <span className="text-sm uppercase tracking-tight">Đăng xuất</span>
-           </button>
+
+           {user && (
+             <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-4 mt-4 rounded-[24px] font-black transition-all text-slate-400 hover:text-red-500 hover:bg-white">
+               <LogOut size={18} /> <span className="text-sm uppercase tracking-tight">Đăng xuất</span>
+             </button>
+           )}
         </div>
 
+        {/* ================= MAIN CONTENT ================= */}
         <div className="flex-1 bg-white rounded-[50px] shadow-2xl border border-white p-12 min-h-[700px] text-black">
-            {activeTab === "account" && <AccountTab />}
-            {activeTab === "affiliate" && <AffiliateTab />}
+            {activeTab === "account" && <AccountTab user={user} loading={isFetchingUser} />}
+            {activeTab === "affiliate" && <AffiliateTab user={user} />}
             {activeTab === "billing" && <BillingTab onUpgrade={handleUpgrade} />}
             {activeTab === "security" && <SecurityTab />}
             {activeTab === "voucher" && <VoucherTab />}
@@ -158,43 +203,29 @@ export default function SettingsPage() {
 // CÁC TAB CHI TIẾT
 // ==========================================
 
-function AccountTab() {
+function AccountTab({ user, loading }: { user: any, loading: boolean }) {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [authMode, setAuthMode] = useState("login"); 
     const [formData, setFormData] = useState({ email: "", password: "", name: "" });
-
-    const fetchProfile = async () => {
-        try {
-            const token = localStorage.getItem("token");
-            if (!token) { setLoading(false); return; }
-            const res = await axios.get(`${API_URL}/auth/profile`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setUser(res.data);
-        } catch (e) { console.log("Guest mode active"); } finally { setLoading(false); }
-    };
-
-    useEffect(() => { fetchProfile(); }, [API_URL]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleManualAuth = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+        setIsSubmitting(true);
         try {
             const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
             const res = await axios.post(`${API_URL}${endpoint}`, formData);
             if (authMode === "login") {
                 localStorage.setItem("token", res.data.token);
                 localStorage.setItem("workspaceId", res.data.wid);
-                window.location.href = "/dashboard";
+                window.location.href = "/dashboard"; // Có thể đổi lại là /settings nếu muốn
             } else {
                 alert("Đăng ký thành công! Mời bạn đăng nhập.");
                 setAuthMode("login");
             }
         } catch (error: any) {
             alert(error.response?.data?.message || "Lỗi xử lý xác thực!");
-        } finally { setLoading(false); }
+        } finally { setIsSubmitting(false); }
     };
 
     if (loading) return <div className="p-10 text-center animate-pulse font-black text-slate-300 uppercase">Đang kết nối hệ thống...</div>;
@@ -202,14 +233,24 @@ function AccountTab() {
     if (user) return (
         <div className="space-y-10 animate-in fade-in text-black">
             <div className="flex items-center gap-6">
-                <div className="w-20 h-20 bg-blue-600 rounded-[30px] flex items-center justify-center text-white font-black text-3xl shadow-xl">{user.name?.[0]}</div>
-                <div><h2 className="text-3xl font-black italic uppercase tracking-tighter">{user.name}</h2><p className="text-slate-400 font-bold">{user.email}</p></div>
+                <div className="w-20 h-20 bg-blue-600 rounded-[30px] flex items-center justify-center text-white font-black text-3xl shadow-xl">
+                  {user.name?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black italic uppercase tracking-tighter">{user.name}</h2>
+                  <p className="text-slate-400 font-bold">{user.email}</p>
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-slate-50 rounded-3xl border"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gói hiện tại</p><p className="text-xl font-black text-blue-600 italic">{user.plan} MEMBER</p></div>
-                <div className="p-6 bg-slate-50 rounded-3xl border"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Không gian</p><p className="text-sm font-mono font-bold text-slate-600 truncate">{user.currentWorkspaceId}</p></div>
+                <div className="p-6 bg-slate-50 rounded-3xl border">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gói hiện tại</p>
+                  <p className="text-xl font-black text-blue-600 italic">{user.plan || "FREE"} MEMBER</p>
+                </div>
+                <div className="p-6 bg-slate-50 rounded-3xl border">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Không gian</p>
+                  <p className="text-sm font-mono font-bold text-slate-600 truncate">{user.currentWorkspaceId || "Chưa có"}</p>
+                </div>
             </div>
-            <button onClick={() => {localStorage.clear(); window.location.reload();}} className="text-red-500 font-black text-[10px] uppercase tracking-[0.2em] hover:underline flex items-center gap-2"><LogOut size={14} /> Thoát tài khoản</button>
         </div>
     );
 
@@ -220,10 +261,21 @@ function AccountTab() {
                 {authMode === 'register' && <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" placeholder="Họ và tên" onChange={e => setFormData({...formData, name: e.target.value})} required />}
                 <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" type="email" placeholder="Email" onChange={e => setFormData({...formData, email: e.target.value})} required />
                 <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" type="password" placeholder="Mật khẩu" onChange={e => setFormData({...formData, password: e.target.value})} required />
-                <button type="submit" className="w-full py-5 bg-black text-white font-black rounded-[25px] shadow-2xl flex justify-center items-center gap-3 active:scale-95 transition-all">{authMode === 'login' ? <LogIn size={20}/> : <UserPlus size={20}/>} {authMode === 'login' ? 'VÀO HỆ THỐNG' : 'ĐĂNG KÝ NGAY'}</button>
+                <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-black text-white font-black rounded-[25px] shadow-2xl flex justify-center items-center gap-3 active:scale-95 transition-all disabled:opacity-50">
+                  {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : authMode === 'login' ? <LogIn size={20}/> : <UserPlus size={20}/>} 
+                  {authMode === 'login' ? 'VÀO HỆ THỐNG' : 'ĐĂNG KÝ NGAY'}
+                </button>
             </form>
-            <div className="mt-8 text-center"><button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 underline"> {authMode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'} </button></div>
-            <div className="my-10 flex items-center gap-4"><div className="h-[1px] bg-slate-100 flex-1"></div><span className="text-[10px] font-black text-slate-300">HOẶC</span><div className="h-[1px] bg-slate-100 flex-1"></div></div>
+            <div className="mt-8 text-center">
+              <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 underline"> 
+                {authMode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'} 
+              </button>
+            </div>
+            <div className="my-10 flex items-center gap-4">
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+              <span className="text-[10px] font-black text-slate-300">HOẶC</span>
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+            </div>
             <button onClick={() => window.location.href=`${API_URL}/auth/google`} className="w-full bg-white border border-slate-200 text-slate-700 font-black py-4 rounded-[24px] text-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 shadow-[0_4px_15px_rgb(0,0,0,0.02)]">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/list/google.svg" className="w-5 h-5" alt="G" />
                 TIẾP TỤC VỚI GOOGLE
@@ -232,12 +284,16 @@ function AccountTab() {
     )
 }
 
-function AffiliateTab() {
+function AffiliateTab({ user }: { user: any }) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [timeFilter, setTimeFilter] = useState('month');
 
+  // Gán link Affiliate động theo WorkspaceID của tài khoản đang đăng nhập
+  const affiliateId = user?.currentWorkspaceId || user?._id || "GUEST";
+  const dynamicAffiliateLink = `https://kpost.vn/?ref=KPOST_${affiliateId}`;
+
   const handleCopy = () => {
-    navigator.clipboard.writeText("https://kpost.vn/?ref=KPOST_PRO_999");
+    navigator.clipboard.writeText(dynamicAffiliateLink);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
   };
@@ -255,7 +311,9 @@ function AffiliateTab() {
              <CheckCircle size={18} />
              <div>
                 <p className="text-[10px] font-black uppercase tracking-wider">Trạng thái Affiliate</p>
-                <p className="text-sm font-bold">Đã kích hoạt (Gói Pro)</p>
+                <p className="text-sm font-bold">
+                  {user ? `Đã kích hoạt (${user.plan || "Free"})` : "Chưa kích hoạt"}
+                </p>
              </div>
           </div>
        </div>
@@ -278,13 +336,13 @@ function AffiliateTab() {
           </div>
        </div>
 
-       {/* LINK AFFILIATE */}
+       {/* LINK AFFILIATE ĐỘNG */}
        <div>
           <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Link Giới Thiệu Của Bạn</label>
           <div className="flex gap-2">
              <input 
                readOnly 
-               value="https://kpost.vn/?ref=KPOST_PRO_999" 
+               value={dynamicAffiliateLink} 
                className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none"
              />
              <button onClick={handleCopy} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase hover:bg-blue-600 transition-colors flex items-center gap-2">
@@ -294,17 +352,18 @@ function AffiliateTab() {
           </div>
        </div>
 
-       {/* THỐNG KÊ */}
+       {/* THỐNG KÊ (Placeholder: Đợi API thực tế từ backend sau) */}
        <div>
           <div className="flex items-center justify-between mb-4">
              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Tổng quan thống kê</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-blue-500"><MousePointerClick size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Lượt nhấp</span></div><p className="text-2xl font-black italic">1,245</p></div>
-             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-indigo-500"><Users size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đăng ký mới</span></div><p className="text-2xl font-black italic">128</p></div>
-             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-purple-500"><ShoppingCart size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đã mua gói</span></div><p className="text-2xl font-black italic">45</p></div>
-             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-green-500"><DollarSign size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Lợi nhuận</span></div><p className="text-xl font-black italic">4.500.000đ</p></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-50">
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-blue-500"><MousePointerClick size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Lượt nhấp</span></div><p className="text-2xl font-black italic">0</p></div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-indigo-500"><Users size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đăng ký mới</span></div><p className="text-2xl font-black italic">0</p></div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-purple-500"><ShoppingCart size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đã mua gói</span></div><p className="text-2xl font-black italic">0</p></div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 mb-2 text-green-500"><DollarSign size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Lợi nhuận</span></div><p className="text-xl font-black italic">0đ</p></div>
           </div>
+          <p className="text-[10px] font-bold text-slate-400 mt-2 italic">* Số liệu sẽ được cập nhật tự động khi có dữ liệu thật.</p>
        </div>
 
        {/* BÁO CÁO DOANH THU THEO THỜI GIAN */}
@@ -326,12 +385,9 @@ function AffiliateTab() {
              </div>
           </div>
           
-          <div className="h-48 flex items-end gap-2 justify-between mt-8">
-             {[40, 70, 45, 90, 65, 120, 80].map((h, i) => (
-               <div key={i} className="w-full bg-blue-100 rounded-t-lg relative group" style={{height: `${h}%`}}>
-                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                   {h * 50}.000đ
-                 </div>
+          <div className="h-48 flex items-end gap-2 justify-between mt-8 opacity-30">
+             {[0, 0, 0, 0, 0, 0, 0].map((h, i) => (
+               <div key={i} className="w-full bg-blue-100 rounded-t-lg relative group" style={{height: `5%`}}>
                </div>
              ))}
           </div>
@@ -339,7 +395,6 @@ function AffiliateTab() {
              <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
           </div>
        </div>
-
     </div>
   )
 }
