@@ -107,7 +107,7 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen text-slate-800 font-sans relative">
-      {/* POPUP THANH TOÁN */}
+      {/* POPUP QUÉT MÃ QR THANH TOÁN (SAU KHI ĐÃ XÁC NHẬN) */}
       {showQR && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
             <div className="bg-white rounded-[50px] p-10 max-w-md w-full text-center shadow-2xl relative border border-white/20 text-black">
@@ -441,6 +441,11 @@ function SecurityTab() {
 
 function BillingTab({ onUpgrade }: any) {
     const [duration, setDuration] = useState('1m');
+    const [selectedPlan, setSelectedPlan] = useState<any>(null); // Trạng thái mở popup xác nhận
+    const [voucher, setVoucher] = useState("");
+    const [discount, setDiscount] = useState(0);
+    const [voucherMessage, setVoucherMessage] = useState("");
+
     const plans = [
         { 
             name: "PRO", 
@@ -461,6 +466,34 @@ function BillingTab({ onUpgrade }: any) {
             features: ["Tất cả tính năng Gói GOLD & PRO", "Add 500 Fanpage", "Thêm 500 sản phẩm", "Mở tính năng Affiliate hoa hồng 20%"] 
         },
     ];
+
+    const handleApplyVoucher = () => {
+        if (!voucher.trim()) {
+            setDiscount(0);
+            setVoucherMessage("");
+            return;
+        }
+        // TODO: Gọi API kiểm tra mã ở đây. Tạm thời mô phỏng logic cứng:
+        if (voucher.toUpperCase() === 'KPOST20') {
+            setDiscount(0.2); // Giảm 20%
+            setVoucherMessage("✅ Đã áp dụng giảm 20%");
+        } else if (voucher.toUpperCase() === 'TECH28') {
+            setDiscount(0.3); // Giảm 30%
+            setVoucherMessage("✅ Đã áp dụng giảm 30%");
+        } else {
+            setDiscount(0);
+            setVoucherMessage("❌ Mã không hợp lệ hoặc đã hết hạn");
+        }
+    };
+
+    const handleConfirmPayment = () => {
+        const finalPrice = selectedPlan.price * (1 - discount);
+        onUpgrade(selectedPlan.name, finalPrice);
+        setSelectedPlan(null); // Đóng modal xác nhận
+        setVoucher("");
+        setDiscount(0);
+        setVoucherMessage("");
+    };
 
     return (
         <div className="space-y-10 text-black animate-in fade-in">
@@ -502,13 +535,85 @@ function BillingTab({ onUpgrade }: any) {
                                     </li>
                                 ))}
                             </ul>
-                            <button onClick={() => onUpgrade(p.name, price)} className={`w-full py-4 rounded-3xl font-black text-white uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all mt-auto ${p.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : p.color === 'amber' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20'}`}>
-                                Nâng cấp ngay ✨
+                            <button 
+                                onClick={() => setSelectedPlan({ name: p.name, price: price })} 
+                                className={`w-full py-4 rounded-3xl font-black text-white uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all mt-auto ${p.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : p.color === 'amber' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20'}`}>
+                                Chọn gói này ✨
                             </button>
                         </div>
                     );
                 })}
             </div>
+
+            {/* MODAL XÁC NHẬN VÀ NHẬP VOUCHER */}
+            {selectedPlan && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200 border border-white/20">
+                        <button onClick={() => setSelectedPlan(null)} className="absolute top-6 right-6 text-slate-400 hover:text-red-500 transition-colors">
+                            <X size={28} />
+                        </button>
+                        
+                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 mb-6">Xác nhận đơn hàng</h3>
+                        
+                        <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-6 space-y-4">
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                                <span>Gói cước:</span>
+                                <span className="text-slate-900 uppercase font-black">Hạng {selectedPlan.name}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                                <span>Chu kỳ:</span>
+                                <span className="text-slate-900 font-black">{
+                                    duration === '1m' ? '1 Tháng' : 
+                                    duration === '3m' ? '3 Tháng' : 
+                                    duration === '6m' ? '6 Tháng' : '1 Năm'
+                                }</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                                <span>Giá gốc:</span>
+                                <span className="text-slate-900 font-black">{selectedPlan.price.toLocaleString()}đ</span>
+                            </div>
+                            
+                            {/* Hiển thị dòng trừ tiền nếu mã hợp lệ */}
+                            {discount > 0 && (
+                                <div className="flex justify-between items-center text-sm font-black text-green-600">
+                                    <span>Giảm giá ({(discount * 100).toFixed(0)}%):</span>
+                                    <span>-{(selectedPlan.price * discount).toLocaleString()}đ</span>
+                                </div>
+                            )}
+                            
+                            <div className="pt-4 border-t border-slate-200 flex flex-col mt-2">
+                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Tổng thanh toán:</span>
+                                <span className="text-3xl font-black italic text-blue-600">{(selectedPlan.price * (1 - discount)).toLocaleString()}đ</span>
+                            </div>
+                        </div>
+
+                        <div className="mb-8">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Mã giảm giá (Nếu có)</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={voucher} 
+                                    onChange={(e) => setVoucher(e.target.value.toUpperCase())}
+                                    placeholder="Nhập mã..." 
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case"
+                                />
+                                <button onClick={handleApplyVoucher} className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase hover:bg-blue-600 transition-colors active:scale-95">
+                                    Áp dụng
+                                </button>
+                            </div>
+                            {voucherMessage && (
+                                <p className={`text-xs font-bold mt-3 ${voucherMessage.includes('❌') ? 'text-red-500' : 'text-green-600'}`}>
+                                    {voucherMessage}
+                                </p>
+                            )}
+                        </div>
+
+                        <button onClick={handleConfirmPayment} className="w-full py-5 bg-blue-600 text-white font-black rounded-[24px] shadow-xl hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                            Tiến Hành Thanh Toán <ChevronRight size={18}/>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
