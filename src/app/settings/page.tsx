@@ -440,11 +440,14 @@ function SecurityTab() {
 }
 
 function BillingTab({ onUpgrade }: any) {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
     const [duration, setDuration] = useState('1m');
-    const [selectedPlan, setSelectedPlan] = useState<any>(null); // Trạng thái mở popup xác nhận
+    const [selectedPlan, setSelectedPlan] = useState<any>(null);
     const [voucher, setVoucher] = useState("");
-    const [discount, setDiscount] = useState(0);
+    const [discount, setDiscount] = useState(0); 
+    const [isPercentage, setIsPercentage] = useState(true); // Biến kiểm tra xem giảm % hay giảm số tiền trực tiếp
     const [voucherMessage, setVoucherMessage] = useState("");
+    const [isCheckingVoucher, setIsCheckingVoucher] = useState(false);
 
     const plans = [
         { 
@@ -467,29 +470,72 @@ function BillingTab({ onUpgrade }: any) {
         },
     ];
 
-    const handleApplyVoucher = () => {
+    const handleApplyVoucher = async () => {
         if (!voucher.trim()) {
             setDiscount(0);
             setVoucherMessage("");
             return;
         }
-        // TODO: Gọi API kiểm tra mã ở đây. Tạm thời mô phỏng logic cứng:
-        if (voucher.toUpperCase() === 'KPOST20') {
-            setDiscount(0.2); // Giảm 20%
-            setVoucherMessage("✅ Đã áp dụng giảm 20%");
-        } else if (voucher.toUpperCase() === 'TECH28') {
-            setDiscount(0.3); // Giảm 30%
-            setVoucherMessage("✅ Đã áp dụng giảm 30%");
-        } else {
+
+        setIsCheckingVoucher(true);
+        setVoucherMessage("Đang kiểm tra...");
+        
+        try {
+            const token = localStorage.getItem("token");
+            // GỌI API THỰC TẾ LÊN BACKEND ĐỂ CHECK VOUCHER
+            const res = await axios.post(`${API_URL}/social/check-voucher`, { code: voucher.toUpperCase() }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Backend trả về hợp lệ
+            if (res.data && res.data.valid) {
+                const discountValue = res.data.discountValue; 
+                const discountType = res.data.discountType; // 'percent' (giảm %) hoặc 'fixed' (giảm tiền VNĐ)
+                
+                setDiscount(discountValue);
+                setIsPercentage(discountType === 'percent');
+                
+                setVoucherMessage(`✅ Đã áp dụng giảm ${discountType === 'percent' ? discountValue + '%' : discountValue.toLocaleString() + 'đ'}`);
+            } else {
+                setDiscount(0);
+                setVoucherMessage("❌ Mã không hợp lệ hoặc đã hết hạn");
+            }
+        } catch (error: any) {
             setDiscount(0);
-            setVoucherMessage("❌ Mã không hợp lệ hoặc đã hết hạn");
+            // Xử lý báo lỗi từ Backend nếu mã lỗi
+            setVoucherMessage(`❌ ${error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn"}`);
+        } finally {
+            setIsCheckingVoucher(false);
         }
     };
 
+    // Hàm tính toán giá cuối cùng dựa trên kiểu giảm giá
+    const getFinalPrice = () => {
+        if (!selectedPlan) return 0;
+        let finalPrice = selectedPlan.price;
+        if (discount > 0) {
+            if (isPercentage) {
+                finalPrice = finalPrice * (1 - (discount / 100)); // Nếu discount là 30 -> giảm 30%
+            } else {
+                finalPrice = finalPrice - discount; // Nếu discount là 100000 -> giảm trực tiếp 100k
+            }
+        }
+        return finalPrice > 0 ? finalPrice : 0; // Không để giá âm
+    };
+    
+    // Hàm tính toán số tiền được giảm để hiển thị
+    const getDiscountAmount = () => {
+        if (!selectedPlan || discount <= 0) return 0;
+        if (isPercentage) {
+            return selectedPlan.price * (discount / 100);
+        }
+        return discount > selectedPlan.price ? selectedPlan.price : discount;
+    };
+
     const handleConfirmPayment = () => {
-        const finalPrice = selectedPlan.price * (1 - discount);
+        const finalPrice = getFinalPrice();
         onUpgrade(selectedPlan.name, finalPrice);
-        setSelectedPlan(null); // Đóng modal xác nhận
+        setSelectedPlan(null); 
         setVoucher("");
         setDiscount(0);
         setVoucherMessage("");
@@ -576,14 +622,14 @@ function BillingTab({ onUpgrade }: any) {
                             {/* Hiển thị dòng trừ tiền nếu mã hợp lệ */}
                             {discount > 0 && (
                                 <div className="flex justify-between items-center text-sm font-black text-green-600">
-                                    <span>Giảm giá ({(discount * 100).toFixed(0)}%):</span>
-                                    <span>-{(selectedPlan.price * discount).toLocaleString()}đ</span>
+                                    <span>Giảm giá ({isPercentage ? discount + '%' : discount.toLocaleString() + 'đ'}):</span>
+                                    <span>-{getDiscountAmount().toLocaleString()}đ</span>
                                 </div>
                             )}
                             
                             <div className="pt-4 border-t border-slate-200 flex flex-col mt-2">
                                 <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Tổng thanh toán:</span>
-                                <span className="text-3xl font-black italic text-blue-600">{(selectedPlan.price * (1 - discount)).toLocaleString()}đ</span>
+                                <span className="text-3xl font-black italic text-blue-600">{getFinalPrice().toLocaleString()}đ</span>
                             </div>
                         </div>
 
@@ -597,8 +643,8 @@ function BillingTab({ onUpgrade }: any) {
                                     placeholder="Nhập mã..." 
                                     className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case"
                                 />
-                                <button onClick={handleApplyVoucher} className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase hover:bg-blue-600 transition-colors active:scale-95">
-                                    Áp dụng
+                                <button onClick={handleApplyVoucher} disabled={isCheckingVoucher} className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase hover:bg-blue-600 transition-colors active:scale-95 disabled:opacity-70 flex items-center justify-center min-w-[90px]">
+                                    {isCheckingVoucher ? <Loader2 size={16} className="animate-spin" /> : "Áp dụng"}
                                 </button>
                             </div>
                             {voucherMessage && (
