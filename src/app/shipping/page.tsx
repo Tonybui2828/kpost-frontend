@@ -122,7 +122,7 @@ export default function ShippingPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Số điện thoại VTP</label>
+                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Nhập Email VTP</label>
                  <input 
                    type="text"
                    placeholder="VD: 0987654321"
