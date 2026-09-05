@@ -1160,12 +1160,3 @@ function PrivacyTab() {
     </div>
   );
 }
-</USER_REQUEST>
-<ADDITIONAL_METADATA>
-The current local time is: 2026-09-05T07:07:35-07:00.
-
-Model: models/gemini-3.1-pro-preview
-Development App URL: https://ais-dev-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app
-Shared App URL: https://ais-pre-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app
-User Email: tech28.vn@gmail.com
-</ADDITIONAL_METADATA>
