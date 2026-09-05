@@ -67,16 +67,24 @@ export default function SettingsPage() {
       }
     });
 
-    let interval: any;
-    if (showQR && paymentStatus === "pending") {
+    let interval: NodeJS.Timeout | null = null;
+    
+    // Nếu đang hiện QR và trạng thái là pending thì bắt đầu poll API
+    if (showQR && paymentStatus === "pending" && paymentInfo.memo) {
         interval = setInterval(async () => {
             try {
-                const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}`);
+                // Thêm timestamp vào URL để trình duyệt KHÔNG LƯU CACHE (Bắt buộc phải gọi server)
+                const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}?t=${new Date().getTime()}`);
                 if (res.data && res.data.status === "success") {
                     setPaymentStatus("success");
-                    clearInterval(interval);
+                    if (interval) clearInterval(interval);
+                    
+                    try {
+                        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+                        audio.play();
+                    } catch (e) { console.log("Audio play blocked"); }
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Poll Error:", e); }
         }, 5000);
     }
 
@@ -1152,3 +1160,12 @@ function PrivacyTab() {
     </div>
   );
 }
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-05T07:07:35-07:00.
+
+Model: models/gemini-3.1-pro-preview
+Development App URL: https://ais-dev-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app
+Shared App URL: https://ais-pre-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app
+User Email: tech28.vn@gmail.com
+</ADDITIONAL_METADATA>
