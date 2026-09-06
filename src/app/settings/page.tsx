@@ -37,12 +37,17 @@ export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
   const [isFetchingUser, setIsFetchingUser] = useState(true);
 
-  // --- BẮT LINK AFFILIATE TRÊN URL ---
+  // --- BẮT LINK AFFILIATE TRÊN URL (ĐÃ FIX CHUẨN) ---
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refCode = urlParams.get('ref');
-    if (refCode) {
-      localStorage.setItem("kpost_affiliate_ref", refCode);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        localStorage.setItem("kpost_affiliate_ref", refCode);
+        console.log("✅ Đã bắt và lưu mã Affiliate:", refCode);
+      }
+    } catch (error) {
+      console.error("Lỗi bắt mã Affiliate:", error);
     }
   }, []);
 
@@ -235,6 +240,8 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
         setIsSubmitting(true);
         try {
             const payload: any = { ...formData };
+            
+            // 👉 LẤY MÃ AFFILIATE TỪ LOCALSTORAGE ĐỂ GỬI LÊN BACKEND KHI ĐĂNG KÝ
             if (authMode === "register") {
                 const savedRef = localStorage.getItem("kpost_affiliate_ref");
                 if (savedRef) {
