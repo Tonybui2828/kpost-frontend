@@ -241,15 +241,14 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
         try {
             const payload: any = { ...formData };
             
-            // 👉 LẤY MÃ AFFILIATE TỪ LOCALSTORAGE ĐỂ GỬI LÊN BACKEND KHI ĐĂNG KÝ
+            // 👉 BẮT VÀ CẮT MÃ AFFILIATE CHUẨN TÊN CỘT DATABASE
             if (authMode === "register") {
                 let savedRef = localStorage.getItem("kpost_affiliate_ref");
                 if (savedRef) {
-                    // CẮT BỎ CHỮ KPOST_ ĐỂ LẤY ĐÚNG ID GỐC TRONG DATABASE
                     if (savedRef.startsWith("KPOST_")) {
                         savedRef = savedRef.replace("KPOST_", "");
                     }
-                    payload.affiliateBy = savedRef; 
+                    payload.referredBy = savedRef; // Khớp 100% với tên cột referredBy trong Supabase
                 }
             }
 
