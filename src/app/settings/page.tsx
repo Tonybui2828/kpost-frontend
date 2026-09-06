@@ -243,8 +243,12 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
             
             // 👉 LẤY MÃ AFFILIATE TỪ LOCALSTORAGE ĐỂ GỬI LÊN BACKEND KHI ĐĂNG KÝ
             if (authMode === "register") {
-                const savedRef = localStorage.getItem("kpost_affiliate_ref");
+                let savedRef = localStorage.getItem("kpost_affiliate_ref");
                 if (savedRef) {
+                    // CẮT BỎ CHỮ KPOST_ ĐỂ LẤY ĐÚNG ID GỐC TRONG DATABASE
+                    if (savedRef.startsWith("KPOST_")) {
+                        savedRef = savedRef.replace("KPOST_", "");
+                    }
                     payload.affiliateBy = savedRef; 
                 }
             }
