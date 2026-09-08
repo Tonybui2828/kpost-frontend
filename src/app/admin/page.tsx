@@ -1,221 +1,251 @@
-"use client";
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { 
-  Users, Globe, Send, Trash2, 
-  Settings, DollarSign, Activity, 
-  ImageIcon, Bell, Save, RefreshCcw,
-  Ticket, Plus, ChevronRight, Loader2, Tag
-} from "lucide-react";
+'use client';
+import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast'; 
 
-export default function AdminPage() {
-  // 1. LẤY URL API TỪ BIẾN MÔI TRƯỜNG
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-  // --- STATE DỮ LIỆU ---
-  const [stats, setStats] = useState<any>(null);
-  const [settings, setSettings] = useState({ 
-    websiteName: "", 
-    logoUrl: "", 
-    announcement: "" 
-  });
-  const [vouchers, setVouchers] = useState<any[]>([]); // Sửa lỗi build
-  const [users, setUsers] = useState<any[]>([]); // Sửa lỗi build
-  const [newVoucher, setNewVoucher] = useState({ code: "", discount: 0, type: "fixed" });
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ALL'); // ALL, FREE, PRO, GOLD, DIAMOND, DELETED
 
-  // --- LẤY DỮ LIỆU TỔNG HỢP ---
-  const fetchAdminData = async () => {
+  // State cho Modal Nâng cấp
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [planForm, setPlanForm] = useState({ plan: 'PRO', extraDays: 30 });
+
+  // State cho Modal Voucher
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [voucherCode, setVoucherCode] = useState('');
+
+  // 1. Fetch dữ liệu
+  const fetchUsers = async () => {
     try {
-      setLoading(true);
-      const [statsRes, settingsRes, vouchersRes, usersRes] = await Promise.all([
-        axios.get(`${API_URL}/admin/stats`),
-        axios.get(`${API_URL}/admin/settings`),
-        axios.get(`${API_URL}/admin/vouchers`),
-        axios.get(`${API_URL}/admin/users-list`),
-      ]);
-      setStats(statsRes.data);
-      setSettings(settingsRes.data);
-      setVouchers(vouchersRes.data || []);
-      setUsers(usersRes.data || []);
-    } catch (error) {
-      console.error("Lỗi tải dữ liệu admin:", error);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.kpost.vn'}/admin/users-list`);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      toast.error('Lỗi tải danh sách khách hàng');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchAdminData(); }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  // --- XỬ LÝ VOUCHER ---
-  const handleCreateVoucher = async () => {
-    if (!newVoucher.code || newVoucher.discount <= 0) {
-        return alert("Vui lòng nhập đầy đủ mã và giá trị giảm!");
-    }
-    try {
-      await axios.post(`${API_URL}/admin/vouchers`, newVoucher);
-      setNewVoucher({ code: "", discount: 0, type: "fixed" });
-      const res = await axios.get(`${API_URL}/admin/vouchers`);
-      setVouchers(res.data || []);
-      alert("✅ Đã tạo voucher mới!");
-    } catch (error) { alert("❌ Lỗi khi tạo voucher"); }
-  };
+  // Lọc user theo Tab
+  const filteredUsers = users.filter(user => {
+    if (activeTab === 'DELETED') return user.status === 'deleted';
+    if (activeTab === 'ALL') return user.status === 'active';
+    return user.status === 'active' && user.plan === activeTab;
+  });
 
-  const handleDeleteVoucher = async (id: string) => {
-    if (!confirm("Xóa voucher này?")) return;
+  // 2. Hàm Nâng cấp gói
+  const handleUpgradePlan = async (e: any) => {
+    e.preventDefault();
     try {
-        await axios.delete(`${API_URL}/admin/vouchers/${id}`);
-        const res = await axios.get(`${API_URL}/admin/vouchers`);
-        setVouchers(res.data || []);
-    } catch (e) { alert("Lỗi khi xóa!"); }
-  };
-
-  // --- CẬP NHẬT CẤU HÌNH LOGO/WEBSITE ---
-  const handleUpdateSettings = async () => {
-    try {
-      await axios.patch(`${API_URL}/admin/settings`, settings);
-      alert("✅ Đã cập nhật cấu hình thành công!");
-    } catch (error: any) { 
-      console.error("Lỗi chi tiết:", error.response?.data);
-      alert("❌ Lỗi khi lưu: " + (error.response?.data?.message || "Kiểm tra lại Backend")); 
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}/plan`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(planForm)
+      });
+      if (res.ok) {
+        toast.success('Nâng cấp thành công!');
+        setShowPlanModal(false);
+        fetchUsers();
+      }
+    } catch (err) {
+      toast.error('Lỗi nâng cấp');
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="animate-spin text-blue-600" size={40} />
-    </div>
-  );
+  // 3. Hàm Tặng Voucher
+  const handleAddVoucher = async (e: any) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}/voucher`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voucherCode })
+      });
+      if (res.ok) {
+        toast.success('Đã tặng Voucher!');
+        setShowVoucherModal(false);
+        fetchUsers();
+      }
+    } catch (err) {
+      toast.error('Lỗi tặng Voucher');
+    }
+  };
+
+  // 4. Hàm Xóa / Khôi phục
+  const toggleUserStatus = async (user: any) => {
+    const isDeleting = user.status === 'active';
+    const action = isDeleting ? 'delete' : 'restore';
+    const method = isDeleting ? 'DELETE' : 'PUT';
+
+    if (!confirm(`Bạn có chắc muốn ${isDeleting ? 'Khóa' : 'Khôi phục'} tài khoản này?`)) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${user.id}${isDeleting ? '' : '/restore'}`, {
+        method
+      });
+      if (res.ok) {
+        toast.success('Cập nhật trạng thái thành công!');
+        fetchUsers();
+      }
+    } catch (err) {
+      toast.error('Lỗi hệ thống');
+    }
+  };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen text-slate-800 font-[family-name:var(--font-geist-sans)]">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-black flex items-center gap-3">
-          <Settings className="text-blue-600" size={32} /> HỆ THỐNG QUẢN TRỊ
-        </h1>
-        <span className="bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">Admin Control</span>
+    <div className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Quản lý Khách hàng</h1>
+
+      {/* TABS PHÂN LOẠI */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 overflow-x-auto">
+        {['ALL', 'FREE', 'PRO', 'GOLD', 'DIAMOND', 'DELETED'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors ${
+              activeTab === tab 
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {tab === 'ALL' ? 'Tất cả' : tab === 'DELETED' ? 'Đã khóa' : `Gói ${tab}`}
+          </button>
+        ))}
       </div>
 
-      {/* --- PHẦN 1: THỐNG KÊ --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 text-black">
-        <StatCard icon={<DollarSign size={20}/>} label="Doanh thu" value={`${(stats?.totalRevenue || 0).toLocaleString()}đ`} color="text-green-600" />
-        <StatCard icon={<Activity size={20}/>} label="Tăng trưởng" value={stats?.growthRate || "0%"} color="text-blue-600" />
-        <StatCard icon={<Users size={20}/>} label="Người dùng" value={stats?.totalUsers || 0} color="text-purple-600" />
-        <StatCard icon={<Bell size={20}/>} label="Tháng này" value={`${(stats?.thisMonthRevenue || 0).toLocaleString()}đ`} color="text-orange-600" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-black mb-8">
-        {/* --- KHỐI CẤU HÌNH --- */}
-        <div className="bg-white p-6 rounded-[32px] shadow-xl border border-blue-50 h-fit">
-          <h2 className="font-bold mb-6 flex items-center gap-2 text-blue-600 uppercase text-xs tracking-widest">
-            <ImageIcon size={16}/> Cấu hình thương hiệu
-          </h2>
-          <div className="space-y-4">
-            <input placeholder="Tên Website" className="w-full p-4 bg-slate-50 rounded-2xl border outline-none font-bold" value={settings.websiteName} onChange={e => setSettings({...settings, websiteName: e.target.value})} />
-            <input placeholder="Logo URL" className="w-full p-4 bg-slate-50 rounded-2xl border outline-none" value={settings.logoUrl} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
-            <textarea placeholder="Thông báo chạy chữ..." className="w-full p-4 bg-slate-50 rounded-2xl border min-h-[80px]" value={settings.announcement} onChange={e => setSettings({...settings, announcement: e.target.value})} />
-            <button onClick={handleUpdateSettings} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
-              <Save size={20}/> LƯU CÀI ĐẶT
-            </button>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AdminToolCard title="Thông báo gia hạn" desc="Quét tự động các Shop sắp hết hạn" icon={<RefreshCcw className="text-orange-500"/>} action={async () => { await axios.post(`${API_URL}/admin/check-renewal`); alert("Đã gửi thông báo!"); }} />
-                <AdminToolCard title="Đăng bài hệ thống" desc="Gửi tin tức đến toàn bộ người dùng" icon={<Globe className="text-blue-500"/>} action={() => alert("Sắp ra mắt")} />
-            </div>
-            <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center">
-                <p className="text-[10px] font-black text-slate-300 uppercase mb-4">Preview Header</p>
-                <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 rounded-full border">
-                    {settings.logoUrl ? <img src={settings.logoUrl} className="h-6 object-contain" alt="Logo" /> : <div className="h-6 w-6 bg-slate-200 rounded-full"/>}
-                    <span className="font-black text-lg">{settings.websiteName || "Dropbuy"}</span>
-                </div>
-            </div>
-        </div>
-      </div>
-
-      {/* --- PHẦN 3: VOUCHER & KHÁCH HÀNG --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-black">
-        <div className="bg-white p-6 rounded-[32px] shadow-xl border border-blue-50">
-            <h2 className="font-bold mb-6 flex items-center gap-2 text-blue-600 uppercase text-xs tracking-widest">
-                <Ticket size={16}/> Kho Voucher Giảm giá
-            </h2>
-            <div className="bg-slate-50 p-5 rounded-[28px] border-2 border-dashed border-blue-100 space-y-4 mb-6">
-                <input placeholder="MÃ GIẢM GIÁ" className="w-full p-4 bg-white rounded-2xl border outline-none font-black text-blue-600 text-center uppercase" value={newVoucher.code} onChange={e => setNewVoucher({...newVoucher, code: e.target.value.toUpperCase()})} />
-                <div className="grid grid-cols-2 gap-2">
-                    <input type="number" placeholder="Số..." className="w-full p-4 bg-white rounded-2xl border outline-none font-bold" value={newVoucher.discount} onChange={e => setNewVoucher({...newVoucher, discount: Number(e.target.value)})} />
-                    <select className="w-full p-4 bg-white rounded-2xl border outline-none font-black text-blue-600 cursor-pointer shadow-sm" value={newVoucher.type} onChange={e => setNewVoucher({...newVoucher, type: e.target.value})} >
-                        <option value="fixed">đ</option>
-                        <option value="percent">%</option>
-                    </select>
-                </div>
-                <button onClick={handleCreateVoucher} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 mt-2">
-                    <Plus size={20}/> THÊM VOUCHER MỚI
-                </button>
-            </div>
-
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {vouchers.map((v: any) => (
-                    <div key={v.id} className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 flex justify-between items-center shadow-sm">
-                        <div>
-                            <p className="font-black text-blue-600">{v.code}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">Giảm {v.type === 'percent' ? `${v.discount}%` : `${v.discount.toLocaleString()}đ`}</p>
-                        </div>
-                        <button onClick={() => handleDeleteVoucher(v.id)} className="p-2 text-slate-200 hover:text-red-500 transition-colors">
-                            <Trash2 size={18}/>
+      {/* BẢNG DANH SÁCH */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 text-gray-500 text-sm">
+            <tr>
+              <th className="p-4 font-medium">Khách hàng</th>
+              <th className="p-4 font-medium">Gói hiện tại</th>
+              <th className="p-4 font-medium">Ngày hết hạn</th>
+              <th className="p-4 font-medium text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={4} className="p-4 text-center">Đang tải...</td></tr>
+            ) : filteredUsers.length === 0 ? (
+              <tr><td colSpan={4} className="p-4 text-center text-gray-500">Không có dữ liệu</td></tr>
+            ) : (
+              filteredUsers.map(user => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4">
+                    <div className="font-medium text-gray-900">{user.name}</div>
+                    <div className="text-sm text-gray-500">{user.email}</div>
+                    {user.vouchers?.length > 0 && (
+                      <div className="text-xs text-orange-500 mt-1">
+                        Voucher: {user.vouchers.join(', ')}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full 
+                      ${user.plan === 'DIAMOND' ? 'bg-purple-100 text-purple-700' : 
+                        user.plan === 'GOLD' ? 'bg-yellow-100 text-yellow-700' : 
+                        user.plan === 'PRO' ? 'bg-blue-100 text-blue-700' : 
+                        'bg-gray-100 text-gray-700'}`}
+                    >
+                      {user.plan}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {user.planExpire ? new Date(user.planExpire).toLocaleDateString('vi-VN') : 'Không giới hạn'}
+                  </td>
+                  <td className="p-4 text-right space-x-2">
+                    {user.status === 'active' ? (
+                      <>
+                        <button onClick={() => { setSelectedUser(user); setShowVoucherModal(true); }} className="text-xs px-3 py-1.5 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 font-medium">
+                          + Voucher
                         </button>
-                    </div>
-                ))}
-            </div>
-        </div>
-
-        <div className="lg:col-span-2 bg-white p-6 rounded-[32px] shadow-xl border border-blue-50">
-            <h2 className="font-bold mb-6 flex items-center gap-2 text-blue-600 uppercase text-xs tracking-widest">
-                <Users size={16}/> Khách hàng hiện tại
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar text-black">
-                {users.map((u: any) => (
-                    <div key={u.id} className="p-4 bg-slate-50 rounded-[24px] border border-transparent hover:border-blue-100 transition-all flex items-center gap-4">
-                        <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center font-black text-blue-600 border shadow-sm">{u.name?.charAt(0) || "U"}</div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-black text-slate-800 text-sm truncate">{u.name || "Khách hàng"}</h3>
-                            <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
-                        </div>
-                        <div className="text-right">
-                            <span className={`text-[8px] px-2 py-1 rounded-full font-black uppercase ${u.workspaces[0]?.workspace?.plan === 'free' ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-600'}`}>{u.workspaces[0]?.workspace?.plan || "Free"}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+                        <button onClick={() => { setSelectedUser(user); setShowPlanModal(true); }} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-medium border-l border-white">
+                          Nâng cấp
+                        </button>
+                        <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 font-medium border-l border-white">
+                          Khóa
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 font-medium">
+                        Khôi phục
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    </div>
-  );
-}
 
-// CÁC COMPONENT PHỤ GIỮ NGUYÊN
-function StatCard({ icon, label, value, color }: any) {
-    return (
-        <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-                <div className={`p-2 rounded-xl bg-slate-50 ${color}`}>{icon}</div>
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{label}</span>
+      {/* --- MODAL NÂNG CẤP GÓI --- */}
+      {showPlanModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <form onSubmit={handleUpgradePlan} className="bg-white p-6 rounded-xl w-full max-w-sm shadow-xl">
+            <h3 className="font-bold text-lg mb-4">Nâng cấp: {selectedUser?.name}</h3>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-1">Chọn gói</label>
+                <select 
+                  className="w-full border rounded-lg px-3 py-2"
+                  value={planForm.plan}
+                  onChange={e => setPlanForm({...planForm, plan: e.target.value})}
+                >
+                  <option value="PRO">Gói PRO</option>
+                  <option value="GOLD">Gói GOLD</option>
+                  <option value="DIAMOND">Gói DIAMOND</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Số ngày tặng thêm</label>
+                <input 
+                  type="number" 
+                  className="w-full border rounded-lg px-3 py-2"
+                  value={planForm.extraDays}
+                  onChange={e => setPlanForm({...planForm, extraDays: Number(e.target.value)})}
+                />
+              </div>
             </div>
-            <p className={`text-2xl font-black ${color}`}>{value || "0"}</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowPlanModal(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Hủy</button>
+              <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">Lưu thay đổi</button>
+            </div>
+          </form>
         </div>
-    );
-}
+      )}
 
-function AdminToolCard({ title, desc, icon, action }: any) {
-  return (
-      <button onClick={action} className="bg-white p-6 rounded-[32px] border hover:border-blue-500 transition-all flex items-start gap-4 text-left shadow-sm group active:scale-95 w-full">
-          <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-blue-50 transition-colors">{icon}</div>
-          <div>
-              <h3 className="font-black text-slate-800 text-sm uppercase tracking-tighter">{title}</h3>
-              <p className="text-[10px] text-slate-400 mt-1 font-medium">{desc}</p>
-          </div>
-      </button>
+      {/* --- MODAL TẶNG VOUCHER --- */}
+      {showVoucherModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <form onSubmit={handleAddVoucher} className="bg-white p-6 rounded-xl w-full max-w-sm shadow-xl">
+            <h3 className="font-bold text-lg mb-4">Tặng Voucher: {selectedUser?.name}</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-1">Nhập mã Voucher</label>
+              <input 
+                type="text" 
+                required
+                className="w-full border rounded-lg px-3 py-2 uppercase"
+                placeholder="VD: KHVIP50"
+                value={voucherCode}
+                onChange={e => setVoucherCode(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowVoucherModal(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Hủy</button>
+              <button type="submit" className="px-4 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700">Tặng ngay</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
