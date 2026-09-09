@@ -11,14 +11,15 @@ export default function AdminDashboardPage() {
     discount: 0,
     type: 'fixed', // 'fixed' hoặc 'percent'
     minOrder: 0,
-    usageLimit: 100
+    usageLimit: 100,
+    validUntil: '' // MỚI: Thêm trường Hạn sử dụng
   });
 
   // --- STATES KHÁCH HÀNG ---
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL'); 
-  const [searchTerm, setSearchTerm] = useState(''); // MỚI: State cho ô tìm kiếm
+  const [searchTerm, setSearchTerm] = useState('');
 
   // --- STATES MODALS ---
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -135,11 +136,16 @@ export default function AdminDashboardPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/vouchers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(voucherForm)
+        body: JSON.stringify({
+          ...voucherForm,
+          // Gửi thêm validUntil lên Backend (Chuyển sang ISO String nếu có nhập)
+          validUntil: voucherForm.validUntil ? new Date(voucherForm.validUntil).toISOString() : null
+        })
       });
       if (res.ok) {
         toast.success('Tạo Voucher thành công!');
-        setVoucherForm({ code: '', discount: 0, type: 'fixed', minOrder: 0, usageLimit: 100 });
+        // Reset form bao gồm cả validUntil
+        setVoucherForm({ code: '', discount: 0, type: 'fixed', minOrder: 0, usageLimit: 100, validUntil: '' });
         fetchData();
       } else {
         toast.error('Có lỗi xảy ra khi tạo Voucher');
@@ -211,6 +217,14 @@ export default function AdminDashboardPage() {
                 <input type="number" required className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="VD: 50000 hoặc 20" value={voucherForm.discount || ''} onChange={e => setVoucherForm({ ...voucherForm, discount: Number(e.target.value) })} />
               </div>
             </div>
+            
+            {/* TRƯỜNG MỚI: Hạn sử dụng */}
+            <div>
+               <label className="block text-sm font-medium mb-1 text-gray-700">Ngày hết hạn</label>
+               <input type="date" className="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none bg-white" value={voucherForm.validUntil} onChange={e => setVoucherForm({ ...voucherForm, validUntil: e.target.value })} />
+               <p className="text-[10px] text-gray-400 mt-1">Để trống nếu mã có hiệu lực vĩnh viễn.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">Đơn tối thiểu</label>
@@ -232,6 +246,8 @@ export default function AdminDashboardPage() {
               <tr>
                 <th className="p-3 font-medium rounded-tl-lg">Mã Code</th>
                 <th className="p-3 font-medium">Mức giảm</th>
+                {/* MỚI: Cột Hạn dùng */}
+                <th className="p-3 font-medium">Hạn dùng</th>
                 <th className="p-3 font-medium">Đơn tối thiểu</th>
                 <th className="p-3 font-medium">Đã dùng / Giới hạn</th>
                 <th className="p-3 font-medium text-right rounded-tr-lg">Thao tác</th>
@@ -242,6 +258,10 @@ export default function AdminDashboardPage() {
                 <tr key={v.id} className="hover:bg-gray-50">
                   <td className="p-3 font-bold text-orange-600">{v.code}</td>
                   <td className="p-3 font-medium">{v.type === 'percent' ? `${v.discount}%` : `${v.discount.toLocaleString()}đ`}</td>
+                  {/* MỚI: Dữ liệu Hạn dùng */}
+                  <td className="p-3 text-sm text-gray-600">
+                    {v.validUntil ? new Date(v.validUntil).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
+                  </td>
                   <td className="p-3 text-gray-600">{v.minOrder.toLocaleString()}đ</td>
                   <td className="p-3 text-gray-600">{v.usedCount} / {v.usageLimit}</td>
                   <td className="p-3 text-right">
@@ -249,7 +269,7 @@ export default function AdminDashboardPage() {
                   </td>
                 </tr>
               ))}
-              {vouchers.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">Hệ thống chưa có voucher nào.</td></tr>}
+              {vouchers.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-400">Hệ thống chưa có voucher nào.</td></tr>}
             </tbody>
           </table>
         </div>
