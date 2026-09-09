@@ -702,8 +702,35 @@ function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () =>
     const [userVouchers, setUserVouchers] = useState<any[]>([]);
     const [loadingVouchers, setLoadingVouchers] = useState(true);
 
-    const fetchVouchersDetail = async () => {
-        if (!user || !user.vouchers || user.vouchers.length === 0) {
+   const fetchVouchersDetail = async () => {
+        if (!user || !user.vouchers) {
+            setUserVouchers([]);
+            setLoadingVouchers(false);
+            return;
+        }
+
+        // ÉP KIỂU MẢNG CHUẨN ĐỂ FIX LỖI "VÍ TRỐNG"
+        let codesToFetch: string[] = [];
+        try {
+             if (Array.isArray(user.vouchers)) {
+                  codesToFetch = user.vouchers;
+             } else if (typeof user.vouchers === 'string') {
+                  const parsed = JSON.parse(user.vouchers);
+                  if (Array.isArray(parsed)) {
+                       codesToFetch = parsed;
+                  } else if (typeof parsed === 'string') {
+                       codesToFetch = JSON.parse(parsed); // Parse lần 2 nếu bị lồng
+                  } else {
+                       codesToFetch = [user.vouchers];
+                  }
+             }
+        } catch(e) {
+             if(typeof user.vouchers === 'string' && user.vouchers.length > 0) {
+                 codesToFetch = [user.vouchers];
+             }
+        }
+
+        if (codesToFetch.length === 0) {
             setUserVouchers([]);
             setLoadingVouchers(false);
             return;
@@ -713,7 +740,7 @@ function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () =>
             setLoadingVouchers(true);
             const token = localStorage.getItem("token");
             const res = await axios.post(`${API_URL}/social/get-vouchers-detail`, 
-                { codes: user.vouchers },
+                { codes: codesToFetch }, // Truyền mảng chuẩn lên
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
@@ -722,8 +749,7 @@ function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () =>
             }
         } catch (error) {
             console.error("Lỗi lấy thông tin voucher:", error);
-            // Fallback tạm khi backend lỗi
-            setUserVouchers(user.vouchers.map((code: string) => ({
+            setUserVouchers(codesToFetch.map((code: string) => ({
                 code: code,
                 discountValue: "??",
                 discountType: "percent",
