@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-// Đường dẫn file lưu trữ trên Server
 const dataFilePath = path.join(process.cwd(), 'data', 'guides.json');
 
-// Hàm đọc dữ liệu
 const readData = () => {
   try {
     if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
@@ -21,13 +19,11 @@ const readData = () => {
   }
 };
 
-// GET: Lấy danh sách Hướng dẫn & Prompts
 export async function GET() {
   const data = readData();
   return NextResponse.json(data);
 }
 
-// POST: Lưu danh sách mới (Dành cho Admin)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
