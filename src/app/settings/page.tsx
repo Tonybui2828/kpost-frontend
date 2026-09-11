@@ -264,7 +264,7 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
    // DÁN ĐOẠN CODE MỚI NÀY VÀO
 const handleManualAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true); // Sửa setLoading(true) thành setIsSubmitting(true)
     try {
         const payload: any = { ...formData };
         if (authMode === "register") {
@@ -294,7 +294,6 @@ const handleManualAuth = async (e: React.FormEvent) => {
         }
     } catch (error: any) {
         console.error("LỖI ĐĂNG NHẬP:", error.response || error);
-        
         const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
         
         if (typeof errorMsg === 'string') {
@@ -305,10 +304,9 @@ const handleManualAuth = async (e: React.FormEvent) => {
              toast.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
         }
     } finally { 
-        setLoading(false); 
+        setIsSubmitting(false); // Đảm bảo dùng setIsSubmitting(false) ở đây
     }
 };
-
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!forgotEmail) return alert("Vui lòng nhập email của bạn!");
