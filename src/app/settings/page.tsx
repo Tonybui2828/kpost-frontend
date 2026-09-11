@@ -261,35 +261,46 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
         return diffDays > 0 ? diffDays : 0;
     };
 
-    const handleManualAuth = async (e: React.FormEvent) => {
+   const handleManualAuth = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitting(true);
+        setLoading(true);
         try {
             const payload: any = { ...formData };
             if (authMode === "register") {
-                let savedRef = localStorage.getItem("kpost_affiliate_ref");
+                const savedRef = localStorage.getItem("kpost_affiliate_ref");
                 if (savedRef) {
-                    if (savedRef.startsWith("KPOST_")) {
-                        savedRef = savedRef.replace("KPOST_", "");
-                    }
-                    payload.referredBy = savedRef; 
+                    payload.affiliateBy = savedRef; 
                 }
             }
+            
             const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
             const res = await axios.post(`${API_URL}${endpoint}`, payload);
             
             if (authMode === "login") {
+                // ĐÃ SỬA: Đảm bảo lưu đúng token và chuyển hướng
                 localStorage.setItem("token", res.data.token);
                 localStorage.setItem("workspaceId", res.data.wid);
-                window.location.href = "/dashboard"; 
+                
+                // Hiển thị thông báo chào mừng Admin (Tùy chọn)
+                if(res.data.email === 'tech28.vn@gmail.com') {
+                     toast.success("Xin chào Quản trị viên!");
+                }
+                
+                // Delay 1 chút rồi mới chuyển hướng để kịp lưu localStorage
+                setTimeout(() => {
+                    window.location.href = "/dashboard";
+                }, 500);
             } else {
                 toast.success("Đăng ký thành công! Mời bạn đăng nhập.");
                 setAuthMode("login");
             }
         } catch (error: any) {
-            // Hiển thị lỗi do Backend trả về (bao gồm cả lỗi Tài khoản bị khóa khi đăng nhập thủ công)
-            toast.error(error.response?.data?.message || "Lỗi xử lý xác thực!");
-        } finally { setIsSubmitting(false); }
+            // Sửa lại cách bắt lỗi NestJS cho chuẩn
+            const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
+            toast.error(typeof errorMsg === 'string' ? errorMsg : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const handleForgotPassword = async (e: React.FormEvent) => {
