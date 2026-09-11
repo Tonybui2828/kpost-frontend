@@ -912,7 +912,192 @@ function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () =>
     ) 
 }
 
-function GuideTab() { return <div className="p-10 text-center text-black animate-in fade-in"><BookOpen size={48} className="mx-auto text-slate-200 mb-4" /><p className="font-black text-slate-400 uppercase italic">Tài liệu đang được cập nhật...</p></div> }
+function GuideTab() {
+  const [guides, setGuides] = useState<any[]>([]);
+  const [prompts, setPrompts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Lấy dữ liệu thực từ API Backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get('/api/admin/guides');
+        setGuides(res.data.guides || []);
+        setPrompts(res.data.prompts || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Đã copy Prompt vào khay nhớ tạm!");
+  };
+
+  if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse"><Loader2 size={24} className="animate-spin mx-auto mb-2" /> Đang đồng bộ dữ liệu...</div>;
+
+  return (
+    <div className="text-black animate-in fade-in space-y-10">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex items-center gap-4">
+        <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl"><BookOpen size={32} /></div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Hướng dẫn Khách mới</h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Tài liệu & Thư viện Prompt AI độc quyền</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* CỘT 1: TÀI LIỆU HƯỚNG DẪN */}
+        <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <FileText className="text-blue-600" size={20} /> Tài liệu biểu mẫu
+          </h3>
+          {guides.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật tài liệu...</p>
+          ) : (
+            <div className="space-y-4">
+              {guides.map((item, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden pr-2">
+                    <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><FileText size={18} /></div>
+                    <p className="font-bold text-sm text-slate-700 truncate" title={item.title}>{item.title}</p>
+                  </div>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="shrink-0 bg-slate-900 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors">
+                    Tải Xuống
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* CỘT 2: THƯ VIỆN PROMPT AI */}
+        <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <Sparkles className="text-orange-500" size={20} /> Thư viện Prompt AI
+          </h3>
+          {prompts.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật Prompt...</p>
+          ) : (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {prompts.map((item, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-orange-200 transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-black text-sm text-slate-800">{item.title}</p>
+                    <button onClick={() => handleCopy(item.content)} className="text-slate-400 hover:text-blue-600 bg-slate-50 p-2 rounded-lg transition-colors">
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+  // Lấy dữ liệu từ Backend (Tạm thời dùng localStorage nếu chưa có API)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Tương lai bạn ráp API vào đây:
+        // const res = await axios.get(`${API_URL}/admin/get-guides`);
+        // setGuides(res.data.guides); setPrompts(res.data.prompts);
+
+        // Tạm thời lấy từ LocalStorage (Đồng bộ với trang Admin bên dưới)
+        const savedGuides = JSON.parse(localStorage.getItem('kpost_admin_guides') || '[]');
+        const savedPrompts = JSON.parse(localStorage.getItem('kpost_admin_prompts') || '[]');
+        setGuides(savedGuides);
+        setPrompts(savedPrompts);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Đã copy Prompt vào khay nhớ tạm!");
+  };
+
+  if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse"><Loader2 size={24} className="animate-spin mx-auto mb-2" /> Đang tải dữ liệu...</div>;
+
+  return (
+    <div className="text-black animate-in fade-in space-y-10">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex items-center gap-4">
+        <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl"><BookOpen size={32} /></div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Hướng dẫn Khách mới</h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Tài liệu & Thư viện Prompt AI độc quyền</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* CỘT 1: TÀI LIỆU HƯỚNG DẪN */}
+        <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <FileText className="text-blue-600" size={20} /> Tài liệu biểu mẫu
+          </h3>
+          {guides.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Chưa có tài liệu nào.</p>
+          ) : (
+            <div className="space-y-4">
+              {guides.map((item, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><FileText size={18} /></div>
+                    <p className="font-bold text-sm text-slate-700 truncate">{item.title}</p>
+                  </div>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="shrink-0 bg-slate-900 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors">
+                    Tải Xuống
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* CỘT 2: THƯ VIỆN PROMPT AI */}
+        <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <Sparkles className="text-orange-500" size={20} /> Thư viện Prompt AI
+          </h3>
+          {prompts.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Chưa có Prompt nào.</p>
+          ) : (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {prompts.map((item, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-orange-200 transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-black text-sm text-slate-800">{item.title}</p>
+                    <button onClick={() => handleCopy(item.content)} className="text-slate-400 hover:text-blue-600 bg-slate-50 p-2 rounded-lg transition-colors">
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TermsTab() {
   useEffect(() => {
