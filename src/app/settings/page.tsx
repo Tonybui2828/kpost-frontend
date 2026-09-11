@@ -261,47 +261,53 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
         return diffDays > 0 ? diffDays : 0;
     };
 
-   const handleManualAuth = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const payload: any = { ...formData };
-            if (authMode === "register") {
-                const savedRef = localStorage.getItem("kpost_affiliate_ref");
-                if (savedRef) {
-                    payload.affiliateBy = savedRef; 
-                }
+   // DÁN ĐOẠN CODE MỚI NÀY VÀO
+const handleManualAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+        const payload: any = { ...formData };
+        if (authMode === "register") {
+            const savedRef = localStorage.getItem("kpost_affiliate_ref");
+            if (savedRef) {
+                payload.affiliateBy = savedRef; 
             }
-            
-            const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
-            const res = await axios.post(`${API_URL}${endpoint}`, payload);
-            
-            if (authMode === "login") {
-                // ĐÃ SỬA: Đảm bảo lưu đúng token và chuyển hướng
-                localStorage.setItem("token", res.data.token);
-                localStorage.setItem("workspaceId", res.data.wid);
-                
-                // Hiển thị thông báo chào mừng Admin (Tùy chọn)
-                if(res.data.email === 'tech28.vn@gmail.com') {
-                     toast.success("Xin chào Quản trị viên!");
-                }
-                
-                // Delay 1 chút rồi mới chuyển hướng để kịp lưu localStorage
-                setTimeout(() => {
-                    window.location.href = "/dashboard";
-                }, 500);
-            } else {
-                toast.success("Đăng ký thành công! Mời bạn đăng nhập.");
-                setAuthMode("login");
-            }
-        } catch (error: any) {
-            // Sửa lại cách bắt lỗi NestJS cho chuẩn
-            const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
-            toast.error(typeof errorMsg === 'string' ? errorMsg : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
-        } finally { 
-            setLoading(false); 
         }
-    };
+        
+        const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
+        const res = await axios.post(`${API_URL}${endpoint}`, payload);
+        
+        if (authMode === "login") {
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("workspaceId", res.data.wid);
+            
+            if(res.data.email === 'tech28.vn@gmail.com') {
+                 toast.success("Xin chào Quản trị viên!");
+            }
+            
+            setTimeout(() => {
+                window.location.href = "/dashboard";
+            }, 500);
+        } else {
+            toast.success("Đăng ký thành công! Mời bạn đăng nhập.");
+            setAuthMode("login");
+        }
+    } catch (error: any) {
+        console.error("LỖI ĐĂNG NHẬP:", error.response || error);
+        
+        const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
+        
+        if (typeof errorMsg === 'string') {
+             toast.error(errorMsg);
+        } else if (errorMsg.message && typeof errorMsg.message === 'string') {
+             toast.error(errorMsg.message);
+        } else {
+             toast.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+        }
+    } finally { 
+        setLoading(false); 
+    }
+};
 
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
