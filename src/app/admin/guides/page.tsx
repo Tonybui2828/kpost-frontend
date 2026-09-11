@@ -15,7 +15,7 @@ export default function AdminGuideManager() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('/api/admin/guides');
+        const res = await axios.get('/api/admin/guide-data');
         setGuides(res.data.guides || []);
         setPrompts(res.data.prompts || []);
       } catch (error) {
@@ -30,7 +30,7 @@ export default function AdminGuideManager() {
   const saveToDB = async (updatedGuides: any, updatedPrompts: any) => {
     setSaving(true);
     try {
-      await axios.post('/api/admin/guides', { guides: updatedGuides, prompts: updatedPrompts });
+      await axios.post('/api/admin/guide-data', { guides: updatedGuides, prompts: updatedPrompts });
       toast.success("Đã đồng bộ thành công!");
     } catch (error) {
       toast.error("Lỗi khi lưu dữ liệu");

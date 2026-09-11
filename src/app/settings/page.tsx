@@ -921,7 +921,7 @@ function GuideTab() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('/api/admin/guides');
+        const res = await axios.get('/api/admin/guide-data');
         setGuides(res.data.guides || []);
         setPrompts(res.data.prompts || []);
       } catch (error) {
