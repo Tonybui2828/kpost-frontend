@@ -917,11 +917,11 @@ function GuideTab() {
   const [prompts, setPrompts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Gọi API lấy dữ liệu thực từ VPS
+  // GỌI API CỦA NEXT.JS ĐỂ LẤY DỮ LIỆU MÀ ADMIN VỪA LƯU
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('/api/admin/guide-data');
+        const res = await axios.get('/api/admin/system-guides');
         setGuides(res.data.guides || []);
         setPrompts(res.data.prompts || []);
       } catch (error) {
@@ -932,6 +932,76 @@ function GuideTab() {
     };
     fetchData();
   }, []);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Đã copy Prompt vào khay nhớ tạm!");
+  };
+
+  if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang đồng bộ dữ liệu...</div>;
+
+  return (
+    <div className="text-black animate-in fade-in space-y-10">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+        <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl shrink-0"><BookOpen size={32} /></div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Hướng dẫn Khách mới</h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Tài liệu & Thư viện Prompt AI độc quyền</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="bg-slate-50 rounded-[32px] p-6 md:p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <FileText className="text-blue-600" size={20} /> Tài liệu biểu mẫu
+          </h3>
+          {guides.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật tài liệu...</p>
+          ) : (
+            <div className="space-y-4">
+              {guides.map((item, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden pr-2">
+                    <div className="bg-blue-50 p-2 rounded-xl text-blue-600 shrink-0"><FileText size={18} /></div>
+                    <p className="font-bold text-sm text-slate-700 truncate" title={item.title}>{item.title}</p>
+                  </div>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="shrink-0 bg-slate-900 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors">
+                    Tải Xuống
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-50 rounded-[32px] p-6 md:p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <Sparkles className="text-orange-500" size={20} /> Thư viện Prompt AI
+          </h3>
+          {prompts.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật Prompt...</p>
+          ) : (
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              {prompts.map((item, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-orange-200 transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-black text-sm text-slate-800 flex-1 pr-2">{item.title}</p>
+                    <button onClick={() => handleCopy(item.content)} className="text-slate-400 hover:text-blue-600 bg-slate-50 p-2 rounded-lg transition-colors shrink-0">
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 whitespace-pre-wrap">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
