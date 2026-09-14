@@ -228,6 +228,7 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
     const [formData, setFormData] = useState({ email: "", password: "", name: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [forgotEmail, setForgotEmail] = useState("");
+    const [loadingState, setLoadingState] = useState(false);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -236,13 +237,7 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
         if (errorParam === 'account_locked') {
             toast.error('Tài khoản của bạn đã bị khóa vui lòng liên hệ : support@kpost.vn để được hỗ trợ', {
                 duration: 8000,
-                style: {
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    border: '1px solid #f87171',
-                    fontWeight: 'bold',
-                    padding: '16px'
-                }
+                style: { background: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171', fontWeight: 'bold', padding: '16px' }
             });
             window.history.replaceState({}, document.title, window.location.pathname);
         }
@@ -258,6 +253,41 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
     const handleManualAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+<<<<<<< Updated upstream
+        setLoadingState(true);
+        try {
+            const payload: any = { ...formData };
+            if (authMode === "register") {
+                let savedRef = localStorage.getItem("kpost_affiliate_ref");
+                if (savedRef) {
+                    if (savedRef.startsWith("KPOST_")) {
+                        savedRef = savedRef.replace("KPOST_", "");
+                    }
+                    payload.referredBy = savedRef; 
+                }
+            }
+            const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
+            const res = await axios.post(`${API_URL}${endpoint}`, payload);
+            
+            if (authMode === "login") {
+                localStorage.setItem("token", res.data.token);
+                localStorage.setItem("workspaceId", res.data.wid);
+                
+                if(res.data.email === 'tech28.vn@gmail.com') {
+                     toast.success("Xin chào Quản trị viên!");
+                }
+                
+                setTimeout(() => {
+                    window.location.href = "/dashboard";
+                }, 500);
+            } else {
+                toast.success("Đăng ký thành công! Mời bạn đăng nhập.");
+                setAuthMode("login");
+            }
+        } catch (error: any) {
+            console.error("LỖI ĐĂNG NHẬP:", error.response || error);
+            const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
+=======
         try {
             const payload: any = { ...formData };
             if (authMode === "register") {
@@ -289,6 +319,7 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
             console.error("LỖI ĐĂNG NHẬP:", error.response || error);
             const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
             
+>>>>>>> Stashed changes
             if (typeof errorMsg === 'string') {
                  toast.error(errorMsg);
             } else if (errorMsg.message && typeof errorMsg.message === 'string') {
@@ -298,6 +329,10 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
             }
         } finally { 
             setIsSubmitting(false); 
+<<<<<<< Updated upstream
+            setLoadingState(false);
+=======
+>>>>>>> Stashed changes
         }
     };
 
