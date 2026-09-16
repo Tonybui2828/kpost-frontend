@@ -38,7 +38,7 @@ function AiMarketingContent() {
   const [productUrl, setProductUrl] = useState(""); 
   const [workspaceId, setWorkspaceId] = useState<string>("");
 
-  // 👉 1. ĐOẠN CODE BẮT LINK AFFILIATE (MÌNH VỪA CHÈN VÀO ĐÂY GIÚP BẠN)
+  // 👉 1. ĐOẠN CODE BẮT LINK AFFILIATE
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -56,7 +56,7 @@ function AiMarketingContent() {
   useEffect(() => {
     const savedTopic = localStorage.getItem("pendingAIPost_topic");
     const savedImgs = localStorage.getItem("pendingAIPost_imgs");
-    const savedLink = localStorage.getItem("pendingAIPost_link"); // Đọc link sản phẩm
+    const savedLink = localStorage.getItem("pendingAIPost_link");
 
     if (savedTopic) {
       setTopic(savedTopic);
@@ -70,7 +70,6 @@ function AiMarketingContent() {
       localStorage.removeItem("pendingAIPost_imgs");
     }
 
-    // THÊM ĐOẠN NÀY: NẾU CÓ LINK, TỰ ĐỘNG ĐIỀN VÀO Ô DÁN LINK
     if (savedLink) {
       setProductUrl(savedLink);
       localStorage.removeItem("pendingAIPost_link");
@@ -105,14 +104,25 @@ function AiMarketingContent() {
     setAvailableImages(prev => [...prev, ...newUrls]);
   };
 
+  // 🚀 ĐÃ SỬA: Hàm handleGenerateContent bắt lỗi chi tiết từ Server
   const handleGenerateContent = async () => {
     if (!topic) return alert("Nhập chủ đề!");
     setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/ai-content/generate`, { topic, userId: "admin-01", workspaceId });
-      setResult(res.data);
-      setEditableContent(res.data.content);
-    } catch (e) { alert("AI đang bận!"); } finally { setLoading(false); }
+      
+      // Đảm bảo lấy đúng nội dung từ server trả về
+      const generated = res.data.content || res.data;
+      
+      setResult({ content: generated });
+      setEditableContent(generated);
+    } catch (error: any) { 
+      console.error(error);
+      const errorMsg = error.response?.data?.message || error.message || "AI đang bận hoặc có lỗi xảy ra. Vui lòng thử lại sau.";
+      alert(`kpost.vn says\n\n${errorMsg}`); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handlePostAction = async () => {
