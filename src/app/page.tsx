@@ -52,14 +52,11 @@ function AiMarketingContent() {
     }
   }, []);
 
-  // LẤY DỮ LIỆU TỪ LOCAL STORAGE KHI LOAD TRANG
+  // KIỂM TRA LOCAL STORAGE KHI LOAD TRANG AI MARKETING
   useEffect(() => {
-    const savedId = localStorage.getItem("workspaceId") || "workspace-01";
-    setWorkspaceId(savedId);
-
-    // Bắt dữ liệu từ trang Sản phẩm truyền qua
     const savedTopic = localStorage.getItem("pendingAIPost_topic");
     const savedImgs = localStorage.getItem("pendingAIPost_imgs");
+    const savedLink = localStorage.getItem("pendingAIPost_link"); // Đọc link sản phẩm
 
     if (savedTopic) {
       setTopic(savedTopic);
@@ -68,14 +65,16 @@ function AiMarketingContent() {
 
     if (savedImgs) {
       const imgList = savedImgs.split(',');
-      setAvailableImages(prev => [...new Set([...imgList, ...prev])]); // Lưu vào kho ảnh hiện có
-      setSelectedImages(imgList); // Tự động chọn luôn ảnh này
+      setAvailableImages(prev => [...new Set([...imgList, ...prev])]); 
+      setSelectedImages(imgList);
       localStorage.removeItem("pendingAIPost_imgs");
     }
 
-    // Load Folder
-    const savedGroups = localStorage.getItem("kpost_page_groups");
-    if (savedGroups) setPageGroups(JSON.parse(savedGroups));
+    // THÊM ĐOẠN NÀY: NẾU CÓ LINK, TỰ ĐỘNG ĐIỀN VÀO Ô DÁN LINK
+    if (savedLink) {
+      setProductUrl(savedLink);
+      localStorage.removeItem("pendingAIPost_link");
+    }
   }, []);
 
   // Lấy dữ liệu Fanpage & Fallback lấy params cũ từ URL
