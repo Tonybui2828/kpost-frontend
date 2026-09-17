@@ -9,7 +9,8 @@ import {
   X, Copy, Smartphone, PartyPopper, Rocket, Loader2, Sparkles, CheckCircle2,
   Mail, KeyRound, UserPlus, LogIn, LogOut, ShieldCheck, Fingerprint,
   ShieldAlert, AlertCircle, FileText, Check, MessageCircle, XCircle, Share2,
-  MousePointerClick, Users, ShoppingCart, DollarSign, TrendingUp, CheckCircle, Clock, Ticket
+  MousePointerClick, Users, ShoppingCart, DollarSign, TrendingUp, CheckCircle, Clock, Ticket,
+  AlertTriangle 
 } from "lucide-react";
 
 // --- 1. KẾT NỐI SOCKET ĐỘNG ---
@@ -555,6 +556,7 @@ function SecurityTab() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+  // Lấy trạng thái 2FA từ server khi tải trang
   useEffect(() => {
     const fetchSecurityStatus = async () => {
       try {
@@ -571,6 +573,7 @@ function SecurityTab() {
     fetchSecurityStatus();
   }, [API_URL]);
 
+  // Đổi mật khẩu
   const handleChangePassword = async (e: React.FormEvent) => {
       e.preventDefault();
       if (passwords.new !== passwords.confirm) {
@@ -590,6 +593,7 @@ function SecurityTab() {
       }
   };
 
+  // Bật/Tắt 2FA
   const handleToggle2FA = async () => {
     if (is2FAEnabled) {
       if (confirm("Bạn có chắc chắn muốn TẮT lớp bảo vệ OTP? Tài khoản sẽ kém an toàn hơn.")) {
@@ -621,6 +625,7 @@ function SecurityTab() {
     }
   };
 
+  // Xác nhận OTP để Bật
   const handleVerifyOTPToEnable = async () => {
     setLoading(true);
     try {
@@ -637,6 +642,7 @@ function SecurityTab() {
     setLoading(false);
   };
 
+  // Xóa thiết bị
   const handleRemoveDevice = (id: number) => {
     if(confirm("Đăng xuất khỏi thiết bị này?")) {
       setDevices(devices.filter(d => d.id !== id));
