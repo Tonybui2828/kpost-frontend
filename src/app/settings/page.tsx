@@ -260,10 +260,12 @@ function AccountTab({ user, loading }: { user: any, loading: boolean }) {
             if (authMode === "register") {
                 let savedRef = localStorage.getItem("kpost_affiliate_ref");
                 if (savedRef) {
-                    if (savedRef.startsWith("KPOST_")) {
-                        savedRef = savedRef.replace("KPOST_", "");
-                    }
-                    payload.referredBy = savedRef; 
+                    // Cắt bỏ tiền tố KPOST_ nếu có để Backend dễ xử lý
+                    const cleanRef = savedRef.startsWith("KPOST_") ? savedRef.replace("KPOST_", "") : savedRef;
+                    
+                    // Gửi cả 2 tham số lên API để Backend bắt biến nào cũng dính
+                    payload.referredBy = cleanRef; 
+                    payload.affiliateBy = savedRef;
                 }
             }
             const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
