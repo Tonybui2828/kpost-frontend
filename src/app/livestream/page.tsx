@@ -84,7 +84,7 @@ export default function LiveStreamPage() {
     }
   };
 
-  // 2. TẢI FILE VIDEO MP4 TỪ MÁY LÊN
+  // 2. TẢI FILE VIDEO MP4 TỪ MÁY LÊN (GỌI API UPLOAD-VIDEO CHUẨN MP4)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -95,31 +95,56 @@ export default function LiveStreamPage() {
     }
 
     setIsUploading(true);
-    const toastId = toast.loading("Đang nạp file video lên máy chủ...");
+    const toastId = toast.loading("Đang xử lý và tải video MP4 lên máy chủ...");
 
     try {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = async () => {
-        const base64Data = reader.result;
-        const res = await axios.post(`${API_URL}/social/upload`, {
-          base64: base64Data
-        });
+        const base64Data = reader.result as string;
 
-        if (res.data?.urls?.[0]) {
-          setVideoUrl(res.data.urls[0]);
-          toast.success("Tải video lên máy chủ thành công!", { id: toastId });
-        } else {
-          toast.error("Không nhận được URL video từ máy chủ", { id: toastId });
+        try {
+          // GỌI ENDPOINT /social/upload-video ĐỂ LƯU CHUẨN .MP4
+          const res = await axios.post(`${API_URL}/social/upload-video`, {
+            base64: base64Data,
+            fileName: file.name
+          });
+
+          const uploadedUrl = res.data?.url || res.data?.urls?.[0];
+
+          if (uploadedUrl) {
+            setVideoUrl(uploadedUrl);
+            toast.success("Tải video MP4 lên máy chủ thành công!", { id: toastId });
+          } else {
+            toast.error("Không nhận được đường dẫn video từ máy chủ", { id: toastId });
+          }
+        } catch (uploadErr: any) {
+          // Fallback thử endpoint upload chung nếu server chưa reload
+          try {
+            const fallbackRes = await axios.post(`${API_URL}/social/upload`, {
+              base64: base64Data
+            });
+            const fallbackUrl = fallbackRes.data?.urls?.[0];
+            if (fallbackUrl) {
+              setVideoUrl(fallbackUrl);
+              toast.success("Tải video thành công!", { id: toastId });
+            } else {
+              throw new Error("Lỗi tải video");
+            }
+          } catch (e: any) {
+            toast.error(uploadErr.response?.data?.message || "Lỗi khi tải video lên máy chủ!", { id: toastId });
+          }
+        } finally {
+          setIsUploading(false);
         }
-        setIsUploading(false);
       };
+
       reader.onerror = () => {
-        toast.error("Lỗi khi đọc file video", { id: toastId });
+        toast.error("Lỗi khi đọc file từ máy tính", { id: toastId });
         setIsUploading(false);
       };
     } catch (err: any) {
-      toast.error("Lỗi tải video lên máy chủ", { id: toastId });
+      toast.error("Lỗi xử lý file video", { id: toastId });
       setIsUploading(false);
     }
   };
@@ -149,6 +174,13 @@ export default function LiveStreamPage() {
     if (!videoUrl) {
       return toast.error("Vui lòng chọn hoặc tải lên một video AI / Video bán hàng!");
     }
+
+    // Kiểm tra nếu link là ảnh tĩnh thì cảnh báo ngay
+    const lowerUrl = videoUrl.toLowerCase();
+    if (lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg") || lowerUrl.endsWith(".png") || lowerUrl.endsWith(".webp")) {
+      return toast.error("File được chọn là ẢNH TĨNH (.jpg/.png). Vui lòng tải lên file VIDEO định dạng .mp4!");
+    }
+
     if (selectedPages.length === 0) {
       return toast.error("Vui lòng tích chọn ít nhất 1 Fanpage!");
     }
@@ -261,6 +293,7 @@ export default function LiveStreamPage() {
               <div className="relative aspect-video bg-slate-950 rounded-3xl overflow-hidden flex items-center justify-center border border-slate-200 shadow-inner group">
                 {videoUrl ? (
                   <video
+                    key={videoUrl}
                     src={videoUrl}
                     controls
                     autoPlay
@@ -275,7 +308,7 @@ export default function LiveStreamPage() {
                     </div>
                     <p className="text-sm font-bold text-slate-300">Chưa có video được chọn</p>
                     <p className="text-xs text-slate-500 max-w-sm">
-                      Tải lên video nhân vật AI được xuất từ HeyGen, D-ID, SadTalker hoặc video giới thiệu sản phẩm của bạn
+                      Tải lên video nhân vật AI được xuất từ HeyGen, D-ID, SadTalker hoặc video giới thiệu sản phẩm của bạn (.mp4)
                     </p>
                   </div>
                 )}
@@ -283,7 +316,7 @@ export default function LiveStreamPage() {
                 {isUploading && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-2">
                     <Loader2 size={36} className="animate-spin text-blue-500" />
-                    <p className="text-xs font-black uppercase tracking-widest">Đang tải video lên máy chủ...</p>
+                    <p className="text-xs font-black uppercase tracking-widest">Đang tải video MP4 lên máy chủ...</p>
                   </div>
                 )}
               </div>
@@ -305,7 +338,7 @@ export default function LiveStreamPage() {
                     disabled={isUploading}
                     className="flex-1 py-4 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-slate-900/10"
                   >
-                    <Upload size={16} /> Chọn File Video Từ Máy
+                    <Upload size={16} /> Chọn File Video MP4 Từ Máy
                   </button>
                   {videoUrl && (
                     <button
