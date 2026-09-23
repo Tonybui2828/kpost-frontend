@@ -970,27 +970,28 @@ function BillingTab({ onUpgrade }: any) {
         },
     ];
 
+    // --- HÀM TÍNH TOÁN GIÁ FLASHSALE CHUẨN XÁC THEO % ---
     const getPlanPricing = (planKey: string, basePrice: number) => {
         const isFlashSaleActive = campaign?.flashSaleActive && campaign?.flashSalePlans?.[planKey];
         const planSetting = campaign?.flashSalePlans?.[planKey];
 
         if (isFlashSaleActive) {
-            let discountPercent = planSetting?.discount || 0;
-            let finalPrice = basePrice;
+            // Lấy đúng số % Admin cài đặt (ví dụ: 30)
+            const discountPercent = Number(planSetting?.discount) || 0;
 
-            if (duration === '1m' && planSetting?.salePrice && planSetting.salePrice > 0) {
-                finalPrice = planSetting.salePrice;
-                discountPercent = planSetting.discount || Math.round((1 - finalPrice / basePrice) * 100);
-            } else if (discountPercent > 0) {
-                finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
+            if (discountPercent > 0) {
+                // Tính tiền giảm: Ví dụ 590.000 x 30% = 177.000đ
+                const discountAmount = Math.round((basePrice * discountPercent) / 100);
+                // Giá sau khi giảm: 590.000 - 177.000 = 413.000đ
+                const finalPrice = basePrice - discountAmount;
+
+                return {
+                    isSale: true,
+                    discountPercent: discountPercent,
+                    originalPrice: basePrice,
+                    finalPrice: finalPrice
+                };
             }
-
-            return {
-                isSale: discountPercent > 0 || finalPrice < basePrice,
-                discountPercent: discountPercent > 0 ? discountPercent : Math.round((1 - finalPrice / basePrice) * 100),
-                originalPrice: basePrice,
-                finalPrice: finalPrice
-            };
         }
 
         return {
