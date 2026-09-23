@@ -70,7 +70,6 @@ export default function SettingsPage() {
         const resolvedWid = res.data.currentWorkspaceId || res.data.wid || res.data.workspaceId || "";
         setWorkspaceId(resolvedWid);
         
-        // Đồng bộ chuẩn lại localStorage theo đúng dữ liệu server xác nhận
         if (resolvedWid) {
           localStorage.setItem("workspaceId", resolvedWid);
         }
@@ -944,7 +943,6 @@ function BillingTab({ onUpgrade }: any) {
     const [campaign, setCampaign] = useState<any>(null);
 
     useEffect(() => {
-        // Tự động kiểm tra xem Admin có đang bật chiến dịch Flash Sale không
         axios.get(`${API_URL}/admin/marketing-campaigns`)
             .then(res => {
                 if (res.data && res.data.flashSaleActive) {
@@ -972,7 +970,6 @@ function BillingTab({ onUpgrade }: any) {
         },
     ];
 
-    // --- HÀM TÍNH TOÁN GIÁ FLASHSALE CHO TỪNG GÓI ---
     const getPlanPricing = (planKey: string, basePrice: number) => {
         const isFlashSaleActive = campaign?.flashSaleActive && campaign?.flashSalePlans?.[planKey];
         const planSetting = campaign?.flashSalePlans?.[planKey];
@@ -981,12 +978,10 @@ function BillingTab({ onUpgrade }: any) {
             let discountPercent = planSetting?.discount || 0;
             let finalPrice = basePrice;
 
-            // Nếu là gói 1 tháng và có cài đặt salePrice cụ thể trong Admin
             if (duration === '1m' && planSetting?.salePrice && planSetting.salePrice > 0) {
                 finalPrice = planSetting.salePrice;
                 discountPercent = planSetting.discount || Math.round((1 - finalPrice / basePrice) * 100);
             } else if (discountPercent > 0) {
-                // Áp dụng % giảm giá cho chu kỳ tương ứng
                 finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
             }
 
@@ -1051,7 +1046,6 @@ function BillingTab({ onUpgrade }: any) {
 
     return (
         <div className="space-y-10 text-black animate-in fade-in">
-            {/* THÔNG BÁO FLASHSALE RỰC LỬA TRÊN ĐẦU NẾU ĐANG BẬT */}
             {campaign?.flashSaleActive && (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 text-white shadow-lg flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
                     <div className="flex items-center gap-2.5">
@@ -1091,7 +1085,6 @@ function BillingTab({ onUpgrade }: any) {
                     return (
                         <div key={p.name} className={`relative p-6 2xl:p-8 rounded-[40px] border-4 bg-white hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col ${p.color === 'blue' ? 'border-blue-100 hover:border-blue-600' : p.color === 'amber' ? 'border-amber-100 hover:border-amber-500' : 'border-purple-100 hover:border-purple-600'}`}>
                             
-                            {/* HUY HIỆU FLASHSALE RỰC LỬA NẾU CÓ GIẢM GIÁ */}
                             {priceData.isSale && (
                                 <div className="absolute -top-3.5 right-6 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-md shadow-orange-500/30 animate-pulse">
                                     <Flame size={12} className="text-yellow-300" />
@@ -1101,7 +1094,6 @@ function BillingTab({ onUpgrade }: any) {
 
                             <p className={`font-black uppercase text-[11px] tracking-widest mb-3 ${p.color === 'blue' ? 'text-blue-600' : p.color === 'amber' ? 'text-amber-500' : 'text-purple-600'}`}>Hạng {p.name}</p>
                             
-                            {/* HIỂN THỊ GIÁ: NẾU SALE THÌ GẠCH NGANG GIÁ GỐC VÀ HIỆN GIÁ SALE ĐỎ NỔI BẬT */}
                             <div className="mb-8">
                                 {priceData.isSale ? (
                                     <div>
@@ -1134,7 +1126,6 @@ function BillingTab({ onUpgrade }: any) {
                                 ))}
                             </ul>
 
-                            {/* NÚT CHỌN GÓI: TRUYỀN GIÁ SALE ĐỂ THANH TOÁN CHÍNH XÁC */}
                             <button 
                                 onClick={() => setSelectedPlan({ 
                                     name: p.name, 
@@ -1151,7 +1142,6 @@ function BillingTab({ onUpgrade }: any) {
                 })}
             </div>
 
-            {/* POPUP XÁC NHẬN ĐƠN HÀNG */}
             {selectedPlan && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200 border border-white/20">
@@ -1161,7 +1151,6 @@ function BillingTab({ onUpgrade }: any) {
                             <div className="flex justify-between items-center text-sm font-bold text-slate-600"><span>Gói cước:</span><span className="text-slate-900 uppercase font-black">Hạng {selectedPlan.name}</span></div>
                             <div className="flex justify-between items-center text-sm font-bold text-slate-600"><span>Chu kỳ:</span><span className="text-slate-900 font-black">{duration === '1m' ? '1 Tháng' : duration === '3m' ? '3 Tháng' : duration === '6m' ? '6 Tháng' : '1 Năm'}</span></div>
                             
-                            {/* Hiển thị giá gốc nếu có Flash Sale */}
                             {selectedPlan.isSale ? (
                                 <>
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-600">
@@ -1942,4 +1931,21 @@ function PrivacyTab() {
            <div className="relative z-10">
              <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-4">Cần Hỗ Trợ Khác?</h3>
              <p className="mb-8 font-medium text-slate-300 max-w-lg mx-auto text-sm leading-relaxed">
-               Nếu bạn có bất kỳ thắc mắc nào về Chính sách Bảo mật này
+               Nếu bạn có bất kỳ thắc mắc nào về Chính sách Bảo mật này hoặc cách chúng tôi bảo vệ thông tin của bạn, đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng lắng nghe và giải quyết.
+             </p>
+             <a href="mailto:support@kpost.vn" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-sm transition-colors mb-8 shadow-lg shadow-blue-900/50">
+               <MessageCircle size={18} />
+               support@kpost.vn
+             </a>
+             <div className="border-t border-slate-800 pt-6">
+                <p className="text-xs font-bold text-blue-300 uppercase tracking-widest">
+                  Hãy yên tâm phát triển kinh doanh, việc bảo vệ dữ liệu đã có Kpost đồng hành cùng bạn!
+                </p>
+             </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
