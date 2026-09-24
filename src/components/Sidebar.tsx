@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenTool, Package, MessageSquare, 
   Settings, Share2, LogOut, LogIn, Clock, MessageCircle, 
   ShoppingBag, Truck, Sparkles, Menu, X, Target, Radio,
-  Flame, Users, ShieldCheck
+  Flame, Users, ShieldCheck, Film // 👈 1. Thêm icon Film vào đây
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,6 +20,8 @@ const menuItems = [
   { name: "Tổng quan", icon: <LayoutDashboard size={20} />, href: "/dashboard" },
   { name: "AI Marketing", icon: <PenTool size={20} />, href: "/" },
   { name: "AI Livestream", icon: <Radio size={20} className="text-red-500 animate-pulse" />, href: "/livestream", badge: "LIVE" },
+  // 🎬 2. THÊM TÍNH NĂNG NHÂN BẢN & LÁCH BẢN QUYỀN VIDEO VÀO ĐÂY:
+  { name: "AI Video Spinner", icon: <Film size={20} className="text-purple-500 animate-pulse" />, href: "/video-spinner", badge: "HOT" },
   { name: "Quản lý sản phẩm", icon: <Package size={20} />, href: "/products" },
   { name: "Lịch đăng bài", icon: <Clock size={20} />, href: "/schedule" }, 
   { name: "Hộp thư Inbox", icon: <MessageSquare size={20} />, href: "/inbox" },
