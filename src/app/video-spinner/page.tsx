@@ -63,11 +63,17 @@ export default function VideoSpinnerPage() {
   const [changeAudio, setChangeAudio] = useState<boolean>(true);
   const [addNoise, setAddNoise] = useState<boolean>(true);
 
-  // Trạng thái xử lý
+  // Trạng thái xử lý & Download
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [currentStepText, setCurrentStepText] = useState<string>("");
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
+
+  // Khôi phục Batch ID
+  const [showRecoveryModal, setShowRecoveryModal] = useState<boolean>(false);
+  const [recoveryBatchId, setRecoveryBatchId] = useState<string>("");
+  const [recoveryCount, setRecoveryCount] = useState<number>(5);
   
   // Chi tiết lỗi
   const [errorMessage, setErrorMessage] = useState<{
@@ -123,6 +129,45 @@ export default function VideoSpinnerPage() {
     const cleanBase = apiUrl.replace(/\/+$/, "");
     const cleanPath = url.startsWith("/") ? url : `/${url}`;
     return `${cleanBase}${cleanPath}`;
+  };
+
+  // Khôi phục kết quả từ Batch ID nếu bị timeout
+  const handleRecoverFromBatch = (batchId: string, count: number = 5) => {
+    const cleanBatch = batchId.trim().replace(/^batch_/, "").split("_")[0];
+    if (!cleanBatch) {
+      alert("Vui lòng nhập mã Batch ID hợp lệ (ví dụ: 4a7f6d65)!");
+      return;
+    }
+    const cleanBase = apiUrl.replace(/\/+$/, "");
+    const zipName = `batch_${cleanBatch}_all_${count}_videos.zip`;
+    const zipUrl = `${cleanBase}/uploads/spun-videos/${cleanBatch}/${zipName}`;
+
+    const recoveredVideos = [];
+    for (let i = 1; i <= count; i++) {
+      recoveredVideos.push({
+        id: `rec_${cleanBatch}_${i}`,
+        fileName: `spin_${cleanBatch}_v${i}.mp4`,
+        url: `${cleanBase}/uploads/spun-videos/${cleanBatch}/spin_${cleanBatch}_v${i}.mp4`,
+        variantIndex: i,
+        parameters: {
+          speed: 1.0,
+          zoom: 1.02,
+          brightness: 0,
+          contrast: 1.0,
+          saturation: 1.0,
+          isFlipped: false,
+        },
+      });
+    }
+
+    setResultData({
+      originalName: `Batch ${cleanBatch}`,
+      totalSpun: count,
+      zipDownloadUrl: zipUrl,
+      videos: recoveredVideos,
+    });
+    setErrorMessage(null);
+    setShowRecoveryModal(false);
   };
 
   // Chọn file video
@@ -316,16 +361,16 @@ export default function VideoSpinnerPage() {
 
       if (status === 504 || err.code === "ECONNABORTED" || technical.includes("timeout")) {
         title = "Hết thời gian chờ phản hồi (504 Gateway Timeout)";
-        desc = "Thời gian render vượt quá giới hạn 60s của Nginx/Cloudflare. Hãy chọn số lượng 2-3 video hoặc chuyển FFmpeg trên backend sang preset 'ultrafast'.";
+        desc = "Thời gian render vượt quá giới hạn chờ của Proxy/Cloudflare. Hãy chọn số lượng 2-3 video hoặc chuyển FFmpeg trên backend sang preset 'ultrafast'.";
       } else if (status === 413) {
         title = "Dung lượng video vượt quá giới hạn (413 Payload Too Large)";
-        desc = "File video tải lên quá lớn so với giới hạn của Nginx/Express. Hãy nén video dưới 50MB hoặc tăng 'client_max_body_size' trên máy chủ.";
+        desc = "File video tải lên quá lớn so với giới hạn của máy chủ. Hãy nén video dưới 50MB hoặc tăng 'client_max_body_size' trên máy chủ.";
       } else if (status === 404) {
         title = "Không tìm thấy đường dẫn API (404 Not Found)";
         desc = `Máy chủ không tồn tại endpoint '${apiUrl}/video-spinner/spin'. Vui lòng kiểm tra lại URL máy chủ backend.`;
       } else if (!err.response) {
-        title = "Không thể kết nối đến máy chủ Backend (CORS / Network Error)";
-        desc = `Trình duyệt không thể kết nối tới '${apiUrl}'. Kiểm tra xem Backend đã khởi chạy và đã bật CORS cho domain này chưa.`;
+        title = "Ngắt kết nối do quá thời gian chờ (Timeout / Network Error)";
+        desc = `Máy chủ mất hơn 60s để render khiến Proxy tự động ngắt kết nối. Tuy nhiên MÁY CHỦ VẪN ĐANG RENDER HOÀN TẤT Ở NỀN! Nếu terminal máy chủ đã báo 'Đã tạo thành công file ZIP', bạn hãy bấm 'Khôi phục từ Batch ID' bên dưới để tải về ngay.`;
       } else if (err.response?.data?.message) {
         desc = Array.isArray(err.response.data.message)
           ? err.response.data.message.join(", ")
@@ -341,24 +386,39 @@ export default function VideoSpinnerPage() {
     }
   };
 
-  // Tải file an toàn không bị chặn Cross-Origin
+  // Tải file an toàn & chống chặn Cross-Origin Download trên Chrome
   const handleDownloadFile = async (targetUrl: string, defaultName: string) => {
     const fullUrl = resolveMediaUrl(targetUrl);
     if (!fullUrl) return;
 
+    setDownloadingUrl(targetUrl);
     try {
-      const res = await fetch(fullUrl);
+      // 1. Tải qua Blob để biến thành link nội bộ -> Chrome cho phép tải về 100%
+      const res = await fetch(fullUrl, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
+
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = defaultName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch {
-      window.open(fullUrl, "_blank");
+
+      // Giữ bộ nhớ 30s để Chrome ghi xong file vào ổ cứng rồi mới giải phóng
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30000);
+    } catch (err) {
+      console.warn("Blob fetch failed, fallback to direct download:", err);
+      // 2. Dự phòng: Mở link trực tiếp
+      const link = document.createElement("a");
+      link.href = fullUrl;
+      link.download = defaultName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setDownloadingUrl(null);
     }
   };
 
@@ -392,6 +452,14 @@ export default function VideoSpinnerPage() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold">
               <Zap size={16} /> FFmpeg Siêu Tốc
             </span>
+            <button
+              onClick={() => setShowRecoveryModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors cursor-pointer border border-emerald-200 shadow-sm"
+              title="Khôi phục file ZIP theo mã Batch ID"
+            >
+              <Download size={14} className="text-emerald-600" />
+              Khôi phục từ Batch ID
+            </button>
             <button
               onClick={() => {
                 setTempApiUrl(apiUrl);
@@ -450,6 +518,12 @@ export default function VideoSpinnerPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
               >
                 Thử lại lần nữa
+              </button>
+              <button
+                onClick={() => setShowRecoveryModal(true)}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Download size={14} /> Khôi phục & Tải ZIP từ mã Batch
               </button>
               <button
                 onClick={() => {
@@ -817,13 +891,37 @@ export default function VideoSpinnerPage() {
                   
                   {/* NÚT TẢI TẤT CẢ FILE ZIP */}
                   {resultData.zipDownloadUrl && (
-                    <button
-                      onClick={() => handleDownloadFile(resultData.zipDownloadUrl!, `${resultData.originalName}_all_variants.zip`)}
-                      className="mb-4 w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.01] cursor-pointer"
-                    >
-                      <FolderDown size={18} />
-                      Tải Về Toàn Bộ {resultData.totalSpun} Video (File ZIP)
-                    </button>
+                    <div className="mb-4">
+                      <button
+                        onClick={() => handleDownloadFile(resultData.zipDownloadUrl!, `${resultData.originalName}_all_variants.zip`)}
+                        disabled={downloadingUrl === resultData.zipDownloadUrl}
+                        className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.01] cursor-pointer"
+                      >
+                        {downloadingUrl === resultData.zipDownloadUrl ? (
+                          <>
+                            <RefreshCw size={18} className="animate-spin" />
+                            Đang tải xuống file ZIP...
+                          </>
+                        ) : (
+                          <>
+                            <FolderDown size={18} />
+                            Tải Về Toàn Bộ {resultData.totalSpun} Video (File ZIP)
+                          </>
+                        )}
+                      </button>
+                      <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-500 px-1">
+                        <span>Nếu trình duyệt không tự lưu:</span>
+                        <a
+                          href={resolveMediaUrl(resultData.zipDownloadUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={`${resultData.originalName}_all_variants.zip`}
+                          className="text-emerald-600 hover:underline font-bold inline-flex items-center gap-1"
+                        >
+                          <Download size={12} /> Bấm tải trực tiếp tại đây
+                        </a>
+                      </div>
+                    </div>
                   )}
 
                   {/* DANH SÁCH BẢN BIẾN THỂ */}
@@ -856,10 +954,16 @@ export default function VideoSpinnerPage() {
 
                               <button
                                 onClick={() => handleDownloadFile(vid.url, vid.fileName)}
-                                className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1 text-[11px] font-bold px-2.5 shadow-sm cursor-pointer"
+                                disabled={downloadingUrl === vid.url}
+                                className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white transition-colors flex items-center gap-1 text-[11px] font-bold px-2.5 shadow-sm cursor-pointer"
                                 title="Tải video này"
                               >
-                                <Download size={13} /> Tải
+                                {downloadingUrl === vid.url ? (
+                                  <RefreshCw size={13} className="animate-spin" />
+                                ) : (
+                                  <Download size={13} />
+                                )}
+                                Tải
                               </button>
                             </div>
                           </div>
@@ -894,6 +998,77 @@ export default function VideoSpinnerPage() {
         </div>
 
       </div>
+
+      {/* MODAL KHÔI PHỤC KẾT QUẢ TỪ BATCH ID */}
+      {showRecoveryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Download size={18} className="text-emerald-600" />
+                Khôi phục file ZIP từ Mã Batch ID
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRecoveryModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl mb-4 text-xs text-emerald-800 leading-relaxed">
+              💡 <strong>Dành cho trường hợp mạng bị Timeout:</strong> Khi server VPS báo <em>&quot;Đã tạo thành công file ZIP: batch_xxxx_all_5_videos.zip&quot;</em> trong terminal, bạn chỉ cần nhập mã 8 ký tự (ví dụ: <code className="font-mono bg-emerald-100 px-1 py-0.5 rounded">4a7f6d65</code> hoặc <code className="font-mono bg-emerald-100 px-1 py-0.5 rounded">f63e199d</code>) để lấy link tải ZIP và xem video ngay!
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Mã Batch ID (hoặc tên file ZIP):
+                </label>
+                <input
+                  type="text"
+                  value={recoveryBatchId}
+                  onChange={(e) => setRecoveryBatchId(e.target.value)}
+                  placeholder="Ví dụ: 4a7f6d65 hoặc batch_4a7f6d65_all_5_videos.zip"
+                  className="w-full text-sm font-mono px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Số lượng video đã tạo:
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={recoveryCount}
+                  onChange={(e) => setRecoveryCount(Math.max(1, Number(e.target.value) || 5))}
+                  className="w-24 text-sm font-bold px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowRecoveryModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRecoverFromBatch(recoveryBatchId, recoveryCount)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5"
+              >
+                <Download size={14} /> Khôi phục & Tải ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CẤU HÌNH API URL SERVER BACKEND */}
       {showConfigModal && (
