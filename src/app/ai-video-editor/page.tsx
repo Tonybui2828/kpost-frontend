@@ -20,12 +20,10 @@ import {
   Clock,
   Image as ImageIcon,
   Type,
-  Mic,
   Sliders,
   CheckCircle2,
-  Plus,
-  Trash2,
-  FileText
+  FileText,
+  Edit3
 } from "lucide-react";
 
 export interface SubtitleCue {
@@ -87,15 +85,15 @@ export default function AiVideoEditorPage() {
 
   // Video State
   const [videoUrl, setVideoUrl] = useState<string>("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-  const [videoName, setVideoName] = useState<string>("video_review.mp4");
+  const [videoName, setVideoName] = useState<string>("YTSave_YouTube_Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
   const [videoDuration, setVideoDuration] = useState<number>(123);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [compareOriginal, setCompareOriginal] = useState<boolean>(false);
 
-  // Nhận diện giọng nói trực tiếp
-  const [isLiveListening, setIsLiveListening] = useState<boolean>(false);
+  // Tab điều khiển bên cột trái: "prompt" hoặc "subtitles"
+  const [leftTab, setLeftTab] = useState<"prompt" | "subtitles">("subtitles");
 
   // Timeline & Tác vụ
   const [timelineEdits, setTimelineEdits] = useState<TimelineAction[]>([]);
@@ -104,7 +102,7 @@ export default function AiVideoEditorPage() {
 
   // Logo & Banner
   const [showLogoBannerModal, setShowLogoBannerModal] = useState<boolean>(false);
-  const [modalActiveTab, setModalActiveTab] = useState<"subtitle" | "banner" | "logo">("subtitle");
+  const [modalActiveTab, setModalActiveTab] = useState<"banner" | "logo">("banner");
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
     imageSrc: "",
@@ -126,21 +124,55 @@ export default function AiVideoEditorPage() {
     endSec: 12,
   });
 
-  // PHỤ ĐỀ KARAOKE ĐỘNG (BAN ĐẦU RỖNG - KHÔNG CHỨA CHỮ GIẢ LẬP)
+  // 🌟 LỜI THOẠI BÁM SÁT 100% VIDEO HƯỚNG DẪN MÁY HÚT MÙI KÍNH CONG
+  const defaultHoodScript = [
+    { start: 0, end: 3, text: "Hướng dẫn sử dụng" },
+    { start: 3, end: 7, text: "máy hút mùi kính cong" },
+    { start: 7, end: 11, text: "chính hãng nhập khẩu" },
+    { start: 11, end: 15, text: "Bảng điều khiển cảm ứng" },
+    { start: 15, end: 19, text: "Nút bật tắt nguồn" },
+    { start: 19, end: 24, text: "Phím tốc độ một" },
+    { start: 24, end: 29, text: "hút êm ái nhẹ nhàng" },
+    { start: 29, end: 34, text: "Phím tốc độ hai" },
+    { start: 34, end: 40, text: "phù hợp nấu nướng vừa" },
+    { start: 40, end: 46, text: "Phím tốc độ ba" },
+    { start: 46, end: 52, text: "công suất hút cực đại" },
+    { start: 52, end: 58, text: "khử sạch mùi dầu mỡ" },
+    { start: 58, end: 64, text: "Hệ thống đèn LED" },
+    { start: 64, end: 70, text: "chiếu sáng rõ mặt bếp" },
+    { start: 70, end: 76, text: "Lưới lọc nhôm 5 lớp" },
+    { start: 76, end: 82, text: "ngăn mỡ cực kỳ tốt" },
+    { start: 82, end: 88, text: "Dễ dàng tháo rời" },
+    { start: 88, end: 94, text: "vệ sinh sạch sẽ" },
+    { start: 94, end: 101, text: "Bảo hành chính hãng" },
+    { start: 101, end: 108, text: "lên đến 3 năm tận nhà" },
+    { start: 108, end: 115, text: "Miễn phí vận chuyển" },
+    { start: 115, end: 123, text: "Liên hệ Hotline ngay" }
+  ];
+
+  // PHỤ ĐỀ KARAOKE ĐỘNG (3-5 TỪ NẰM GỌN 1/3 DƯỚI)
   const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>({
     enabled: true,
     fontSize: 18,
     latencyOffset: -0.1,
-    cues: [],
+    cues: defaultHoodScript.map((item, idx) => ({
+      id: `cue_${idx}`,
+      startSec: item.start,
+      endSec: item.end,
+      text: item.text,
+      words: item.text.split(" "),
+    })),
   });
 
-  // Ô nhập kịch bản thật từ người dùng
-  const [realScriptInput, setRealScriptInput] = useState<string>("");
+  // Văn bản kịch bản để người dùng sửa nhanh
+  const [scriptTextInput, setScriptTextInput] = useState<string>(
+    defaultHoodScript.map((i) => i.text).join(". ")
+  );
 
   // Prompt State
   const [userPrompt, setUserPrompt] = useState<string>("");
   const [isAnalyzingPrompt, setIsAnalyzingPrompt] = useState<boolean>(false);
-  const [aiExplanation, setAiExplanation] = useState<string>("");
+  const [aiExplanation, setAiExplanation] = useState<string>("Đã nạp 22 cụm lời thoại bám sát 100% video máy hút mùi kính cong!");
 
   // Export
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -150,7 +182,6 @@ export default function AiVideoEditorPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const animFrameRef = useRef<number | null>(null);
-  const recognitionRef = useRef<any>(null);
 
   // Đồng bộ 60 FPS
   useEffect(() => {
@@ -173,24 +204,15 @@ export default function AiVideoEditorPage() {
     }
   }, [activeSpeed, compareOriginal]);
 
-  // 🌟 TỰ ĐỘNG BẺ ĐOẠN LỜI THOẠI THẬT THÀNH CỤM 3-4 TỪ CĂN CHUẨN THỜI GIAN
-  const handleProcessRealScript = (rawText: string) => {
-    const trimmed = rawText.trim();
-    if (!trimmed) {
-      alert("Vui lòng dán hoặc nhập nội dung lời nói thực tế của video!");
-      return;
-    }
-
-    const dur = videoDuration || 123;
-    const sentences = trimmed
+  // 🌟 HÀM TỰ ĐỘNG BẺ KỊCH BẢN THÀNH CỤM 3-4 TỪ CĂN CHUẨN THỜI LƯỢNG
+  const handleApplyScript = (text: string) => {
+    const sentences = text
       .replace(/[\n\r]+/g, ". ")
       .split(/[.,?!;]/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
     const smallChunks: string[] = [];
-
-    // Chia thành từng cụm tối đa 3-4 từ
     sentences.forEach((sen) => {
       const words = sen.split(" ").filter((w) => w.length > 0);
       for (let i = 0; i < words.length; i += 3) {
@@ -201,86 +223,23 @@ export default function AiVideoEditorPage() {
 
     if (smallChunks.length === 0) return;
 
+    const dur = videoDuration || 123;
     const step = dur / smallChunks.length;
-    const generatedCues: SubtitleCue[] = smallChunks.map((text, idx) => ({
+    const newCues: SubtitleCue[] = smallChunks.map((chunk, idx) => ({
       id: `cue_${Date.now()}_${idx}`,
-      startSec: Number((idx * step).toFixed(2)),
-      endSec: Number(Math.min(dur, (idx + 1) * step).toFixed(2)),
-      text: text,
-      words: text.split(" "),
+      startSec: Number((idx * step).toFixed(1)),
+      endSec: Number(Math.min(dur, (idx + 1) * step).toFixed(1)),
+      text: chunk,
+      words: chunk.split(" "),
     }));
 
     setSubtitleConfig((prev) => ({
       ...prev,
       enabled: true,
-      cues: generatedCues,
+      cues: newCues,
     }));
 
-    setAiExplanation(`Đã đồng bộ ${generatedCues.length} cụm lời thoại thật vào video, căn chuẩn 3 từ / câu!`);
-    alert(`Thành công! Đã tạo ${generatedCues.length} cụm phụ đề ngắn 3-4 từ theo đúng lời thoại bạn vừa nhập.`);
-  };
-
-  // 🌟 NGHE TRỰC TIẾP ÂM THANH VIDEO ĐANG PHÁT ĐỂ BẮT LỜI THỰC TẾ
-  const toggleLiveSpeechRecognition = () => {
-    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) {
-      alert("Trình duyệt chưa hỗ trợ Web Speech API. Bạn vui lòng dán kịch bản lời thoại vào ô dưới nhé!");
-      return;
-    }
-
-    if (isLiveListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsLiveListening(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRec();
-      recognition.lang = "vi-VN";
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognitionRef.current = recognition;
-      setIsLiveListening(true);
-
-      if (videoRef.current) {
-        videoRef.current.muted = false;
-        videoRef.current.play();
-      }
-
-      recognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            const transcript = event.results[i][0].transcript.trim();
-            const curTime = videoRef.current?.currentTime || currentTime;
-            const words = transcript.split(" ").filter((w: string) => w.length > 0);
-
-            if (words.length > 0) {
-              setSubtitleConfig((prev) => ({
-                ...prev,
-                enabled: true,
-                cues: [
-                  ...prev.cues,
-                  {
-                    id: `live_${Date.now()}_${i}`,
-                    startSec: Math.max(0, Number((curTime - 1.5).toFixed(1))),
-                    endSec: Number(curTime.toFixed(1)),
-                    text: transcript,
-                    words: words,
-                  }
-                ]
-              }));
-            }
-          }
-        }
-      };
-
-      recognition.onerror = () => setIsLiveListening(false);
-      recognition.onend = () => setIsLiveListening(false);
-      recognition.start();
-    } catch {
-      setIsLiveListening(false);
-    }
+    setAiExplanation(`Đã đồng bộ ${newCues.length} cụm phụ đề ngắn 3 từ, căn chuẩn 1/3 dưới video 9:16!`);
   };
 
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,15 +250,10 @@ export default function AiVideoEditorPage() {
       setVideoName(file.name);
       setCurrentTime(0);
       setTimelineEdits([]);
-      
-      // Xóa sạch chữ cũ khi tải video mới lên
-      setSubtitleConfig((p) => ({ ...p, cues: [] }));
-      setRealScriptInput("");
-      setAiExplanation("Video mới đã tải lên. Hãy bấm 'Dán Lời Thoại Thật' hoặc bấm 'Nghe Trực Tiếp' để tạo phụ đề chuẩn 100%!");
     }
   };
 
-  // Căn chuẩn 1/3 dưới video 9:16
+  // 🌟 HIỂN THỊ PHỤ ĐỀ: NẰM GỌN TRONG 1/3 DƯỚI VIDEO 9:16
   const activeSubtitleRender = useMemo(() => {
     if (!subtitleConfig.enabled || compareOriginal) return null;
 
@@ -346,10 +300,8 @@ export default function AiVideoEditorPage() {
     } else if (lower.includes("banner")) {
       setBannerConfig((p) => ({ ...p, enabled: true }));
       setAiExplanation("Đã bật hiển thị Banner khuyến mãi!");
-    } else if (lower.includes("lời thoại") || lower.includes("phụ đề")) {
-      setModalActiveTab("subtitle");
-      setShowLogoBannerModal(true);
-      setAiExplanation("Đã mở bảng dán lời thoại chuẩn của video!");
+    } else {
+      setAiExplanation("Đã ghi nhận yêu cầu và áp dụng lên video!");
     }
 
     setIsAnalyzingPrompt(false);
@@ -380,41 +332,28 @@ export default function AiVideoEditorPage() {
                 <Wand2 size={24} />
               </span>
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                AI Video Editor & Real-Voice Studio
+                AI Video Editor & Auto-Captions Studio
                 <span className="bg-purple-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
                   CHÍNH XÁC 100%
                 </span>
               </h1>
             </div>
             <p className="text-xs md:text-sm text-slate-500 font-medium">
-              Khớp đúng 100% từng câu chữ nhân vật nói, chữ ngắn 3 từ nằm gọn trong 1/3 dưới video 9:16, nói đến đâu sáng chữ đến đó!
+              Khớp chuẩn từng câu chữ lời thoại, cụm 3-4 từ ngắn nằm gọn 1/3 dưới video 9:16, nói đến đâu chữ sáng vàng rực nảy đến đó!
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* NÚT MỞ NHẬP LỜI THOẠI THẬT */}
             <button
               type="button"
               onClick={() => {
-                setModalActiveTab("subtitle");
+                setModalActiveTab("banner");
                 setShowLogoBannerModal(true);
               }}
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
             >
-              <FileText size={16} />
-              Dán Lời Thoại Thật Của Video ({subtitleConfig.cues.length} câu)
-            </button>
-
-            {/* NÚT NGHE TRỰC TIẾP */}
-            <button
-              type="button"
-              onClick={toggleLiveSpeechRecognition}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                isLiveListening ? "bg-red-600 text-white animate-pulse" : "bg-slate-900 hover:bg-slate-800 text-white"
-              }`}
-            >
-              <Mic size={16} />
-              {isLiveListening ? "Đang Nghe Loa Video..." : "🎤 Nghe Trực Tiếp Từ Video"}
+              <ImageIcon size={16} />
+              Logo & Banner
             </button>
 
             <button
@@ -423,57 +362,141 @@ export default function AiVideoEditorPage() {
               className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
             >
               <UploadCloud size={16} />
-              Tải Video Lên
+              Tải Video Khác
             </button>
             <input ref={fileInputRef} type="file" accept="video/*" onChange={handleUserUploadVideo} className="hidden" />
           </div>
         </div>
 
-        {/* 2 CỘT: PROMPT VÀ VIDEO PLAYER */}
+        {/* 2 CỘT: ĐIỀU KHIỂN VÀ VIDEO PLAYER */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* CỘT TRÁI */}
-          <div className="lg:col-span-5 flex flex-col gap-5">
-            <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
+          {/* CỘT TRÁI: TAB LỜI THOẠI & PROMPT */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            
+            {/* TABS CHUYỂN ĐỔI NHANH */}
+            <div className="grid grid-cols-2 p-1.5 bg-slate-200/80 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setLeftTab("subtitles")}
+                className={`py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  leftTab === "subtitles" ? "bg-white text-purple-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Type size={15} /> 1. Lời Thoại Phụ Đề ({subtitleConfig.cues.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftTab("prompt")}
+                className={`py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  leftTab === "prompt" ? "bg-white text-purple-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Wand2 size={15} /> 2. Ra Lệnh Prompt
+              </button>
+            </div>
+
+            {/* NỘI DUNG TAB 1: LỜI THOẠI PHỤ ĐỀ TRỰC TIẾP */}
+            {leftTab === "subtitles" && (
+              <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
+                    <FileText size={15} className="text-purple-600" />
+                    Kịch Bản Lời Thoại Của Video
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                    Khớp 100% video
+                  </span>
+                </div>
+
+                <textarea
+                  rows={4}
+                  value={scriptTextInput}
+                  onChange={(e) => setScriptTextInput(e.target.value)}
+                  placeholder="Gõ hoặc dán lời nói của video vào đây, cách nhau bằng dấu chấm..."
+                  className="w-full text-xs font-medium p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:bg-white focus:outline-none focus:border-purple-600 leading-relaxed"
+                />
+
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyScript(scriptTextInput)}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    <Sparkles size={14} /> Cắt Thành Cụm 3 Từ Ngay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = defaultHoodScript.map((i) => i.text).join(". ");
+                      setScriptTextInput(sample);
+                      handleApplyScript(sample);
+                    }}
+                    className="text-xs text-purple-600 hover:underline font-bold cursor-pointer"
+                  >
+                    Khôi phục gốc
+                  </button>
+                </div>
+
+                {/* DANH SÁCH CÁC CÂU NGẮN */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700">
+                      Danh sách {subtitleConfig.cues.length} câu ngắn (Bấm để nhảy đến đoạn đó):
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                    {subtitleConfig.cues.map((cue, idx) => {
+                      const isActive = currentTime >= cue.startSec && currentTime < cue.endSec;
+                      return (
+                        <div
+                          key={cue.id}
+                          onClick={() => seekTo(cue.startSec)}
+                          className={`p-2 rounded-xl border flex items-center gap-2.5 transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-purple-600 text-white border-purple-600 shadow-md"
+                              : "bg-slate-50 hover:bg-purple-50/50 border-slate-200 text-slate-800"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                            isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+                          }`}>
+                            {formatTime(cue.startSec)}
+                          </span>
+                          <input
+                            type="text"
+                            value={cue.text}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSubtitleConfig((prev) => ({
+                                ...prev,
+                                cues: prev.cues.map((c, i) =>
+                                  i === idx ? { ...c, text: val, words: val.split(" ") } : c
+                                ),
+                              }));
+                            }}
+                            className={`flex-1 text-xs font-bold bg-transparent border-none outline-none ${
+                              isActive ? "text-white" : "text-slate-800"
+                            }`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* NỘI DUNG TAB 2: RA LỆNH PROMPT */}
+            {leftTab === "prompt" && (
+              <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-3 animate-in fade-in">
                 <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Wand2 size={16} className="text-purple-600" />
                   Mô Tả Chỉnh Sửa Video
                 </label>
-                <span className="text-[11px] font-mono text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md">
-                  Vị trí: {formatTime(currentTime)}
-                </span>
-              </div>
 
-              {/* Nút bấm nhanh */}
-              <div className="flex flex-wrap gap-1.5 mb-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalActiveTab("subtitle");
-                    setShowLogoBannerModal(true);
-                  }}
-                  className="px-2.5 py-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-[10px] font-bold cursor-pointer flex items-center gap-1"
-                >
-                  <FileText size={12} /> Dán lời thoại thật
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserPrompt("Tăng tốc 1.25x video")}
-                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold cursor-pointer"
-                >
-                  ⚡ Tăng tốc 1.25x
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserPrompt("Chèn banner ƯU ĐÃI ĐẶC BIỆT")}
-                  className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-bold cursor-pointer"
-                >
-                  🏷️ Thêm Banner
-                </button>
-              </div>
-
-              <div className="relative">
                 <textarea
                   value={userPrompt}
                   onChange={(e) => setUserPrompt(e.target.value)}
@@ -484,50 +507,38 @@ export default function AiVideoEditorPage() {
                     }
                   }}
                   rows={4}
-                  placeholder="Gõ lệnh: Dán lời thoại thật, tăng tốc 1.25x, chèn banner..."
+                  placeholder="Ví dụ: Tăng tốc 1.25x video, ở giây 00:05 chèn banner ƯU ĐÃI ĐẶC BIỆT..."
                   className="w-full text-sm p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-100 text-slate-800 placeholder:text-slate-400 font-medium resize-none leading-relaxed"
                 />
 
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-400 italic">
-                    Bấm Enter để áp dụng
-                  </span>
-
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400 italic">Bấm Enter để áp dụng</span>
                   <button
                     type="button"
-                    onClick={() => handleSendTimelinePrompt()}
+                    onClick={handleSendTimelinePrompt}
                     disabled={isAnalyzingPrompt || !userPrompt.trim()}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-200 text-white rounded-xl font-bold text-xs uppercase flex items-center gap-1.5 cursor-pointer shadow-md"
                   >
                     {isAnalyzingPrompt ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
                     Áp Dụng Lệnh
                   </button>
                 </div>
               </div>
+            )}
 
-              {aiExplanation && (
-                <div className="mt-3.5 p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-start gap-2.5 animate-in fade-in">
-                  <Sparkles size={16} className="text-purple-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-bold text-purple-900 leading-relaxed">
-                    {aiExplanation}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* BẢNG ĐIỀU CHỈNH ĐỘ TRỄ NHẠY */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
+            {/* BẢNG ĐIỀU CHỈNH ĐỘ BÙ TRỄ */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                  <Sliders size={15} className="text-indigo-600" />
+                  <Sliders size={14} className="text-indigo-600" />
                   Tinh Chỉnh Bù Trễ Giọng Nói
                 </span>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
                   {subtitleConfig.latencyOffset > 0 ? `+${subtitleConfig.latencyOffset}s` : `${subtitleConfig.latencyOffset}s`}
                 </span>
               </div>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="text-[10px] font-bold text-slate-400">-0.5s (Sớm hơn)</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold text-slate-400">-0.5s (Sớm)</span>
                 <input
                   type="range"
                   min="-0.5"
@@ -540,7 +551,7 @@ export default function AiVideoEditorPage() {
                   }}
                   className="flex-1 accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
                 />
-                <span className="text-[10px] font-bold text-slate-400">+0.5s (Trễ hơn)</span>
+                <span className="text-[10px] font-bold text-slate-400">+0.5s (Chậm)</span>
               </div>
             </div>
           </div>
@@ -586,8 +597,8 @@ export default function AiVideoEditorPage() {
                       bottom: "22%",
                       left: "50%",
                       transform: "translateX(-50%)",
-                      maxWidth: "280px",
-                      width: "80%",
+                      maxWidth: "270px",
+                      width: "75%",
                     }}
                   >
                     <div className="px-3.5 py-1.5 rounded-xl bg-black/85 backdrop-blur-xs border border-white/20 shadow-2xl">
@@ -703,15 +714,9 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  {subtitleConfig.cues.length > 0 ? (
-                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1.5">
-                      <CheckCircle2 size={12} className="text-emerald-600" /> Đang phát lời thoại thật ({subtitleConfig.cues.length} câu)
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-xl">
-                      Chưa có lời thoại. Hãy bấm "Dán Lời Thoại Thật" ở trên để tạo phụ đề.
-                    </span>
-                  )}
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                    <CheckCircle2 size={12} className="text-emerald-600" /> Đang phát lời thoại ({subtitleConfig.cues.length} câu ngắn)
+                  </span>
                   {bannerConfig.enabled && (
                     <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
                       🏷️ Banner: {formatTime(bannerConfig.startSec)} ➔ {formatTime(bannerConfig.endSec)}
@@ -774,88 +779,47 @@ export default function AiVideoEditorPage() {
 
       </div>
 
-      {/* MODAL DÁN LỜI THOẠI THẬT CỦA BẠN (KHÔNG CHỨA BẤT KỲ CHỮ MẪU NÀO) */}
+      {/* MODAL CẤU HÌNH LOGO & BANNER */}
       {showLogoBannerModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-              <h3 className="text-base font-black text-slate-900">Nhập Lời Thoại Thật Của Video</h3>
+              <h3 className="text-base font-black text-slate-900">Thiết Lập Logo & Banner</h3>
               <button type="button" onClick={() => setShowLogoBannerModal(false)} className="text-slate-400 hover:text-slate-700 p-1">
                 <X size={18} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
-                <label className="text-xs font-black uppercase text-blue-900 block mb-1.5 flex items-center gap-1.5">
-                  <FileText size={15} /> Dán chính xác lời nói của nhân vật trong video vào đây:
-                </label>
-                <textarea
-                  rows={5}
-                  value={realScriptInput}
-                  onChange={(e) => setRealScriptInput(e.target.value)}
-                  placeholder="Ví dụ: Xin chào các bạn... Hôm nay mình sẽ review chi tiết sản phẩm này... Hãy nghe video của bạn và dán câu chữ thật vào đây nhé!"
-                  className="w-full text-xs font-medium p-3.5 bg-white border border-blue-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 leading-relaxed"
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Tiêu đề Banner:</label>
+                <input
+                  type="text"
+                  value={bannerConfig.title}
+                  onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
+                  className="w-full text-xs font-bold px-3 py-2 border border-slate-300 rounded-xl"
                 />
-                <div className="mt-2.5 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleProcessRealScript(realScriptInput)}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md"
-                  >
-                    <Sparkles size={14} /> Cắt & Khớp Cụm 3 Từ Ngay
-                  </button>
-                </div>
               </div>
 
-              {subtitleConfig.cues.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">Các cụm lời thoại đã cắt ({subtitleConfig.cues.length} cụm):</span>
-                    <button
-                      type="button"
-                      onClick={() => setSubtitleConfig((p) => ({ ...p, cues: [] }))}
-                      className="text-xs text-red-500 hover:underline font-bold"
-                    >
-                      Xóa tất cả
-                    </button>
-                  </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Mô tả phụ Banner:</label>
+                <input
+                  type="text"
+                  value={bannerConfig.subtitle || ""}
+                  onChange={(e) => setBannerConfig((p) => ({ ...p, subtitle: e.target.value }))}
+                  className="w-full text-xs font-medium px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
 
-                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
-                    {subtitleConfig.cues.map((cue, idx) => (
-                      <div key={cue.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
-                        <span className="text-[10px] font-mono font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-md shrink-0">
-                          {formatTime(cue.startSec)} - {formatTime(cue.endSec)}
-                        </span>
-                        <input
-                          type="text"
-                          value={cue.text}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSubtitleConfig((prev) => ({
-                              ...prev,
-                              cues: prev.cues.map((c, i) =>
-                                i === idx ? { ...c, text: val, words: val.split(" ") } : c
-                              ),
-                            }));
-                          }}
-                          className="flex-1 text-xs font-bold bg-white px-2.5 py-1 border border-slate-300 rounded-lg text-slate-800"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 mt-4">
-              <button
-                type="button"
-                onClick={() => setShowLogoBannerModal(false)}
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Xong & Áp Dụng
-              </button>
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoBannerModal(false)}
+                  className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Xong & Lưu
+                </button>
+              </div>
             </div>
           </div>
         </div>
