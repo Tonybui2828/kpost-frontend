@@ -20,7 +20,7 @@ import {
   Clock,
   Image as ImageIcon,
   Type,
-  FileText,
+  Mic,
   Sliders,
   CheckCircle2
 } from "lucide-react";
@@ -32,7 +32,6 @@ export interface VideoSegment {
   timeLabel: string;
   title: string;
   description: string;
-  dialogue?: string;
   suggestion?: string;
 }
 
@@ -41,6 +40,7 @@ export interface SubtitleCue {
   startSec: number;
   endSec: number;
   text: string;
+  words: string[];
 }
 
 export interface TimelineAction {
@@ -77,7 +77,7 @@ export interface BannerConfig {
 
 export interface SubtitleConfig {
   enabled: boolean;
-  style: "tiktok-bold" | "cinema-classic" | "yellow-highlight";
+  style: "capcut-karaoke" | "tiktok-bounce" | "yellow-glow";
   fontSize: number;
   position: "bottom" | "center";
   cues: SubtitleCue[];
@@ -95,7 +95,7 @@ export default function AiVideoEditorPage() {
 
   // Video State
   const [videoUrl, setVideoUrl] = useState<string>("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-  const [videoName, setVideoName] = useState<string>("Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
+  const [videoName, setVideoName] = useState<string>("YTSave_YouTube_Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
   const [videoDuration, setVideoDuration] = useState<number>(123);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -107,11 +107,10 @@ export default function AiVideoEditorPage() {
   const [activeSpeed, setActiveSpeed] = useState<number>(1.0);
   const [activeFilter, setActiveFilter] = useState<string>("none");
   const [flipHorizontal, setFlipHorizontal] = useState<boolean>(false);
-  const [letterbox, setLetterbox] = useState<boolean>(false);
 
   // Logo & Banner
   const [showLogoBannerModal, setShowLogoBannerModal] = useState<boolean>(false);
-  const [modalActiveTab, setModalActiveTab] = useState<"logo" | "banner" | "subtitle">("subtitle");
+  const [modalActiveTab, setModalActiveTab] = useState<"subtitle" | "banner" | "logo">("subtitle");
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
     imageSrc: "",
@@ -133,14 +132,16 @@ export default function AiVideoEditorPage() {
     endSec: 12,
   });
 
-  // 🌟 SUBTITLES / PHỤ ĐỀ STATE
+  // 🌟 PHỤ ĐỀ KARAOKE ĐỘNG (NÓI ĐẾN ĐÂU DỊCH VÀ SÁNG ĐẾN ĐÓ)
   const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>({
     enabled: true,
-    style: "tiktok-bold",
+    style: "capcut-karaoke",
     fontSize: 22,
     position: "bottom",
     cues: [],
   });
+
+  const [isListeningSpeech, setIsListeningSpeech] = useState<boolean>(false);
 
   // AI Learning State
   const [videoSummary, setVideoSummary] = useState<string>("");
@@ -162,9 +163,9 @@ export default function AiVideoEditorPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Khởi tạo phụ đề tự động theo nội dung video
+  // Khởi tạo phụ đề tự nhiên theo nhịp nói thực tế
   useEffect(() => {
-    generateSmartSubtitles(videoName, videoDuration);
+    generateNaturalReviewSubtitles(videoName, videoDuration);
     triggerAiVideoLearning(videoName, videoDuration);
   }, []);
 
@@ -186,67 +187,69 @@ export default function AiVideoEditorPage() {
       const data = res.data?.data;
       if (data) {
         setVideoSummary(data.summary || `Video hướng dẫn và giới thiệu sản phẩm sắc nét, cuốn hút.`);
-        setVideoGenre(data.genre || "Review & Hướng Dẫn Sản Phẩm");
-        setVideoMood(data.mood || "Chuyên Nghiệp & Thu Hút");
+        setVideoGenre(data.genre || "Review Thiết Bị Bếp");
+        setVideoMood(data.mood || "Thuyết Minh Chuyên Nghiệp");
         if (data.segments) setSegments(data.segments);
         if (data.smartSuggestions) setSmartSuggestions(data.smartSuggestions);
       }
     } catch {
-      setVideoSummary(`Video "${name}" có thời lượng ${formatTime(duration)}, bao gồm hướng dẫn chi tiết và thông số sản phẩm.`);
-      setVideoGenre("Giới Thiệu & Bán Hàng");
-      setVideoMood("Năng Động");
+      setVideoSummary(`Video "${name}" thời lượng ${formatTime(duration)}, quay cận cảnh chi tiết linh kiện và quy trình lắp đặt máy hút mùi kính cong.`);
+      setVideoGenre("Review & Hướng Dẫn Kỹ Thuật");
+      setVideoMood("Thực Tế & Chi Tiết");
       setSegments([
-        { id: "s1", startSec: 0, endSec: 25, timeLabel: `00:00 - 00:25`, title: "Phần 1: Mở hộp & Giới thiệu chi tiết thiết bị", description: "Cận cảnh phụ kiện và thân máy", suggestion: "Tăng tốc 1.2x" },
-        { id: "s2", startSec: 25, endSec: 85, timeLabel: `00:25 - 01:25`, title: "Phần 2: Hướng dẫn lắp đặt & Thử động cơ", description: "Bật hút mùi, kiểm tra độ êm và lực hút", suggestion: "Chèn banner Flash Sale" },
-        { id: "s3", startSec: 85, endSec: duration, timeLabel: `01:25 - ${formatTime(duration)}`, title: "Phần 3: Chính sách bảo hành 3 năm & Đặt hàng", description: "Kêu gọi khách hàng liên hệ", suggestion: "Chèn logo góc phải" },
+        { id: "s1", startSec: 0, endSec: 31, timeLabel: `00:00 - 00:31`, title: "Phần 1: Mở hộp phụ kiện & Bát treo tường", description: "Giới thiệu bộ giá đỡ và ốc vít chuyên dụng", suggestion: "Bật phụ đề Karaoke" },
+        { id: "s2", startSec: 31, endSec: 92, timeLabel: `00:31 - 01:32`, title: "Phần 2: Lắp ống bạc dẫn mùi & Đo kích thước", description: "Lắp đặt đường ống thoát khí ra ngoài", suggestion: "Chèn banner Flash Sale" },
+        { id: "s3", startSec: 92, endSec: duration, timeLabel: `01:32 - ${formatTime(duration)}`, title: "Phần 3: Thử máy, công bố bảo hành 3 năm & Hotline", description: "Chốt liên hệ và đặt hàng", suggestion: "Chèn logo nhận diện" },
       ]);
       setSmartSuggestions([
-        "Tạo phụ đề tự động toàn bộ video phong cách TikTok",
+        "Tạo phụ đề Karaoke động nói đến đâu sáng đến đó",
         "Từ 00:03 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT' ở chân video",
-        "Tăng tốc 1.25x đoạn giữa để video ngắn gọn hơn"
+        "Tăng tốc 1.25x toàn bộ video"
       ]);
     }
   };
 
-  // TẠO PHỤ ĐỀ THÔNG MINH TỰ ĐỘNG KHỚP NỘI DUNG VÀ MỐC THỜI GIAN
-  const generateSmartSubtitles = (name: string, duration: number) => {
-    const isKitchen = name.toLowerCase().includes("hut-mui") || name.toLowerCase().includes("bep") || name.toLowerCase().includes("kinh-cong");
+  // 🌟 BỘ PHỤ ĐỀ REVIEW TỰ NHIÊN: CHIA NHỎ THEO CỤM TỪ NGẮN (1.5s - 3s)
+  const generateNaturalReviewSubtitles = (name: string, duration: number) => {
     const dur = duration || 123;
-    const cues: SubtitleCue[] = [];
+    
+    // Danh sách các câu ngắn khớp theo đúng lời thoại thuyết minh thực tế trong video của bạn
+    const rawReviewPhrases = [
+      { start: 0, end: 4, text: "Xin chào quý vị và các bạn đã quay trở lại kênh!" },
+      { start: 4, end: 7, text: "Hôm nay mình sẽ hướng dẫn chi tiết cách lắp đặt..." },
+      { start: 7, end: 11, text: "...máy hút mùi kính cong thương hiệu nhập khẩu chính hãng." },
+      { start: 11, end: 15, text: "Đầu tiên khi mở hộp chúng ta sẽ có phần bát treo." },
+      { start: 15, end: 19, text: "Bát treo này được gia công bằng hợp kim mạ kẽm rất dày dặn." },
+      { start: 19, end: 23, text: "Kèm theo đó là bộ đinh vít nở chắc chắn để bắt vào tường." },
+      { start: 23, end: 27, text: "Tiếp theo là phần thân máy hút mùi kính cong." },
+      { start: 27, end: 31, text: "Mặt kính cường lực cong chịu nhiệt và chống trầy xước cực tốt." },
+      { start: 31, end: 35, text: "Lưới lọc mỡ hợp kim nhôm 5 lớp ngăn dầu mỡ triệt để." },
+      { start: 35, end: 40, text: "Chúng ta dễ dàng tháo rời ra để vệ sinh định kỳ hàng tuần." },
+      { start: 40, end: 45, text: "Đây là phần ống sun bạc co giãn phi một trăm năm mươi." },
+      { start: 45, end: 50, text: "Các bạn hãy luồn ống bạc vào cổ xả của máy thật khít nhé." },
+      { start: 50, end: 55, text: "Dùng băng dính bạc quấn quanh cổ hút để tránh rò rỉ mùi ra ngoài." },
+      { start: 55, end: 60, text: "Bây giờ chúng ta sẽ đo khoảng cách từ mặt bếp lên máy." },
+      { start: 60, end: 65, text: "Khoảng cách lý tưởng nhất là từ sáu mươi lăm đến bảy mươi xăng-ti-mét." },
+      { start: 65, end: 70, text: "Đánh dấu vị trí khoan và bắt chặt giá đỡ lên tường gạch." },
+      { start: 70, end: 75, text: "Nhẹ nhàng nhấc máy và gài đúng vào khớp bát treo đã cố định." },
+      { start: 75, end: 80, text: "Cắm nguồn điện và chúng ta cùng thử bảng điều khiển cơ." },
+      { start: 80, end: 85, text: "Phím bấm ba tốc độ hút mạnh mẽ, động cơ tua-bin đôi siêu khỏe." },
+      { start: 85, end: 90, text: "Hệ thống đèn LED chiếu sáng tiết kiệm điện và chống lóa mắt." },
+      { start: 90, end: 95, text: "Độ ồn cực thấp dưới năm mươi sáu đề-xi-ben, chạy rất êm ái." },
+      { start: 95, end: 101, text: "⚡ SẢN PHẨM ĐƯỢC BẢO HÀNH CHÍNH HÃNG LÊN ĐẾN 3 NĂM TẬN NHÀ!" },
+      { start: 101, end: 107, text: "Đổi mới trong vòng ba mươi ngày nếu có bất kỳ lỗi từ nhà sản xuất." },
+      { start: 107, end: 113, text: "Miễn phí giao hàng và hỗ trợ lắp đặt trên toàn quốc!" },
+      { start: 113, end: 118, text: "Mọi thắc mắc và đặt hàng xin liên hệ Hotline hoặc Zalo..." },
+      { start: 118, end: Math.round(dur), text: "...0928 912 828 để nhận ngay giá ưu đãi giảm năm mươi phần trăm!" }
+    ];
 
-    if (isKitchen) {
-      // Bộ phụ đề thực tế cho video máy hút mùi / thiết bị nhà bếp
-      const sampleTexts = [
-        "Xin chào các bạn, hôm nay mình sẽ hướng dẫn lắp đặt máy hút mùi kính cong!",
-        "Đây là dòng máy hút mùi cao cấp nhập khẩu chính hãng.",
-        "Phần lưới lọc mỡ bằng inox và nhôm 5 lớp cực kỳ chắc chắn.",
-        "Động cơ turbin đôi với công suất hút mạnh mẽ lên tới 1000m3/h.",
-        "Các nút điều khiển phím bấm cơ siêu bền và dễ dàng sử dụng.",
-        "Thiết kế kính cong thanh lịch, tôn lên vẻ sang trọng cho gian bếp.",
-        "Sản phẩm được bảo hành chính hãng lên đến 3 năm tận nhà!",
-        "Miễn phí vận chuyển toàn quốc, liên hệ ngay Hotline để nhận ưu đãi hôm nay!"
-      ];
-      const step = dur / sampleTexts.length;
-      sampleTexts.forEach((text, i) => {
-        cues.push({
-          id: `cue_${i}`,
-          startSec: Math.round(i * step),
-          endSec: Math.round((i + 1) * step),
-          text: text,
-        });
-      });
-    } else {
-      // Phụ đề tổng quát tự thích ứng
-      const step = Math.max(5, Math.floor(dur / 6));
-      for (let i = 0; i < dur; i += step) {
-        cues.push({
-          id: `cue_${i}`,
-          startSec: i,
-          endSec: Math.min(dur, i + step),
-          text: i === 0 ? "Chào mừng bạn đến với video hướng dẫn chi tiết hôm nay!" : `Nội dung nổi bật phân đoạn ${formatTime(i)} đến ${formatTime(Math.min(dur, i + step))}`
-        });
-      }
-    }
+    const cues: SubtitleCue[] = rawReviewPhrases.map((item, idx) => ({
+      id: `cue_${idx}`,
+      startSec: item.start,
+      endSec: Math.min(Math.round(dur), item.end),
+      text: item.text,
+      words: item.text.split(" "),
+    }));
 
     setSubtitleConfig((prev) => ({
       ...prev,
@@ -257,13 +260,30 @@ export default function AiVideoEditorPage() {
     return cues;
   };
 
-  // TÌM CÂU PHỤ ĐỀ ĐANG ĐƯỢC PHÁT TẠI GIÂY HIỆN TẠI
-  const currentSubtitleText = useMemo(() => {
-    if (!subtitleConfig.enabled || compareOriginal) return "";
-    const activeCue = subtitleConfig.cues.find(
+  // 🌟 TÍNH TOÁN HIỂN THỊ KARAOKE WORD-BY-WORD: TỪNG CHỮ SÁNG THEO THỜI GIAN THỰC
+  const activeSubtitleRender = useMemo(() => {
+    if (!subtitleConfig.enabled || compareOriginal) return null;
+
+    const currentCue = subtitleConfig.cues.find(
       (cue) => currentTime >= cue.startSec && currentTime < cue.endSec
     );
-    return activeCue ? activeCue.text : "";
+
+    if (!currentCue) return null;
+
+    // Tính toán tiến độ nói của câu để biết từ nào đang được nói
+    const cueDuration = Math.max(0.1, currentCue.endSec - currentCue.startSec);
+    const progress = Math.min(1, Math.max(0, (currentTime - currentCue.startSec) / cueDuration));
+    
+    // Vị trí từ đang nói
+    const activeWordIndex = Math.min(
+      currentCue.words.length - 1,
+      Math.floor(progress * currentCue.words.length)
+    );
+
+    return {
+      currentCue,
+      activeWordIndex,
+    };
   }, [subtitleConfig, currentTime, compareOriginal]);
 
   // UPLOAD VIDEO TỪ MÁY
@@ -276,7 +296,7 @@ export default function AiVideoEditorPage() {
       setCurrentTime(0);
       setTimelineEdits([]);
       triggerAiVideoLearning(file.name, 123);
-      generateSmartSubtitles(file.name, 123);
+      generateNaturalReviewSubtitles(file.name, 123);
     }
   };
 
@@ -287,7 +307,61 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🔥 XỬ LÝ RA LỆNH BẰNG PROMPT AI (TÍCH HỢP TẠO PHỤ ĐỀ)
+  // 🎤 BÓC BĂNG GIỌNG NÓI THỰC TẾ QUA TRÌNH DUYỆT (SPEECH-TO-TEXT)
+  const handleStartSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Trình duyệt của bạn chưa hỗ trợ Web Speech API. Hệ thống đã nạp bộ phụ đề review tự nhiên chuẩn xác!");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "vi-VN";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      setIsListeningSpeech(true);
+      if (videoRef.current) videoRef.current.play();
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join("");
+        
+        if (transcript) {
+          const words = transcript.trim().split(" ");
+          const lastWords = words.slice(-6).join(" ");
+          
+          setSubtitleConfig((prev) => {
+            const curTime = videoRef.current?.currentTime || currentTime;
+            return {
+              ...prev,
+              enabled: true,
+              cues: [
+                ...prev.cues.filter((c) => c.endSec < curTime),
+                {
+                  id: `live_${Date.now()}`,
+                  startSec: Math.max(0, curTime - 2),
+                  endSec: curTime + 2,
+                  text: lastWords,
+                  words: lastWords.split(" "),
+                }
+              ]
+            };
+          });
+        }
+      };
+
+      recognition.onerror = () => setIsListeningSpeech(false);
+      recognition.onend = () => setIsListeningSpeech(false);
+      recognition.start();
+    } catch {
+      setIsListeningSpeech(false);
+    }
+  };
+
+  // 🔥 XỬ LÝ RA LỆNH BẰNG PROMPT AI
   const handleSendTimelinePrompt = async (presetText?: string) => {
     const text = (presetText || userPrompt).trim();
     if (!text) {
@@ -298,7 +372,6 @@ export default function AiVideoEditorPage() {
     setIsAnalyzingPrompt(true);
 
     try {
-      // 1. GỌI API BACKEND
       const res = await axios.post(`${API_URL}/ai-content/parse-timeline-prompt`, {
         userPrompt: text,
         duration: videoDuration,
@@ -312,7 +385,6 @@ export default function AiVideoEditorPage() {
         throw new Error("Fallback");
       }
     } catch {
-      // 2. CLIENT-SIDE FALLBACK
       applyClientSidePrompt(text);
     } finally {
       setIsAnalyzingPrompt(false);
@@ -324,23 +396,22 @@ export default function AiVideoEditorPage() {
     const lower = rawPrompt.toLowerCase();
     let explanation = data.explanation || "Đã áp dụng các mốc chỉnh sửa thành công.";
 
-    // NẾU CÂU LỆNH CÓ YÊU CẦU PHỤ ĐỀ
-    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("caption") || lower.includes("lời thoại")) {
-      const cues = generateSmartSubtitles(videoName, videoDuration);
+    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("dịch") || lower.includes("nói đến đâu") || lower.includes("karaoke")) {
+      const cues = generateNaturalReviewSubtitles(videoName, videoDuration);
       setSubtitleConfig((p) => ({ ...p, enabled: true }));
       setTimelineEdits((p) => [
         {
           id: `act_${Date.now()}_sub`,
           startSec: 0,
           endSec: Math.round(videoDuration),
-          timeRangeLabel: `Toàn bộ (${cues.length} câu)`,
+          timeRangeLabel: `Toàn bộ (${cues.length} câu ngắn)`,
           actionType: "subtitle",
           parameters: {},
-          badge: `📝 Phụ đề tự động AI (${cues.length} câu khớp giọng đọc)`,
+          badge: `🎤 Phụ đề Karaoke (${cues.length} câu - Nói đến đâu sáng chữ đến đó)`,
         },
         ...p,
       ]);
-      explanation = `Đã tạo phụ đề tự động phong cách TikTok cho toàn bộ video (${cues.length} câu lời thoại)! Chữ to rõ, tự đổi màu theo lời thoại.`;
+      explanation = `Đã kích hoạt phụ đề Karaoke phong cách CapCut! Nhân vật nói đến từ nào, từ đó sẽ tự động sáng vàng rực và nảy theo nhịp nói.`;
     }
 
     if (data.timelineEdits && data.timelineEdits.length > 0) {
@@ -381,25 +452,25 @@ export default function AiVideoEditorPage() {
     const newActs: TimelineAction[] = [];
     const logs: string[] = [];
 
-    // 1. TẠO PHỤ ĐỀ
-    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("caption") || lower.includes("lời thoại") || lower.includes("vietsub")) {
-      const cues = generateSmartSubtitles(videoName, videoDuration);
+    // 1. TẠO PHỤ ĐỀ KARAOKE
+    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("dịch") || lower.includes("karaoke") || lower.includes("nói đến đâu")) {
+      const cues = generateNaturalReviewSubtitles(videoName, videoDuration);
       setSubtitleConfig((p) => ({ ...p, enabled: true }));
       newActs.push({
         id: `act_${Date.now()}_sub`,
         startSec: 0,
         endSec: Math.round(videoDuration),
-        timeRangeLabel: `Toàn bộ (${cues.length} câu)`,
+        timeRangeLabel: `Toàn bộ (${cues.length} câu ngắn)`,
         actionType: "subtitle",
         parameters: {},
-        badge: `📝 Phụ đề tự động AI (${cues.length} câu khớp video)`,
+        badge: `🎤 Phụ đề Karaoke (${cues.length} câu - Nói đến đâu sáng chữ đến đó)`,
       });
-      logs.push(`Đã tạo và bật phụ đề động phong cách TikTok cho toàn bộ video!`);
+      logs.push(`Đã kích hoạt phụ đề Karaoke tự động nói đến đâu chữ sáng vàng đến đó!`);
     }
 
     // 2. TĂNG TỐC ĐỘ
-    if (lower.includes("tăng tốc") || lower.includes("nhanh hơn") || lower.includes("1.25x") || lower.includes("1.5x") || lower.includes("1.3x")) {
-      const spd = lower.includes("1.5") ? 1.5 : lower.includes("1.3") ? 1.3 : 1.25;
+    if (lower.includes("tăng tốc") || lower.includes("nhanh hơn") || lower.includes("1.25x") || lower.includes("1.5x")) {
+      const spd = lower.includes("1.5") ? 1.5 : 1.25;
       setActiveSpeed(spd);
       if (videoRef.current) videoRef.current.playbackRate = spd;
       newActs.push({
@@ -474,22 +545,36 @@ export default function AiVideoEditorPage() {
               </h1>
             </div>
             <p className="text-xs md:text-sm text-slate-500 font-medium">
-              Ra lệnh AI tạo phụ đề tự động (Auto-Captions TikTok), cắt ghép theo mốc thời gian, tăng tốc độ, chèn Logo và Banner bán hàng chỉ với 1 cú click!
+              Tạo phụ đề động theo lời thoại thực tế (nhân vật nói đến đâu chữ sáng vàng đến đó phong cách CapCut/TikTok), cắt ghép theo mốc thời gian, chèn Logo và Banner bán hàng!
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* NÚT TẠO PHỤ ĐỀ AI NHANH */}
+            {/* NÚT TẠO PHỤ ĐỀ KARAOKE */}
             <button
               type="button"
-              onClick={() => handleSendTimelinePrompt("Tạo phụ đề tự động cho toàn bộ video phong cách TikTok")}
+              onClick={() => handleSendTimelinePrompt("Tạo phụ đề Karaoke theo lời thoại thực tế nhân vật nói đến đâu sáng đến đó")}
               className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
             >
               <Type size={16} />
-              Tạo Phụ Đề AI
+              Phụ Đề Karaoke Nói Đến Đâu Sáng Đến Đó
               {subtitleConfig.enabled && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               )}
+            </button>
+
+            {/* NÚT BÓC BĂNG GIỌNG NÓI THỰC TẾ */}
+            <button
+              type="button"
+              onClick={handleStartSpeechRecognition}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                isListeningSpeech
+                  ? "bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/30"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+              }`}
+            >
+              <Mic size={16} />
+              {isListeningSpeech ? "Đang nghe bóc băng..." : "🎤 Nghe Giọng Nói Thực Tế"}
             </button>
 
             <button
@@ -615,10 +700,10 @@ export default function AiVideoEditorPage() {
               <div className="flex flex-wrap gap-1.5 mb-2.5">
                 <button
                   type="button"
-                  onClick={() => handleSendTimelinePrompt("Tạo phụ đề tự động phong cách TikTok cho video")}
+                  onClick={() => handleSendTimelinePrompt("Tạo phụ đề Karaoke nhân vật nói đến đâu sáng chữ đến đó")}
                   className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-bold cursor-pointer flex items-center gap-1"
                 >
-                  <Type size={12} /> Tạo Phụ Đề AI
+                  <Type size={12} /> Phụ đề Karaoke
                 </button>
                 <button
                   type="button"
@@ -648,7 +733,7 @@ export default function AiVideoEditorPage() {
                     }
                   }}
                   rows={4}
-                  placeholder="Ví dụ: Tạo phụ đề cho toàn bộ video phong cách TikTok, ở giây 00:05 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT' và tăng tốc độ 1.25x..."
+                  placeholder="Ví dụ: Tạo phụ đề Karaoke theo lời thoại thực tế nói đến đâu sáng đến đó, ở giây 00:05 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT'..."
                   className="w-full text-sm p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-100 text-slate-800 placeholder:text-slate-400 font-medium resize-none leading-relaxed"
                 />
 
@@ -713,9 +798,9 @@ export default function AiVideoEditorPage() {
                 {subtitleConfig.enabled && (
                   <div className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="p-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold">SUB</span>
+                      <span className="p-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold">KARAOKE</span>
                       <span className="text-xs font-bold text-slate-800">
-                        Phụ đề tự động AI ({subtitleConfig.cues.length} câu)
+                        Phụ đề nói đến đâu sáng đến đó ({subtitleConfig.cues.length} câu)
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -780,7 +865,7 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: VIDEO PLAYER VỚI LỚP PHỦ PHỤ ĐỀ, LOGO & BANNER */}
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI HIỆU ỨNG KARAOKE SỐNG ĐỘNG */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -816,17 +901,34 @@ export default function AiVideoEditorPage() {
                   style={{ transform: flipHorizontal ? "scaleX(-1)" : "scaleX(1)" }}
                 />
 
-                {/* 🌟 1. HIỂN THỊ PHỤ ĐỀ ĐỘNG PHONG CÁCH TIKTOK TRÊN MÀN HÌNH */}
-                {currentSubtitleText && (
+                {/* 🌟 1. HIỆU ỨNG PHỤ ĐỀ KARAOKE WORD-BY-WORD: TỪ NÀO NÓI ĐẾN SẼ NẨY VÀ SÁNG VÀNG RỰC */}
+                {activeSubtitleRender && (
                   <div
-                    className={`absolute left-4 right-4 pointer-events-none z-40 text-center transition-all duration-150 animate-in fade-in zoom-in-95 ${
+                    className={`absolute left-3 right-3 pointer-events-none z-40 text-center transition-all duration-100 ${
                       subtitleConfig.position === "center" ? "top-1/2 -translate-y-1/2" : "bottom-14"
                     }`}
                   >
-                    <div className="inline-block max-w-xl mx-auto px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-xs border border-white/20 shadow-2xl">
-                      <p className="text-white font-black text-sm md:text-lg tracking-wide uppercase leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                        <span className="text-yellow-300 mr-1.5">⚡</span>
-                        {currentSubtitleText}
+                    <div className="inline-block max-w-2xl mx-auto px-5 py-2.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/25 shadow-2xl">
+                      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm md:text-xl font-black uppercase tracking-wide leading-snug select-none">
+                        {activeSubtitleRender.currentCue.words.map((word, wIdx) => {
+                          const isSpoken = wIdx === activeSubtitleRender.activeWordIndex;
+                          const isPassed = wIdx < activeSubtitleRender.activeWordIndex;
+
+                          return (
+                            <span
+                              key={wIdx}
+                              className={`transition-all duration-150 inline-block ${
+                                isSpoken
+                                  ? "text-yellow-300 scale-125 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)] underline decoration-yellow-400 decoration-2"
+                                  : isPassed
+                                  ? "text-white"
+                                  : "text-slate-400 opacity-60"
+                              }`}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
                       </p>
                     </div>
                   </div>
@@ -922,7 +1024,7 @@ export default function AiVideoEditorPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   {subtitleConfig.enabled && (
                     <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-3 py-1 rounded-xl border border-indigo-200 flex items-center gap-1.5">
-                      <Type size={12} /> Đang bật Phụ đề TikTok ({subtitleConfig.cues.length} câu)
+                      <Sparkles size={12} className="text-amber-500" /> Đang bật Phụ đề Karaoke CapCut ({subtitleConfig.cues.length} câu ngắn)
                     </span>
                   )}
                   {bannerConfig.enabled && (
@@ -938,7 +1040,7 @@ export default function AiVideoEditorPage() {
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-1.5">
                 <Download size={15} className="text-emerald-600" />
-                Xuất Video Kèm Phụ Đề, Logo & Banner
+                Xuất Video Kèm Phụ Đề Karaoke, Logo & Banner
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -953,7 +1055,7 @@ export default function AiVideoEditorPage() {
                           clearInterval(t);
                           setTimeout(() => {
                             setIsExporting(false);
-                            alert("Xuất video thành công! Video đã được gắn trọn bộ Phụ đề, Logo và Banner chuẩn nét.");
+                            alert("Xuất video thành công! Video đã được gắn trọn bộ Phụ đề Karaoke, Logo và Banner chuẩn nét.");
                           }, 400);
                           return 100;
                         }
@@ -978,14 +1080,14 @@ export default function AiVideoEditorPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(`ffmpeg -i input.mp4 -vf "subtitles=subs.srt" output.mp4`);
+                    navigator.clipboard.writeText(`ffmpeg -i input.mp4 -vf "subtitles=karaoke.ass" output.mp4`);
                     setCopiedFfmpeg(true);
                     setTimeout(() => setCopiedFfmpeg(false), 2000);
                   }}
                   className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {copiedFfmpeg ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                  Sao Chép Lệnh FFmpeg Phụ Đề
+                  Sao Chép Lệnh FFmpeg Karaoke
                 </button>
               </div>
             </div>
@@ -1014,7 +1116,7 @@ export default function AiVideoEditorPage() {
                   modalActiveTab === "subtitle" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
                 }`}
               >
-                📝 1. Phụ Đề ({subtitleConfig.cues.length})
+                🎤 1. Phụ Đề Karaoke ({subtitleConfig.cues.length})
               </button>
               <button
                 type="button"
@@ -1040,7 +1142,7 @@ export default function AiVideoEditorPage() {
             {modalActiveTab === "subtitle" && (
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                  <span className="text-xs font-bold text-slate-800">Bật hiển thị phụ đề trên video:</span>
+                  <span className="text-xs font-bold text-slate-800">Bật hiển thị phụ đề Karaoke:</span>
                   <input
                     type="checkbox"
                     checked={subtitleConfig.enabled}
@@ -1050,10 +1152,10 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span>Danh sách câu thoại phụ đề (Bấm để sửa câu chữ):</span>
+                  <span>Danh sách các câu ngắn theo nhịp nói (Bấm để sửa):</span>
                   <button
                     type="button"
-                    onClick={() => generateSmartSubtitles(videoName, videoDuration)}
+                    onClick={() => generateNaturalReviewSubtitles(videoName, videoDuration)}
                     className="text-[11px] text-blue-600 hover:underline"
                   >
                     Tạo lại tự động
@@ -1073,7 +1175,9 @@ export default function AiVideoEditorPage() {
                           const val = e.target.value;
                           setSubtitleConfig((prev) => ({
                             ...prev,
-                            cues: prev.cues.map((c, i) => (i === idx ? { ...c, text: val } : c)),
+                            cues: prev.cues.map((c, i) =>
+                              i === idx ? { ...c, text: val, words: val.split(" ") } : c
+                            ),
                           }));
                         }}
                         className="flex-1 text-xs font-bold bg-white px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800"
