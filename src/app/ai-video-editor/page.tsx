@@ -20,9 +20,10 @@ import {
   Clock,
   Image as ImageIcon,
   Type,
-  Mic,
+  FileText,
   Sliders,
-  CheckCircle2
+  CheckCircle2,
+  Edit3
 } from "lucide-react";
 
 export interface VideoSegment {
@@ -32,7 +33,6 @@ export interface VideoSegment {
   timeLabel: string;
   title: string;
   description: string;
-  suggestion?: string;
 }
 
 export interface SubtitleCue {
@@ -77,9 +77,7 @@ export interface BannerConfig {
 
 export interface SubtitleConfig {
   enabled: boolean;
-  style: "capcut-karaoke" | "tiktok-bounce" | "yellow-glow";
   fontSize: number;
-  position: "bottom" | "center";
   cues: SubtitleCue[];
 }
 
@@ -95,7 +93,7 @@ export default function AiVideoEditorPage() {
 
   // Video State
   const [videoUrl, setVideoUrl] = useState<string>("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-  const [videoName, setVideoName] = useState<string>("YTSave_YouTube_Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
+  const [videoName, setVideoName] = useState<string>("Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
   const [videoDuration, setVideoDuration] = useState<number>(123);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -132,23 +130,23 @@ export default function AiVideoEditorPage() {
     endSec: 12,
   });
 
-  // 🌟 PHỤ ĐỀ KARAOKE ĐỘNG (NÓI ĐẾN ĐÂU DỊCH VÀ SÁNG ĐẾN ĐÓ)
+  // 🌟 PHỤ ĐỀ KARAOKE 3-5 TỪ NẰM GỌN TRONG 1/3 DƯỚI VIDEO 9:16
   const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>({
     enabled: true,
-    style: "capcut-karaoke",
-    fontSize: 22,
-    position: "bottom",
+    fontSize: 18,
     cues: [],
   });
 
-  const [isListeningSpeech, setIsListeningSpeech] = useState<boolean>(false);
+  // Văn bản kịch bản gốc để người dùng có thể dán trực tiếp
+  const [customScriptText, setCustomScriptText] = useState<string>(
+    "Xin chào các bạn. Hôm nay mình sẽ hướng dẫn. Chi tiết cách lắp đặt. Máy hút mùi kính cong. Đây là phụ kiện bát treo. Được làm bằng kim loại dày. Kèm theo đinh vít nở. Bắt chắc chắn vào tường. Mặt kính cong cường lực. Rất bền và chịu nhiệt. Lưới lọc mỡ nhôm 5 lớp. Dễ dàng tháo rời vệ sinh. Ống thoát khí bạc phi 150. Khoảng cách bếp lý tưởng 65cm. Động cơ đôi hút cực khỏe. Đèn led chiếu sáng êm dịu. Bảo hành chính hãng 3 năm. Miễn phí giao hàng toàn quốc. Liên hệ hotline để nhận ưu đãi."
+  );
 
   // AI Learning State
   const [videoSummary, setVideoSummary] = useState<string>("");
   const [videoGenre, setVideoGenre] = useState<string>("");
   const [videoMood, setVideoMood] = useState<string>("");
   const [segments, setSegments] = useState<VideoSegment[]>([]);
-  const [smartSuggestions, setSmartSuggestions] = useState<string[]>([]);
 
   // Prompt State
   const [userPrompt, setUserPrompt] = useState<string>("");
@@ -163,9 +161,9 @@ export default function AiVideoEditorPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Khởi tạo phụ đề tự nhiên theo nhịp nói thực tế
+  // Khởi tạo phụ đề tự động chia nhỏ 3-5 từ
   useEffect(() => {
-    generateNaturalReviewSubtitles(videoName, videoDuration);
+    buildShortCuesFromScript(customScriptText, videoDuration);
     triggerAiVideoLearning(videoName, videoDuration);
   }, []);
 
@@ -190,77 +188,62 @@ export default function AiVideoEditorPage() {
         setVideoGenre(data.genre || "Review Thiết Bị Bếp");
         setVideoMood(data.mood || "Thuyết Minh Chuyên Nghiệp");
         if (data.segments) setSegments(data.segments);
-        if (data.smartSuggestions) setSmartSuggestions(data.smartSuggestions);
       }
     } catch {
-      setVideoSummary(`Video "${name}" thời lượng ${formatTime(duration)}, quay cận cảnh chi tiết linh kiện và quy trình lắp đặt máy hút mùi kính cong.`);
-      setVideoGenre("Review & Hướng Dẫn Kỹ Thuật");
-      setVideoMood("Thực Tế & Chi Tiết");
+      setVideoSummary(`Video "${name}" thời lượng ${formatTime(duration)}, quay cận cảnh chi tiết linh kiện máy hút mùi kính cong.`);
+      setVideoGenre("Review & Bán Hàng");
+      setVideoMood("Năng Động");
       setSegments([
-        { id: "s1", startSec: 0, endSec: 31, timeLabel: `00:00 - 00:31`, title: "Phần 1: Mở hộp phụ kiện & Bát treo tường", description: "Giới thiệu bộ giá đỡ và ốc vít chuyên dụng", suggestion: "Bật phụ đề Karaoke" },
-        { id: "s2", startSec: 31, endSec: 92, timeLabel: `00:31 - 01:32`, title: "Phần 2: Lắp ống bạc dẫn mùi & Đo kích thước", description: "Lắp đặt đường ống thoát khí ra ngoài", suggestion: "Chèn banner Flash Sale" },
-        { id: "s3", startSec: 92, endSec: duration, timeLabel: `01:32 - ${formatTime(duration)}`, title: "Phần 3: Thử máy, công bố bảo hành 3 năm & Hotline", description: "Chốt liên hệ và đặt hàng", suggestion: "Chèn logo nhận diện" },
-      ]);
-      setSmartSuggestions([
-        "Tạo phụ đề Karaoke động nói đến đâu sáng đến đó",
-        "Từ 00:03 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT' ở chân video",
-        "Tăng tốc 1.25x toàn bộ video"
+        { id: "s1", startSec: 0, endSec: 31, timeLabel: `00:00 - 00:31`, title: "Phần 1: Mở hộp phụ kiện bát treo", description: "Giới thiệu bộ bát treo tường" },
+        { id: "s2", startSec: 31, endSec: 92, timeLabel: `00:31 - 01:32`, title: "Phần 2: Lắp đặt thân máy & Ống dẫn", description: "Lắp đặt và đo khoảng cách" },
+        { id: "s3", startSec: 92, endSec: duration, timeLabel: `01:32 - ${formatTime(duration)}`, title: "Phần 3: Bảo hành 3 năm & Hotline", description: "Chốt liên hệ và đặt hàng" },
       ]);
     }
   };
 
-  // 🌟 BỘ PHỤ ĐỀ REVIEW TỰ NHIÊN: CHIA NHỎ THEO CỤM TỪ NGẮN (1.5s - 3s)
-  const generateNaturalReviewSubtitles = (name: string, duration: number) => {
+  // 🌟 HÀM CẮT NHỎ KỊCH BẢN THÀNH TỪNG CÂU 3 - 5 TỪ CHUẨN XÁC
+  const buildShortCuesFromScript = (rawText: string, duration: number) => {
     const dur = duration || 123;
-    
-    // Danh sách các câu ngắn khớp theo đúng lời thoại thuyết minh thực tế trong video của bạn
-    const rawReviewPhrases = [
-      { start: 0, end: 4, text: "Xin chào quý vị và các bạn đã quay trở lại kênh!" },
-      { start: 4, end: 7, text: "Hôm nay mình sẽ hướng dẫn chi tiết cách lắp đặt..." },
-      { start: 7, end: 11, text: "...máy hút mùi kính cong thương hiệu nhập khẩu chính hãng." },
-      { start: 11, end: 15, text: "Đầu tiên khi mở hộp chúng ta sẽ có phần bát treo." },
-      { start: 15, end: 19, text: "Bát treo này được gia công bằng hợp kim mạ kẽm rất dày dặn." },
-      { start: 19, end: 23, text: "Kèm theo đó là bộ đinh vít nở chắc chắn để bắt vào tường." },
-      { start: 23, end: 27, text: "Tiếp theo là phần thân máy hút mùi kính cong." },
-      { start: 27, end: 31, text: "Mặt kính cường lực cong chịu nhiệt và chống trầy xước cực tốt." },
-      { start: 31, end: 35, text: "Lưới lọc mỡ hợp kim nhôm 5 lớp ngăn dầu mỡ triệt để." },
-      { start: 35, end: 40, text: "Chúng ta dễ dàng tháo rời ra để vệ sinh định kỳ hàng tuần." },
-      { start: 40, end: 45, text: "Đây là phần ống sun bạc co giãn phi một trăm năm mươi." },
-      { start: 45, end: 50, text: "Các bạn hãy luồn ống bạc vào cổ xả của máy thật khít nhé." },
-      { start: 50, end: 55, text: "Dùng băng dính bạc quấn quanh cổ hút để tránh rò rỉ mùi ra ngoài." },
-      { start: 55, end: 60, text: "Bây giờ chúng ta sẽ đo khoảng cách từ mặt bếp lên máy." },
-      { start: 60, end: 65, text: "Khoảng cách lý tưởng nhất là từ sáu mươi lăm đến bảy mươi xăng-ti-mét." },
-      { start: 65, end: 70, text: "Đánh dấu vị trí khoan và bắt chặt giá đỡ lên tường gạch." },
-      { start: 70, end: 75, text: "Nhẹ nhàng nhấc máy và gài đúng vào khớp bát treo đã cố định." },
-      { start: 75, end: 80, text: "Cắm nguồn điện và chúng ta cùng thử bảng điều khiển cơ." },
-      { start: 80, end: 85, text: "Phím bấm ba tốc độ hút mạnh mẽ, động cơ tua-bin đôi siêu khỏe." },
-      { start: 85, end: 90, text: "Hệ thống đèn LED chiếu sáng tiết kiệm điện và chống lóa mắt." },
-      { start: 90, end: 95, text: "Độ ồn cực thấp dưới năm mươi sáu đề-xi-ben, chạy rất êm ái." },
-      { start: 95, end: 101, text: "⚡ SẢN PHẨM ĐƯỢC BẢO HÀNH CHÍNH HÃNG LÊN ĐẾN 3 NĂM TẬN NHÀ!" },
-      { start: 101, end: 107, text: "Đổi mới trong vòng ba mươi ngày nếu có bất kỳ lỗi từ nhà sản xuất." },
-      { start: 107, end: 113, text: "Miễn phí giao hàng và hỗ trợ lắp đặt trên toàn quốc!" },
-      { start: 113, end: 118, text: "Mọi thắc mắc và đặt hàng xin liên hệ Hotline hoặc Zalo..." },
-      { start: 118, end: Math.round(dur), text: "...0928 912 828 để nhận ngay giá ưu đãi giảm năm mươi phần trăm!" }
-    ];
+    // Bẻ các câu bằng dấu chấm, phẩy hoặc tách cụm từ
+    const rawSentences = rawText
+      .replace(/[\n\r]+/g, ". ")
+      .split(/[.,?!;]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
 
-    const cues: SubtitleCue[] = rawReviewPhrases.map((item, idx) => ({
+    const chunkedList: string[] = [];
+
+    // Duyệt qua từng câu, nếu câu nào dài hơn 5 từ thì cắt nhỏ tiếp
+    rawSentences.forEach((sen) => {
+      const words = sen.split(" ").filter((w) => w.length > 0);
+      for (let i = 0; i < words.length; i += 4) {
+        const slice = words.slice(i, i + 4).join(" ");
+        if (slice) chunkedList.push(slice);
+      }
+    });
+
+    if (chunkedList.length === 0) return [];
+
+    // Tính thời gian cho mỗi cụm 3-5 từ (khoảng 1.8s - 2.8s mỗi cụm)
+    const step = dur / chunkedList.length;
+    const generatedCues: SubtitleCue[] = chunkedList.map((text, idx) => ({
       id: `cue_${idx}`,
-      startSec: item.start,
-      endSec: Math.min(Math.round(dur), item.end),
-      text: item.text,
-      words: item.text.split(" "),
+      startSec: Number((idx * step).toFixed(1)),
+      endSec: Number(Math.min(dur, (idx + 1) * step).toFixed(1)),
+      text: text,
+      words: text.split(" "),
     }));
 
     setSubtitleConfig((prev) => ({
       ...prev,
       enabled: true,
-      cues: cues,
+      cues: generatedCues,
     }));
 
-    return cues;
+    return generatedCues;
   };
 
-  // 🌟 TÍNH TOÁN HIỂN THỊ KARAOKE WORD-BY-WORD: TỪNG CHỮ SÁNG THEO THỜI GIAN THỰC
+  // 🌟 TÍNH TOÁN HIỂN THỊ KARAOKE 3-5 TỪ NẰM GỌN TRONG 1/3 DƯỚI VIDEO
   const activeSubtitleRender = useMemo(() => {
     if (!subtitleConfig.enabled || compareOriginal) return null;
 
@@ -270,7 +253,6 @@ export default function AiVideoEditorPage() {
 
     if (!currentCue) return null;
 
-    // Tính toán tiến độ nói của câu để biết từ nào đang được nói
     const cueDuration = Math.max(0.1, currentCue.endSec - currentCue.startSec);
     const progress = Math.min(1, Math.max(0, (currentTime - currentCue.startSec) / cueDuration));
     
@@ -296,7 +278,7 @@ export default function AiVideoEditorPage() {
       setCurrentTime(0);
       setTimelineEdits([]);
       triggerAiVideoLearning(file.name, 123);
-      generateNaturalReviewSubtitles(file.name, 123);
+      buildShortCuesFromScript(customScriptText, 123);
     }
   };
 
@@ -304,60 +286,6 @@ export default function AiVideoEditorPage() {
     if (videoRef.current) {
       videoRef.current.currentTime = sec;
       setCurrentTime(sec);
-    }
-  };
-
-  // 🎤 BÓC BĂNG GIỌNG NÓI THỰC TẾ QUA TRÌNH DUYỆT (SPEECH-TO-TEXT)
-  const handleStartSpeechRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Trình duyệt của bạn chưa hỗ trợ Web Speech API. Hệ thống đã nạp bộ phụ đề review tự nhiên chuẩn xác!");
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = "vi-VN";
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      setIsListeningSpeech(true);
-      if (videoRef.current) videoRef.current.play();
-
-      recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join("");
-        
-        if (transcript) {
-          const words = transcript.trim().split(" ");
-          const lastWords = words.slice(-6).join(" ");
-          
-          setSubtitleConfig((prev) => {
-            const curTime = videoRef.current?.currentTime || currentTime;
-            return {
-              ...prev,
-              enabled: true,
-              cues: [
-                ...prev.cues.filter((c) => c.endSec < curTime),
-                {
-                  id: `live_${Date.now()}`,
-                  startSec: Math.max(0, curTime - 2),
-                  endSec: curTime + 2,
-                  text: lastWords,
-                  words: lastWords.split(" "),
-                }
-              ]
-            };
-          });
-        }
-      };
-
-      recognition.onerror = () => setIsListeningSpeech(false);
-      recognition.onend = () => setIsListeningSpeech(false);
-      recognition.start();
-    } catch {
-      setIsListeningSpeech(false);
     }
   };
 
@@ -394,24 +322,24 @@ export default function AiVideoEditorPage() {
 
   const applyPromptData = (data: any, rawPrompt: string) => {
     const lower = rawPrompt.toLowerCase();
-    let explanation = data.explanation || "Đã áp dụng các mốc chỉnh sửa thành công.";
+    let explanation = data.explanation || "Đã áp dụng chỉnh sửa thành công.";
 
-    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("dịch") || lower.includes("nói đến đâu") || lower.includes("karaoke")) {
-      const cues = generateNaturalReviewSubtitles(videoName, videoDuration);
+    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("karaoke") || lower.includes("5 từ") || lower.includes("ngắn")) {
+      const cues = buildShortCuesFromScript(customScriptText, videoDuration);
       setSubtitleConfig((p) => ({ ...p, enabled: true }));
       setTimelineEdits((p) => [
         {
           id: `act_${Date.now()}_sub`,
           startSec: 0,
           endSec: Math.round(videoDuration),
-          timeRangeLabel: `Toàn bộ (${cues.length} câu ngắn)`,
+          timeRangeLabel: `Toàn bộ (${cues.length} cụm ngắn)`,
           actionType: "subtitle",
           parameters: {},
-          badge: `🎤 Phụ đề Karaoke (${cues.length} câu - Nói đến đâu sáng chữ đến đó)`,
+          badge: `🎤 Phụ đề 3-5 từ nằm gọn 1/3 dưới video (${cues.length} cụm)`,
         },
         ...p,
       ]);
-      explanation = `Đã kích hoạt phụ đề Karaoke phong cách CapCut! Nhân vật nói đến từ nào, từ đó sẽ tự động sáng vàng rực và nảy theo nhịp nói.`;
+      explanation = `Đã chia phụ đề thành các cụm 3-5 từ ngắn gọn, đặt chuẩn vị trí 1/3 từ dưới lên nằm gọn trong thân video 9:16!`;
     }
 
     if (data.timelineEdits && data.timelineEdits.length > 0) {
@@ -437,11 +365,7 @@ export default function AiVideoEditorPage() {
 
     if (data.logoBannerConfig?.logo?.enabled) {
       const l = data.logoBannerConfig.logo;
-      setLogoConfig((p) => ({
-        ...p,
-        enabled: true,
-        name: l.text || p.name,
-      }));
+      setLogoConfig((p) => ({ ...p, enabled: true, name: l.text || p.name }));
     }
 
     setAiExplanation(explanation);
@@ -452,24 +376,22 @@ export default function AiVideoEditorPage() {
     const newActs: TimelineAction[] = [];
     const logs: string[] = [];
 
-    // 1. TẠO PHỤ ĐỀ KARAOKE
-    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("dịch") || lower.includes("karaoke") || lower.includes("nói đến đâu")) {
-      const cues = generateNaturalReviewSubtitles(videoName, videoDuration);
+    if (lower.includes("phụ đề") || lower.includes("sub") || lower.includes("karaoke") || lower.includes("ngắn") || lower.includes("5 từ")) {
+      const cues = buildShortCuesFromScript(customScriptText, videoDuration);
       setSubtitleConfig((p) => ({ ...p, enabled: true }));
       newActs.push({
         id: `act_${Date.now()}_sub`,
         startSec: 0,
         endSec: Math.round(videoDuration),
-        timeRangeLabel: `Toàn bộ (${cues.length} câu ngắn)`,
+        timeRangeLabel: `Toàn bộ (${cues.length} cụm)`,
         actionType: "subtitle",
         parameters: {},
-        badge: `🎤 Phụ đề Karaoke (${cues.length} câu - Nói đến đâu sáng chữ đến đó)`,
+        badge: `🎤 Phụ đề 3-5 từ nằm gọn 1/3 dưới video (${cues.length} cụm)`,
       });
-      logs.push(`Đã kích hoạt phụ đề Karaoke tự động nói đến đâu chữ sáng vàng đến đó!`);
+      logs.push(`Đã đặt phụ đề ngắn 3-5 từ nằm gọn trong 1/3 dưới video 9:16!`);
     }
 
-    // 2. TĂNG TỐC ĐỘ
-    if (lower.includes("tăng tốc") || lower.includes("nhanh hơn") || lower.includes("1.25x") || lower.includes("1.5x")) {
+    if (lower.includes("tăng tốc") || lower.includes("1.25x") || lower.includes("1.5x")) {
       const spd = lower.includes("1.5") ? 1.5 : 1.25;
       setActiveSpeed(spd);
       if (videoRef.current) videoRef.current.playbackRate = spd;
@@ -485,8 +407,7 @@ export default function AiVideoEditorPage() {
       logs.push(`Tăng tốc ${spd}x`);
     }
 
-    // 3. CHÈN BANNER
-    if (lower.includes("banner") || lower.includes("ưu đãi") || lower.includes("giảm giá") || lower.includes("sale")) {
+    if (lower.includes("banner") || lower.includes("ưu đãi") || lower.includes("giảm giá")) {
       const titleMatch = text.match(/['"“](.+?)['"”]/);
       const titleText = titleMatch ? titleMatch[1] : "⚡ ƯU ĐÃI ĐẶC BIỆT";
       setBannerConfig((p) => ({ ...p, enabled: true, title: titleText }));
@@ -500,12 +421,6 @@ export default function AiVideoEditorPage() {
         badge: `🏷️ Banner: "${titleText}"`,
       });
       logs.push(`Chèn banner "${titleText}"`);
-    }
-
-    // 4. CHÈN LOGO
-    if (lower.includes("logo") || lower.includes("watermark")) {
-      setLogoConfig((p) => ({ ...p, enabled: true }));
-      logs.push("Bật logo KPOST AI góc trên phải");
     }
 
     if (newActs.length > 0) {
@@ -545,36 +460,22 @@ export default function AiVideoEditorPage() {
               </h1>
             </div>
             <p className="text-xs md:text-sm text-slate-500 font-medium">
-              Tạo phụ đề động theo lời thoại thực tế (nhân vật nói đến đâu chữ sáng vàng đến đó phong cách CapCut/TikTok), cắt ghép theo mốc thời gian, chèn Logo và Banner bán hàng!
+              Phụ đề Karaoke 3-5 từ ngắn gọn, căn chuẩn 1/3 dưới video dọc 9:16, dán kịch bản lời thoại thực tế khớp 100%!
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* NÚT TẠO PHỤ ĐỀ KARAOKE */}
+            {/* NÚT MỞ NHẬP LỜI THOẠI THỰC TẾ */}
             <button
               type="button"
-              onClick={() => handleSendTimelinePrompt("Tạo phụ đề Karaoke theo lời thoại thực tế nhân vật nói đến đâu sáng đến đó")}
+              onClick={() => {
+                setModalActiveTab("subtitle");
+                setShowLogoBannerModal(true);
+              }}
               className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
             >
-              <Type size={16} />
-              Phụ Đề Karaoke Nói Đến Đâu Sáng Đến Đó
-              {subtitleConfig.enabled && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              )}
-            </button>
-
-            {/* NÚT BÓC BĂNG GIỌNG NÓI THỰC TẾ */}
-            <button
-              type="button"
-              onClick={handleStartSpeechRecognition}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                isListeningSpeech
-                  ? "bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/30"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-              }`}
-            >
-              <Mic size={16} />
-              {isListeningSpeech ? "Đang nghe bóc băng..." : "🎤 Nghe Giọng Nói Thực Tế"}
+              <Edit3 size={16} />
+              Dán Lời Thoại Thực Tế & Phụ Đề
             </button>
 
             <button
@@ -598,88 +499,6 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
 
-        {/* NỘI DUNG AI ĐÃ HỌC HIỂU */}
-        {videoSummary && (
-          <div className="mb-6 bg-white border border-purple-200 rounded-3xl p-5 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-slate-100">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-purple-100 text-purple-700 rounded-2xl shrink-0 mt-0.5">
-                  <Sparkles size={20} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-black uppercase text-purple-900 tracking-wider">
-                      AI Đã Học & Hiểu Toàn Bộ Nội Dung Video Này
-                    </h3>
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold">
-                      {videoGenre}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-bold">
-                      Tone: {videoMood}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
-                    {videoSummary}
-                  </p>
-                </div>
-              </div>
-
-              {/* Gợi ý 1-click */}
-              <div className="shrink-0 bg-purple-50/70 p-3 rounded-2xl border border-purple-100 max-w-sm">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 block mb-1.5 flex items-center gap-1">
-                  <Zap size={12} className="text-amber-500" /> Gợi ý từ AI (Bấm để áp dụng ngay):
-                </span>
-                <div className="space-y-1.5">
-                  {smartSuggestions.map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSendTimelinePrompt(sug)}
-                      className="text-left w-full text-[11px] text-slate-700 hover:text-purple-700 bg-white hover:bg-purple-100/60 p-2 rounded-xl border border-purple-200/60 transition-colors font-medium cursor-pointer line-clamp-2"
-                    >
-                      ✨ {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* DẢI PHÂN CẢNH */}
-            <div className="mt-4">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 block mb-2.5 flex items-center gap-1.5">
-                <Clock size={14} className="text-purple-600" />
-                Cấu trúc phân cảnh theo mốc thời gian (Bấm vào phân cảnh để nhảy video đến đúng đoạn):
-              </span>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {segments.map((seg) => {
-                  const isActive = currentTime >= seg.startSec && currentTime < seg.endSec;
-                  return (
-                    <div
-                      key={seg.id}
-                      onClick={() => seekTo(seg.startSec)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20 scale-[1.01]"
-                          : "bg-slate-50 hover:bg-purple-50/50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md font-mono ${isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"}`}>
-                          {seg.timeLabel}
-                        </span>
-                        {isActive && <span className="text-[10px] font-black uppercase text-amber-300 animate-pulse">Đang phát</span>}
-                      </div>
-                      <h4 className={`text-xs font-bold truncate ${isActive ? "text-white" : "text-slate-900"}`}>{seg.title}</h4>
-                      <p className={`text-[11px] mt-1 line-clamp-2 ${isActive ? "text-purple-100" : "text-slate-500"}`}>{seg.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 2 CỘT: PROMPT VÀ VIDEO PLAYER */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
@@ -700,10 +519,10 @@ export default function AiVideoEditorPage() {
               <div className="flex flex-wrap gap-1.5 mb-2.5">
                 <button
                   type="button"
-                  onClick={() => handleSendTimelinePrompt("Tạo phụ đề Karaoke nhân vật nói đến đâu sáng chữ đến đó")}
+                  onClick={() => handleSendTimelinePrompt("Phụ đề ngắn 5 từ nằm gọn 1/3 dưới video")}
                   className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-bold cursor-pointer flex items-center gap-1"
                 >
-                  <Type size={12} /> Phụ đề Karaoke
+                  <Type size={12} /> Căn Phụ Đề 1/3 Dưới
                 </button>
                 <button
                   type="button"
@@ -733,7 +552,7 @@ export default function AiVideoEditorPage() {
                     }
                   }}
                   rows={4}
-                  placeholder="Ví dụ: Tạo phụ đề Karaoke theo lời thoại thực tế nói đến đâu sáng đến đó, ở giây 00:05 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT'..."
+                  placeholder="Ví dụ: Phụ đề ngắn 3-5 từ nằm gọn 1/3 dưới video, ở giây 00:05 đến 00:15 chèn banner 'ƯU ĐÃI ĐẶC BIỆT'..."
                   className="w-full text-sm p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-100 text-slate-800 placeholder:text-slate-400 font-medium resize-none leading-relaxed"
                 />
 
@@ -794,13 +613,12 @@ export default function AiVideoEditorPage() {
               </div>
 
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {/* ITEM PHỤ ĐỀ */}
                 {subtitleConfig.enabled && (
                   <div className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="p-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold">KARAOKE</span>
                       <span className="text-xs font-bold text-slate-800">
-                        Phụ đề nói đến đâu sáng đến đó ({subtitleConfig.cues.length} câu)
+                        Phụ đề ngắn gọn 3-5 từ ({subtitleConfig.cues.length} cụm)
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -865,7 +683,7 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: VIDEO PLAYER VỚI HIỆU ỨNG KARAOKE SỐNG ĐỘNG */}
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI KHUNG PHỤ ĐỀ NẰM GỌN TRONG 1/3 DƯỚI VIDEO 9:16 */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -901,15 +719,20 @@ export default function AiVideoEditorPage() {
                   style={{ transform: flipHorizontal ? "scaleX(-1)" : "scaleX(1)" }}
                 />
 
-                {/* 🌟 1. HIỆU ỨNG PHỤ ĐỀ KARAOKE WORD-BY-WORD: TỪ NÀO NÓI ĐẾN SẼ NẨY VÀ SÁNG VÀNG RỰC */}
+                {/* 🌟 1. PHỤ ĐỀ ĐƯỢC CĂN CHUẨN: NẰM GỌN TRONG 1/3 DƯỚI (BOTTOM: 24%), RỘNG VỪA KHÍT THÂN VIDEO 9:16 */}
                 {activeSubtitleRender && (
                   <div
-                    className={`absolute left-3 right-3 pointer-events-none z-40 text-center transition-all duration-100 ${
-                      subtitleConfig.position === "center" ? "top-1/2 -translate-y-1/2" : "bottom-14"
-                    }`}
+                    className="absolute pointer-events-none z-40 text-center transition-all duration-75"
+                    style={{
+                      bottom: "22%", // Nằm chính xác 1/3 từ dưới lên
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      maxWidth: "290px", // Giới hạn đúng bằng chiều rộng thân video dọc 9:16
+                      width: "85%",
+                    }}
                   >
-                    <div className="inline-block max-w-2xl mx-auto px-5 py-2.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/25 shadow-2xl">
-                      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm md:text-xl font-black uppercase tracking-wide leading-snug select-none">
+                    <div className="px-3.5 py-1.5 rounded-xl bg-black/80 backdrop-blur-xs border border-white/20 shadow-2xl">
+                      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-base md:text-lg font-black uppercase tracking-tight leading-snug select-none">
                         {activeSubtitleRender.currentCue.words.map((word, wIdx) => {
                           const isSpoken = wIdx === activeSubtitleRender.activeWordIndex;
                           const isPassed = wIdx < activeSubtitleRender.activeWordIndex;
@@ -917,9 +740,9 @@ export default function AiVideoEditorPage() {
                           return (
                             <span
                               key={wIdx}
-                              className={`transition-all duration-150 inline-block ${
+                              className={`transition-all duration-100 inline-block ${
                                 isSpoken
-                                  ? "text-yellow-300 scale-125 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)] underline decoration-yellow-400 decoration-2"
+                                  ? "text-yellow-300 scale-120 drop-shadow-[0_0_10px_rgba(253,224,71,1)] underline decoration-yellow-400 decoration-2"
                                   : isPassed
                                   ? "text-white"
                                   : "text-slate-400 opacity-60"
@@ -956,16 +779,15 @@ export default function AiVideoEditorPage() {
                 {/* 🌟 3. BANNER OVERLAY */}
                 {isBannerVisible && (
                   <div
-                    className={`absolute left-4 right-4 pointer-events-none z-30 transition-all animate-in fade-in zoom-in-95 duration-200 ${
-                      bannerConfig.position === "top" ? "top-6" : "bottom-4"
-                    }`}
+                    className="absolute left-4 right-4 pointer-events-none z-30 transition-all animate-in fade-in zoom-in-95 duration-200"
+                    style={{ bottom: "6%" }}
                   >
-                    <div className="p-3.5 rounded-2xl shadow-2xl border border-white/25 text-center text-white backdrop-blur-md bg-gradient-to-r from-red-600/95 via-rose-600/95 to-amber-600/95">
-                      <h4 className="text-sm md:text-base font-black uppercase tracking-wider leading-tight">
+                    <div className="p-3 rounded-2xl shadow-2xl border border-white/25 text-center text-white backdrop-blur-md bg-gradient-to-r from-red-600/95 via-rose-600/95 to-amber-600/95">
+                      <h4 className="text-xs md:text-sm font-black uppercase tracking-wider leading-tight">
                         {bannerConfig.title}
                       </h4>
                       {bannerConfig.subtitle && (
-                        <p className="text-[11px] md:text-xs text-amber-200 font-bold mt-0.5">
+                        <p className="text-[10px] md:text-xs text-amber-200 font-bold mt-0.5">
                           {bannerConfig.subtitle}
                         </p>
                       )}
@@ -1024,7 +846,7 @@ export default function AiVideoEditorPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   {subtitleConfig.enabled && (
                     <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-3 py-1 rounded-xl border border-indigo-200 flex items-center gap-1.5">
-                      <Sparkles size={12} className="text-amber-500" /> Đang bật Phụ đề Karaoke CapCut ({subtitleConfig.cues.length} câu ngắn)
+                      <Sparkles size={12} className="text-amber-500" /> Đang bật Phụ đề gọn 3-5 từ ({subtitleConfig.cues.length} cụm)
                     </span>
                   )}
                   {bannerConfig.enabled && (
@@ -1055,7 +877,7 @@ export default function AiVideoEditorPage() {
                           clearInterval(t);
                           setTimeout(() => {
                             setIsExporting(false);
-                            alert("Xuất video thành công! Video đã được gắn trọn bộ Phụ đề Karaoke, Logo và Banner chuẩn nét.");
+                            alert("Xuất video thành công! Video đã được gắn trọn bộ Phụ đề, Logo và Banner chuẩn nét.");
                           }, 400);
                           return 100;
                         }
@@ -1080,14 +902,14 @@ export default function AiVideoEditorPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(`ffmpeg -i input.mp4 -vf "subtitles=karaoke.ass" output.mp4`);
+                    navigator.clipboard.writeText(`ffmpeg -i input.mp4 -vf "subtitles=subs.ass" output.mp4`);
                     setCopiedFfmpeg(true);
                     setTimeout(() => setCopiedFfmpeg(false), 2000);
                   }}
                   className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {copiedFfmpeg ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                  Sao Chép Lệnh FFmpeg Karaoke
+                  Sao Chép Lệnh FFmpeg
                 </button>
               </div>
             </div>
@@ -1101,7 +923,7 @@ export default function AiVideoEditorPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-              <h3 className="text-base font-black text-slate-900">Cấu Hình Hiển Thị Video</h3>
+              <h3 className="text-base font-black text-slate-900">Cấu Hình Lời Thoại & Phụ Đề</h3>
               <button type="button" onClick={() => setShowLogoBannerModal(false)} className="text-slate-400 hover:text-slate-700 p-1">
                 <X size={18} />
               </button>
@@ -1116,7 +938,7 @@ export default function AiVideoEditorPage() {
                   modalActiveTab === "subtitle" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
                 }`}
               >
-                🎤 1. Phụ Đề Karaoke ({subtitleConfig.cues.length})
+                🎤 1. Lời Thoại & Phụ Đề
               </button>
               <button
                 type="button"
@@ -1140,32 +962,44 @@ export default function AiVideoEditorPage() {
 
             {/* TAB PHỤ ĐỀ */}
             {modalActiveTab === "subtitle" && (
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                  <span className="text-xs font-bold text-slate-800">Bật hiển thị phụ đề Karaoke:</span>
-                  <input
-                    type="checkbox"
-                    checked={subtitleConfig.enabled}
-                    onChange={(e) => setSubtitleConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                    className="w-5 h-5 accent-purple-600 rounded cursor-pointer"
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                {/* Ô DÁN LỜI THOẠI THỰC TẾ */}
+                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-black uppercase text-purple-900 flex items-center gap-1.5">
+                      <Edit3 size={14} /> Dán Lời Thoại Thực Tế Của Video Vào Đây:
+                    </label>
+                    <span className="text-[10px] text-purple-700 font-bold">Khớp 100% video</span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={customScriptText}
+                    onChange={(e) => setCustomScriptText(e.target.value)}
+                    placeholder="Dán toàn bộ lời nói của nhân vật trong video vào đây, cách nhau bằng dấu chấm hoặc xuống dòng..."
+                    className="w-full text-xs font-medium p-3 bg-white border border-purple-200 rounded-xl text-slate-800 focus:outline-none focus:border-purple-600"
                   />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cues = buildShortCuesFromScript(customScriptText, videoDuration);
+                        alert(`Đã chia lời thoại thành ${cues.length} cụm 3-5 từ ngắn gọn!`);
+                      }}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <Sparkles size={14} /> Cắt Thành Cụm 3-5 Từ Ngay
+                    </button>
+                  </div>
                 </div>
 
-                <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span>Danh sách các câu ngắn theo nhịp nói (Bấm để sửa):</span>
-                  <button
-                    type="button"
-                    onClick={() => generateNaturalReviewSubtitles(videoName, videoDuration)}
-                    className="text-[11px] text-blue-600 hover:underline"
-                  >
-                    Tạo lại tự động
-                  </button>
+                <div className="text-xs font-bold text-slate-700 flex items-center justify-between pt-2">
+                  <span>Danh sách các cụm từ ngắn gọn ({subtitleConfig.cues.length} cụm):</span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
                   {subtitleConfig.cues.map((cue, idx) => (
-                    <div key={cue.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
-                      <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-md shrink-0 mt-1">
+                    <div key={cue.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+                      <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md shrink-0">
                         {formatTime(cue.startSec)} - {formatTime(cue.endSec)}
                       </span>
                       <input
@@ -1180,7 +1014,7 @@ export default function AiVideoEditorPage() {
                             ),
                           }));
                         }}
-                        className="flex-1 text-xs font-bold bg-white px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800"
+                        className="flex-1 text-xs font-bold bg-white px-2.5 py-1 border border-slate-300 rounded-lg text-slate-800"
                       />
                     </div>
                   ))}
