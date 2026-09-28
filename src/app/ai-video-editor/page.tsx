@@ -18,7 +18,9 @@ import {
   X,
   Trash2,
   Sliders,
-  Clock
+  Clock,
+  Download,
+  FileDown
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -114,6 +116,10 @@ export default function AiVideoEditorPage() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [compareOriginal, setCompareOriginal] = useState<boolean>(false);
 
+  // Export State
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<number>(0);
+
   // Whisper Subtitles State
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [transcribeProgress, setTranscribeProgress] = useState<number>(0);
@@ -168,7 +174,6 @@ export default function AiVideoEditorPage() {
   }, []);
 
   // 🌟 Trích xuất TOÀN BỘ ÂM THANH của video thành Blob WAV 16kHz Mono siêu nhẹ (~1.5MB cho 2 phút)
-  // Giải quyết triệt để lỗi 413: Maximum content size limit (25MB) của OpenAI Whisper
   const extractFullAudioBlob = async (fileOrUrl: File | string): Promise<Blob> => {
     let arrayBuffer: ArrayBuffer;
     if (fileOrUrl instanceof File) {
@@ -181,7 +186,7 @@ export default function AiVideoEditorPage() {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // LẤY CHÍNH XÁC TOÀN BỘ THỜI LƯỢNG THẬT CỦA VIDEO (VÍ DỤ 123 GIÂY)
+    // LẤY CHÍNH XÁC TOÀN BỘ THỜI LƯỢNG THẬT CỦA VIDEO
     const fullDuration = decodedBuffer.duration;
     if (fullDuration > 0) {
       setVideoDuration(fullDuration);
@@ -190,7 +195,6 @@ export default function AiVideoEditorPage() {
     const targetSampleRate = 16000;
     const numFrames = Math.ceil(targetSampleRate * fullDuration);
 
-    // OfflineAudioContext render siêu tốc độ phần cứng trong ~100ms
     const offlineCtx = new OfflineAudioContext(1, numFrames, targetSampleRate);
     const source = offlineCtx.createBufferSource();
     source.buffer = decodedBuffer;
@@ -200,11 +204,10 @@ export default function AiVideoEditorPage() {
     const renderedBuffer = await offlineCtx.startRendering();
     await audioCtx.close();
 
-    // Đóng gói WAV 16-bit Mono (chỉ nặng khoảng 1MB - 2MB, không bao giờ vượt 25MB)
     return audioBufferToWav(renderedBuffer);
   };
 
-  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT: GỬI FILE WAV SIÊU NHẸ (CHỐNG LỖI 413 & CHỐNG LẶP)
+  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl && !selectedFile) {
       alert("Vui lòng tải video lên trước!");
@@ -216,7 +219,6 @@ export default function AiVideoEditorPage() {
     setTranscribeStatus("Đang trích xuất toàn bộ dải âm thanh 16kHz Mono siêu nhẹ...");
 
     try {
-      // 1. Tách âm thanh chuẩn của toàn bộ video (chỉ ~1.5MB)
       const inputSource = selectedFile || videoUrl;
       const wavBlob = await extractFullAudioBlob(inputSource);
 
@@ -225,7 +227,6 @@ export default function AiVideoEditorPage() {
 
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       
-      // 2. Gửi qua FormData dạng file audio.wav
       const formData = new FormData();
       formData.append("file", wavBlob, "audio.wav");
       formData.append("duration", String(videoDuration || 120));
@@ -238,7 +239,6 @@ export default function AiVideoEditorPage() {
       setTranscribeProgress(85);
       setTranscribeStatus("Đang phân tách mốc thời gian và tạo phụ đề TikTok...");
 
-      // Nhận kết quả từ cả 2 dạng data (res.data.data.cues hoặc res.data.cues)
       const rawCues = res?.data?.data?.cues || res?.data?.cues || [];
 
       if (rawCues && rawCues.length > 0) {
@@ -260,7 +260,7 @@ export default function AiVideoEditorPage() {
       setIsTranscribing(false);
       alert(
         "Lỗi bóc băng âm thanh: " +
-          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiểm tra kết nối hoặc OPENAI_API_KEY ở backend.")
+          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiểm tra kết nối hoặc tài khoản.")
       );
     }
   };
@@ -268,7 +268,7 @@ export default function AiVideoEditorPage() {
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file); // Lưu lại file gốc
+      setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       setVideoName(file.name);
@@ -303,18 +303,285 @@ export default function AiVideoEditorPage() {
     }
   };
 
+  // 🌟 XUẤT FILE PHỤ ĐỀ .SRT CHUẨN
+  const handleDownloadSRT = () => {
+    if (subtitleCues.length === 0) {
+      alert("Chưa có phụ đề để tải về! Vui lòng bấm 'Bật sub tự động bằng AI' trước.");
+      return;
+    }
+
+    const formatSRTTime = (sec: number) => {
+      const hrs = Math.floor(sec / 3600);
+      const mins = Math.floor((sec % 3600) / 60);
+      const secs = Math.floor(sec % 60);
+      const millis = Math.floor((sec % 1) * 1000);
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${millis.toString().padStart(3, '0')}`;
+    };
+
+    let srtContent = "";
+    subtitleCues.forEach((cue, index) => {
+      srtContent += `${index + 1}\n`;
+      srtContent += `${formatSRTTime(cue.startSec)} --> ${formatSRTTime(cue.endSec)}\n`;
+      srtContent += `${cue.text}\n\n`;
+    });
+
+    const blob = new Blob([srtContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${videoName.replace(/\.[^/.]+$/, "") || "phu_de"}_subtitles.srt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 🌟 TẢI VIDEO XUẤT KHẨU (RENDER BẰNG CANVAS TRỰC TIẾP TRÊN TRÌNH DUYỆT 100% CÓ SUB, LOGO, BANNER)
+  const handleExportFullVideo = async () => {
+    if (!videoUrl) {
+      alert("Vui lòng tải video lên trước!");
+      return;
+    }
+
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      // 1. Tạo Canvas ảo để vẽ từng khung hình
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Không thể khởi tạo Canvas 2D");
+
+      const width = videoEl.videoWidth || 720;
+      const height = videoEl.videoHeight || 1280;
+      canvas.width = width;
+      canvas.height = height;
+
+      // 2. Tải Logo Image nếu có
+      let logoImg: HTMLImageElement | null = null;
+      if (logoConfig.enabled && logoConfig.imageSrc) {
+        logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.src = logoConfig.imageSrc;
+        await new Promise((res) => {
+          logoImg!.onload = res;
+          logoImg!.onerror = res;
+        });
+      }
+
+      // 3. Chuẩn bị luồng Stream Video + Audio
+      const canvasStream = canvas.captureStream(30);
+
+      // Thu âm thanh gốc của video
+      let combinedStream = canvasStream;
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = audioCtx.createMediaElementSource(videoEl);
+        const destination = audioCtx.createMediaStreamDestination();
+        source.connect(destination);
+        source.connect(audioCtx.destination);
+
+        const audioTracks = destination.stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          canvasStream.addTrack(audioTracks[0]);
+        }
+      } catch (e) {
+        console.warn("Không thể nối âm thanh trực tiếp (có thể đã nối trước đó)");
+      }
+
+      // 4. Khởi tạo MediaRecorder
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+      }
+      if (MediaRecorder.isTypeSupported('video/mp4')) {
+        mimeType = 'video/mp4';
+      }
+
+      const recorder = new MediaRecorder(combinedStream, { mimeType });
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const exportedBlob = new Blob(chunks, { type: mimeType });
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        const downloadUrl = URL.createObjectURL(exportedBlob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${videoName.replace(/\.[^/.]+$/, "") || "video"}_kpost_sub.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        setIsExporting(false);
+        setExportProgress(100);
+      };
+
+      // 5. Bắt đầu tua về 0 và play video để render
+      videoEl.currentTime = 0;
+      await new Promise((res) => setTimeout(res, 200));
+
+      recorder.start();
+      await videoEl.play();
+
+      const totalDur = videoEl.duration || videoDuration || 120;
+
+      const renderFrame = () => {
+        if (!isExporting && recorder.state !== "recording") return;
+
+        // Vẽ video nền
+        ctx.drawImage(videoEl, 0, 0, width, height);
+
+        const currentSec = videoEl.currentTime;
+        const progress = Math.min(99, Math.round((currentSec / totalDur) * 100));
+        setExportProgress(progress);
+
+        // A. VẼ LOGO
+        if (logoConfig.enabled && !compareOriginal) {
+          ctx.save();
+          ctx.globalAlpha = logoConfig.opacity / 100;
+          const logoSize = (logoConfig.size || 40) * (width / 400);
+
+          let posX = width - logoSize - 20;
+          let posY = 25;
+          if (logoConfig.position === "top-left") {
+            posX = 20;
+            posY = 25;
+          } else if (logoConfig.position === "bottom-right") {
+            posX = width - logoSize - 20;
+            posY = height - logoSize - 40;
+          } else if (logoConfig.position === "bottom-left") {
+            posX = 20;
+            posY = height - logoSize - 40;
+          }
+
+          if (logoImg && logoImg.complete) {
+            ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
+          } else {
+            ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+            const textWidth = ctx.measureText(logoConfig.name).width + 30;
+            ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
+            ctx.fill();
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = `bold ${Math.round(15 * (width / 400))}px Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
+          }
+          ctx.restore();
+        }
+
+        // B. VẼ BANNER
+        if (bannerConfig.enabled && !compareOriginal && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
+          ctx.save();
+          const bannerHeight = Math.round(75 * (height / 800));
+          const bannerY = height - bannerHeight - 30;
+
+          ctx.fillStyle = "rgba(220, 38, 38, 0.95)";
+          ctx.roundRect(24, bannerY, width - 48, bannerHeight, 18);
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+          ctx.stroke();
+
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = `bold ${Math.round(18 * (width / 400))}px Arial, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(bannerConfig.title, width / 2, bannerY + bannerHeight * 0.42);
+
+          if (bannerConfig.subtitle) {
+            ctx.fillStyle = "#FEF08A";
+            ctx.font = `bold ${Math.round(12 * (width / 400))}px Arial, sans-serif`;
+            ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerHeight * 0.78);
+          }
+          ctx.restore();
+        }
+
+        // C. VẼ PHỤ ĐỀ TIKTOK
+        if (subtitleConfig.enabled && !compareOriginal) {
+          const adjTime = currentSec + subtitleConfig.offsetSeconds;
+          const matchedCue = subtitleCues.find(
+            (c) => adjTime >= c.startSec && adjTime <= c.endSec + 0.5
+          );
+
+          if (matchedCue) {
+            ctx.save();
+            const subY = height * 0.74;
+            const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
+            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            const words = matchedCue.words && matchedCue.words.length > 0
+              ? matchedCue.words
+              : matchedCue.text.split(" ").map((w) => ({ word: w, startSec: matchedCue.startSec, endSec: matchedCue.endSec }));
+
+            const spaceWidth = ctx.measureText(" ").width;
+            const wordWidths = words.map((w) => ctx.measureText(w.word).width);
+            const totalTextWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1);
+
+            ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+            const padX = 24;
+            const padY = 12;
+            ctx.roundRect((width - totalTextWidth) / 2 - padX, subY - fontSize / 2 - padY, totalTextWidth + padX * 2, fontSize + padY * 2, 16);
+            ctx.fill();
+
+            let startX = (width - totalTextWidth) / 2;
+            words.forEach((w, wIdx) => {
+              const isWordActive = adjTime >= w.startSec && adjTime <= w.endSec + 0.15;
+
+              ctx.lineWidth = 4;
+              ctx.strokeStyle = "#000000";
+              ctx.strokeText(w.word, startX + wordWidths[wIdx] / 2, subY);
+
+              ctx.fillStyle = isWordActive ? "#FACC15" : "#FFFFFF";
+              ctx.fillText(w.word, startX + wordWidths[wIdx] / 2, subY);
+
+              startX += wordWidths[wIdx] + spaceWidth;
+            });
+
+            ctx.restore();
+          }
+        }
+
+        if (!videoEl.paused && !videoEl.ended) {
+          requestAnimationFrame(renderFrame);
+        } else if (videoEl.ended) {
+          recorder.stop();
+        }
+      };
+
+      requestAnimationFrame(renderFrame);
+
+      videoEl.onended = () => {
+        if (recorder.state === "recording") {
+          recorder.stop();
+        }
+      };
+    } catch (err: any) {
+      console.error("Lỗi xuất video:", err);
+      setIsExporting(false);
+      alert("Lỗi xuất video: " + (err?.message || "Vui lòng thử lại"));
+    }
+  };
+
   // 🌟 TÌM CÂU PHỤ ĐỀ HIỆN TẠI VỚI CƠ CHẾ GIỮ HIỂN THỊ CHỐNG NGẮT QUÃNG
   const adjustedCurrentTime = currentTime + subtitleConfig.offsetSeconds;
   const currentSubtitleCue = useMemo(() => {
     if (!subtitleConfig.enabled || subtitleCues.length === 0) return null;
 
-    // Tìm câu đang phát trong khoảng [startSec, endSec + 0.5s]
     const matched = subtitleCues.find(
       (cue) => adjustedCurrentTime >= cue.startSec && adjustedCurrentTime <= cue.endSec + 0.5
     );
     if (matched) return matched;
 
-    // Giữ câu vừa nói xong thêm 0.8 giây để mắt người kịp đọc và không bị gián đoạn giữa các khoảng nghỉ
     const recent = subtitleCues.find(
       (cue) => adjustedCurrentTime > cue.endSec && adjustedCurrentTime <= cue.endSec + 0.8
     );
@@ -355,11 +622,12 @@ export default function AiVideoEditorPage() {
             </p>
           </div>
 
+          {/* DÃY NÚT CHỨC NĂNG CÓ THÊM NÚT TẢI VIDEO VỀ */}
           <div className="flex items-center flex-wrap gap-2.5">
             <button
               type="button"
               onClick={handleTranscribeRealAudio}
-              disabled={isTranscribing}
+              disabled={isTranscribing || isExporting}
               className="px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
             >
               {isTranscribing ? (
@@ -381,6 +649,24 @@ export default function AiVideoEditorPage() {
               <ImageIcon size={16} /> Logo & Banner
             </button>
 
+            {/* 🌟 NÚT TẢI VIDEO VỀ ĐẦY ĐỦ PHỤ ĐỀ VÀ LOGO */}
+            <button
+              type="button"
+              onClick={handleExportFullVideo}
+              disabled={!videoUrl || isExporting}
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+            >
+              {isExporting ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" /> Đang xuất ({exportProgress}%)
+                </>
+              ) : (
+                <>
+                  <Download size={16} /> ⬇️ Tải Video Về Máy
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -397,6 +683,28 @@ export default function AiVideoEditorPage() {
             />
           </div>
         </div>
+
+        {/* TIẾN TRÌNH XUẤT VIDEO */}
+        {isExporting && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <Download size={24} className="text-emerald-400 animate-bounce" />
+                <div>
+                  <h3 className="text-base font-black text-white">Đang Render & Xuất Video Hoàn Chỉnh...</h3>
+                  <p className="text-xs text-emerald-200 mt-0.5">Video đang được gắn cứng phụ đề, logo và banner chất lượng cao</p>
+                </div>
+              </div>
+              <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-emerald-400 to-teal-400 h-full rounded-full transition-all duration-200"
+                style={{ width: `${exportProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* TIẾN TRÌNH BÓC BĂNG */}
         {isTranscribing && (
@@ -432,9 +740,15 @@ export default function AiVideoEditorPage() {
                     Lời Thoại Thật Đã Bóc ({subtitleCues.length} Câu)
                   </h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-                  Chuẩn Whisper AI
-                </span>
+                {subtitleCues.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadSRT}
+                    className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <FileDown size={13} /> Tải file .SRT
+                  </button>
+                )}
               </div>
 
               {/* TÙY CHỌN */}
@@ -532,18 +846,32 @@ export default function AiVideoEditorPage() {
                     {videoName || "Video Preview"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCompareOriginal(!compareOriginal)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    compareOriginal
-                      ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                  }`}
-                >
-                  <Eye size={13} />
-                  {compareOriginal ? "Đang xem: GỐC" : "Xem bản gốc"}
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  {/* NÚT TẢI NHANH Ở TRÊN ĐẦU VIDEO */}
+                  <button
+                    type="button"
+                    onClick={handleExportFullVideo}
+                    disabled={!videoUrl || isExporting}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                  >
+                    <Download size={13} />
+                    {isExporting ? `Đang xuất ${exportProgress}%` : "Tải Video"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCompareOriginal(!compareOriginal)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      compareOriginal
+                        ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <Eye size={13} />
+                    {compareOriginal ? "Đang xem: GỐC" : "Xem bản gốc"}
+                  </button>
+                </div>
               </div>
 
               {/* KHUNG VIDEO 9:16 */}
@@ -555,6 +883,7 @@ export default function AiVideoEditorPage() {
                       src={videoUrl}
                       loop
                       playsInline
+                      crossOrigin="anonymous"
                       onLoadedMetadata={() => {
                         if (videoRef.current && videoRef.current.duration) {
                           setVideoDuration(videoRef.current.duration);
@@ -724,7 +1053,7 @@ export default function AiVideoEditorPage() {
         </div>
       </div>
 
-      {/* 🌟 MODAL THIẾT LẬP LOGO & BANNER ĐẦY ĐỦ CÓ Ô TẢI TỆP LOGO LÊN */}
+      {/* MODAL THIẾT LẬP LOGO & BANNER */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
@@ -762,7 +1091,6 @@ export default function AiVideoEditorPage() {
                   </label>
                 </div>
 
-                {/* Ô TẢI TỆP ẢNH LOGO LÊN */}
                 <div className="space-y-3">
                   <div>
                     <label className="text-[11px] font-bold text-slate-600 block mb-1.5">
