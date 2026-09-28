@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   Wand2,
@@ -20,12 +20,10 @@ import {
   Clock,
   Image as ImageIcon,
   Type,
+  Mic,
   Sliders,
   CheckCircle2,
-  FileText,
-  Target,
-  ChevronRight,
-  Flame
+  AlertCircle
 } from "lucide-react";
 
 export interface SubtitleCue {
@@ -86,16 +84,18 @@ export default function AiVideoEditorPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   // Video State
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-  const [videoName, setVideoName] = useState<string>("YTSave_YouTube_Huong-dan-su-dung-hut-mui-kinh-cong.mp4");
+  const [videoName, setVideoName] = useState<string>("video_review.mp4");
   const [videoDuration, setVideoDuration] = useState<number>(123);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [compareOriginal, setCompareOriginal] = useState<boolean>(false);
 
-  // Tab cột trái
-  const [leftTab, setLeftTab] = useState<"subtitles" | "prompt">("subtitles");
+  // Tiến trình AI bóc băng thật
+  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
+  const [transcribeStatus, setTranscribeStatus] = useState<string>("");
 
   // Timeline & Tác vụ
   const [timelineEdits, setTimelineEdits] = useState<TimelineAction[]>([]);
@@ -104,7 +104,6 @@ export default function AiVideoEditorPage() {
 
   // Logo & Banner
   const [showLogoBannerModal, setShowLogoBannerModal] = useState<boolean>(false);
-  const [modalActiveTab, setModalActiveTab] = useState<"banner" | "logo">("banner");
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
     imageSrc: "",
@@ -126,48 +125,18 @@ export default function AiVideoEditorPage() {
     endSec: 12,
   });
 
-  // 🌟 BỘ MỐC THỜI GIAN ĐƯỢC HIỆU CHỈNH CHUẨN XÁC THEO HÀNH ĐỘNG THỰC TẾ TRONG VIDEO
-  const initialCorrectedCues = [
-    { start: 0.0, end: 2.2, text: "Hướng dẫn sử dụng" },
-    { start: 2.2, end: 4.5, text: "máy hút mùi kính cong" },
-    { start: 4.5, end: 8.0, text: "Bật nút nguồn cảm ứng" }, // Khớp đúng giây 00:04 khi tay chạm vào nút!
-    { start: 8.0, end: 12.0, text: "Chọn phím tốc độ một" },
-    { start: 12.0, end: 16.5, text: "hút êm ái nhẹ nhàng" },
-    { start: 16.5, end: 21.0, text: "Chuyển tốc độ hai" },
-    { start: 21.0, end: 26.0, text: "tăng lực hút mùi" },
-    { start: 26.0, end: 32.0, text: "Phím tốc độ ba" },
-    { start: 32.0, end: 38.0, text: "công suất hút cực đại" },
-    { start: 38.0, end: 45.0, text: "Bật đèn LED chiếu sáng" },
-    { start: 45.0, end: 52.0, text: "chiếu sáng rõ mặt bếp" },
-    { start: 52.0, end: 60.0, text: "Lưới lọc nhôm 5 lớp" },
-    { start: 60.0, end: 68.0, text: "ngăn mỡ triệt để" },
-    { start: 68.0, end: 76.0, text: "Dễ dàng tháo rời vệ sinh" },
-    { start: 76.0, end: 85.0, text: "Bảo hành chính hãng 3 năm" },
-    { start: 85.0, end: 95.0, text: "Miễn phí vận chuyển toàn quốc" },
-    { start: 95.0, end: 123.0, text: "Hotline Zalo: 0928 912 828" }
-  ];
-
-  // PHỤ ĐỀ KARAOKE ĐỘNG
+  // 🌟 PHỤ ĐỀ BAN ĐẦU HOÀN TOÀN RỖNG (XÓA SẠCH 100% CHỮ MẪU)
   const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>({
     enabled: true,
     fontSize: 18,
     latencyOffset: 0.0,
-    cues: initialCorrectedCues.map((item, idx) => ({
-      id: `cue_${idx}`,
-      startSec: item.start,
-      endSec: item.end,
-      text: item.text,
-      words: item.text.split(" "),
-    })),
+    cues: [], // 👈 RỖNG, CHỈ CHỨA LỜI THẬT KHI AI NGHE XONG
   });
-
-  // Con trỏ theo dõi câu đang chuẩn bị đồng bộ nhanh bằng phím Space
-  const [syncIndex, setSyncIndex] = useState<number>(0);
 
   // Prompt State
   const [userPrompt, setUserPrompt] = useState<string>("");
   const [isAnalyzingPrompt, setIsAnalyzingPrompt] = useState<boolean>(false);
-  const [aiExplanation, setAiExplanation] = useState<string>("Đã hiệu chỉnh mốc giây khớp đúng lúc tay nhân vật bấm nút ở giây 00:04!");
+  const [aiExplanation, setAiExplanation] = useState<string>("Sẵn sàng! Bấm 'Bắt đầu AI bóc băng' để AI nghe âm thanh thật từ video của bạn.");
 
   // Export
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -199,70 +168,125 @@ export default function AiVideoEditorPage() {
     }
   }, [activeSpeed, compareOriginal]);
 
-  // 🌟 THUẬT TOÁN 1: GHIM MỐC GIỜ HIỆN TẠI VÀO CÂU ĐANG CHỌN (1-CLICK SYNC)
-  const pinCurrentTimeToCue = (cueIndex: number) => {
-    const curTime = Number(currentTime.toFixed(1));
-    setSubtitleConfig((prev) => {
-      const updated = [...prev.cues];
-      if (cueIndex < updated.length) {
-        updated[cueIndex].startSec = curTime;
-        // Tự động kéo câu trước kết thúc tại đây
-        if (cueIndex > 0) {
-          updated[cueIndex - 1].endSec = curTime;
-        }
-        // Đặt câu hiện tại kéo dài khoảng 3 giây
-        updated[cueIndex].endSec = Math.min(videoDuration, Number((curTime + 3.5).toFixed(1)));
-      }
-      return { ...prev, cues: updated };
-    });
-    setAiExplanation(`Đã ghim câu "${subtitleConfig.cues[cueIndex]?.text}" bắt đầu chính xác tại giây ${formatTime(curTime)}!`);
+  // 🌟 TRÍCH XUẤT FILE WAV SIÊU NHẸ (16KHZ MONO) TRỰC TIẾP TRÊN TRÌNH DUYỆT
+  const extractAudioWavFromBlob = async (file: File): Promise<string> => {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const audioContext = new AudioCtx();
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+    // Nén xuống Mono 16kHz
+    const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, 16000);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    const channelData = renderedBuffer.getChannelData(0);
+
+    const wavBuffer = encodeWAV(channelData, 16000);
+    return arrayBufferToBase64(wavBuffer);
   };
 
-  // 🌟 THUẬT TOÁN 2: ĐỒNG BỘ THEO NHỊP BẤM (TAP-TO-SYNC NHƯ CAPCUT)
-  const handleTapNextCue = useCallback(() => {
-    if (syncIndex >= subtitleConfig.cues.length) return;
-    const curTime = Number(currentTime.toFixed(1));
-
-    setSubtitleConfig((prev) => {
-      const updated = [...prev.cues];
-      updated[syncIndex].startSec = curTime;
-      if (syncIndex > 0) {
-        updated[syncIndex - 1].endSec = curTime;
-      }
-      updated[syncIndex].endSec = Math.min(videoDuration, Number((curTime + 3.0).toFixed(1)));
-      return { ...prev, cues: updated };
-    });
-
-    setAiExplanation(`🎯 Đã ghim câu [${syncIndex + 1}/${subtitleConfig.cues.length}]: "${subtitleConfig.cues[syncIndex]?.text}" vào ${formatTime(curTime)}`);
-    setSyncIndex((prev) => Math.min(subtitleConfig.cues.length - 1, prev + 1));
-  }, [syncIndex, currentTime, subtitleConfig.cues, videoDuration]);
-
-  // Bắt phím tắt Spacebar khi nhấn vào nút đồng bộ
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && e.target === document.body) {
-        e.preventDefault();
-        handleTapNextCue();
+  const encodeWAV = (samples: Float32Array, sampleRate: number): ArrayBuffer => {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+    const writeString = (view: DataView, offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleTapNextCue]);
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return buffer;
+  };
+
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  };
+
+  // 🌟 HÀM GỌI WHISPER AI BÓC BĂNG THẬT 100%
+  const handleStartRealTranscription = async (fileObj?: File) => {
+    const targetFile = fileObj || selectedFile;
+    if (!targetFile) {
+      alert("Vui lòng bấm 'Tải Video Lên' để AI lấy file âm thanh của bạn!");
+      fileInputRef.current?.click();
+      return;
+    }
+
+    setIsTranscribing(true);
+    setTranscribeStatus("Đang trích xuất sóng âm thanh từ video...");
+
+    try {
+      // 1. Trích xuất âm thanh nén 16kHz siêu nhẹ
+      const audioBase64 = await extractAudioWavFromBlob(targetFile);
+      setTranscribeStatus("Đang gửi âm thanh lên OpenAI Whisper AI để nghe từng câu chữ...");
+
+      // 2. Gửi sang Backend NestJS
+      const res = await axios.post(`${API_URL}/ai-content/transcribe-video`, {
+        audioBase64: `data:audio/wav;base64,${audioBase64}`,
+      });
+
+      if (res.data?.success && res.data?.cues?.length > 0) {
+        setSubtitleConfig((prev) => ({
+          ...prev,
+          enabled: true,
+          cues: res.data.cues,
+        }));
+        setIsTranscribing(false);
+        setAiExplanation(`🎉 Whisper AI đã bóc băng thành công ${res.data.cues.length} câu lời thoại thật từ video của bạn!`);
+        return;
+      } else {
+        throw new Error(res.data?.error || "Không nhận diện được giọng nói trong video");
+      }
+    } catch (err: any) {
+      console.error("Lỗi bóc băng:", err);
+      setIsTranscribing(false);
+      alert("Lỗi bóc băng: " + (err.response?.data?.message || err.message || "Vui lòng kiểm tra lại file video!"));
+    }
+  };
 
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const url = URL.createObjectURL(file);
+      setSelectedFile(file);
       setVideoUrl(url);
       setVideoName(file.name);
       setCurrentTime(0);
       setTimelineEdits([]);
+      
+      // XÓA SẠCH MỌI PHỤ ĐỀ CŨ
+      setSubtitleConfig((p) => ({ ...p, cues: [] }));
+      setAiExplanation(`Đã tải file "${file.name}". Bấm nút xanh phía trên để AI bóc băng tiếng nói thật!`);
     }
   };
 
-  // 🌟 TÍNH TOÁN HIỂN THỊ PHỤ ĐỀ:
-  // KHI BANNER BẬT -> TỰ ĐỘNG ĐẨY LÊN BOTTOM 34% (KHÔNG ĐÈ NHAU)
-  // KHI BANNER TẮT -> NẰM Ở BOTTOM 20%
+  // 🌟 HIỂN THỊ PHỤ ĐỀ: TÁCH BIỆT BANNER, CĂN 1/3 DƯỚI VIDEO 9:16
   const isBannerVisible = useMemo(() => {
     if (!bannerConfig.enabled || compareOriginal) return false;
     if (bannerConfig.timeScope === "all") return true;
@@ -270,7 +294,7 @@ export default function AiVideoEditorPage() {
   }, [bannerConfig, currentTime, compareOriginal]);
 
   const activeSubtitleRender = useMemo(() => {
-    if (!subtitleConfig.enabled || compareOriginal) return null;
+    if (!subtitleConfig.enabled || compareOriginal || subtitleConfig.cues.length === 0) return null;
 
     const adjustedTime = Math.max(0, currentTime + subtitleConfig.latencyOffset);
 
@@ -307,28 +331,6 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  const handleSendTimelinePrompt = async () => {
-    const text = userPrompt.trim();
-    if (!text) return;
-
-    setIsAnalyzingPrompt(true);
-    const lower = text.toLowerCase();
-
-    if (lower.includes("tăng tốc")) {
-      setActiveSpeed(1.25);
-      if (videoRef.current) videoRef.current.playbackRate = 1.25;
-      setAiExplanation("Đã tăng tốc độ phát video lên 1.25x!");
-    } else if (lower.includes("banner")) {
-      setBannerConfig((p) => ({ ...p, enabled: true }));
-      setAiExplanation("Đã bật hiển thị Banner khuyến mãi!");
-    } else {
-      setAiExplanation("Đã cập nhật các mốc thời gian theo câu lệnh!");
-    }
-
-    setIsAnalyzingPrompt(false);
-    setUserPrompt("");
-  };
-
   return (
     <div className="flex-1 bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-800 overflow-y-auto">
       <div className="max-w-7xl mx-auto pb-24">
@@ -341,25 +343,33 @@ export default function AiVideoEditorPage() {
                 <Wand2 size={24} />
               </span>
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                AI Video Editor & Tap-to-Sync Studio
+                AI Video Editor & Whisper Subtitles
                 <span className="bg-purple-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
-                  CAPCUT ENGINE
+                  REAL AI 100%
                 </span>
               </h1>
             </div>
             <p className="text-xs md:text-sm text-slate-500 font-medium">
-              Tách rời hoàn toàn Phụ Đề và Banner (không bị đè chữ), tự động căn khớp hành động bấm nút ở giây 00:04, đồng bộ nhịp nói chuẩn xác 100%!
+              Không dùng chữ mẫu bịa đặt. AI Whisper nghe trực tiếp âm thanh từ video thật của bạn, nhân vật nói đến đâu sáng chữ đến đó!
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {/* NÚT BÓC BĂNG THẬT 100% */}
             <button
               type="button"
-              onClick={() => {
-                setModalActiveTab("banner");
-                setShowLogoBannerModal(true);
-              }}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+              onClick={() => handleStartRealTranscription()}
+              disabled={isTranscribing}
+              className="px-5 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:bg-slate-300 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-all cursor-pointer"
+            >
+              <Mic size={16} className={isTranscribing ? "animate-bounce text-yellow-300" : ""} />
+              {isTranscribing ? "AI Đang Lắng Nghe Âm Thanh..." : "🎤 AI Bóc Băng Lời Nói Thật"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowLogoBannerModal(true)}
+              className="px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all cursor-pointer"
             >
               <ImageIcon size={16} />
               Logo & Banner
@@ -368,7 +378,7 @@ export default function AiVideoEditorPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
             >
               <UploadCloud size={16} />
               Tải Video Lên
@@ -377,64 +387,59 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
 
-        {/* 2 CỘT: BẢNG ĐIỀU KHIỂN VÀ VIDEO PLAYER */}
+        {/* THÔNG BÁO TIẾN TRÌNH KHI BÓC BĂNG */}
+        {isTranscribing && (
+          <div className="mb-6 p-5 bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 text-white rounded-3xl shadow-xl border border-indigo-500/30 flex items-center gap-4 animate-in fade-in">
+            <RefreshCw size={24} className="animate-spin text-cyan-400 shrink-0" />
+            <div>
+              <h4 className="text-sm font-black uppercase tracking-wider text-cyan-200">
+                Đang Phân Tích Giọng Nói Bằng OpenAI Whisper AI...
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">{transcribeStatus}</p>
+            </div>
+          </div>
+        )}
+
+        {/* 2 CỘT: DANH SÁCH LỜI THẬT VÀ VIDEO PLAYER */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* CỘT TRÁI */}
+          {/* CỘT TRÁI: HIỂN THỊ CÂU CHỮ THẬT AI BÓC ĐƯỢC */}
           <div className="lg:col-span-5 flex flex-col gap-4">
-            
-            {/* THANH CÔNG CỤ ĐỒNG BỘ 1-CHẠM (TAP-TO-SYNC NHƯ CAPCUT) */}
-            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-4 rounded-3xl shadow-lg border border-purple-500/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-amber-300">
-                  <Target size={16} /> Đồng bộ nhịp nói 1-chạm (Tap-to-sync)
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/20">
-                  Câu {syncIndex + 1}/{subtitleConfig.cues.length}
-                </span>
-              </div>
-              
-              <p className="text-[11px] text-purple-200 mb-3">
-                Bật video phát ➔ Nghe người nói đến câu nào, bấm nút dưới để ghim đúng mili-giây câu đó!
-              </p>
-
-              <button
-                type="button"
-                onClick={handleTapNextCue}
-                className="w-full py-3 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all cursor-pointer"
-              >
-                <Zap size={16} className="text-slate-900 animate-bounce" />
-                🎯 Bấm Ghim Nhịp Nói Câu Kế Tiếp ({formatTime(currentTime)})
-              </button>
-            </div>
-
-            {/* TAB LỜI THOẠI & PROMPT */}
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
-                  <FileText size={15} className="text-purple-600" />
-                  Danh Sách Lời Thoại ({subtitleConfig.cues.length} câu)
+                  <Type size={15} className="text-purple-600" />
+                  Lời Thoại Thật Đã Bóc ({subtitleConfig.cues.length} câu)
                 </span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  Đã chỉnh khớp 00:04
-                </span>
+                {subtitleConfig.cues.length > 0 && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                    Chuẩn Whisper AI
+                  </span>
+                )}
               </div>
 
-              {/* DANH SÁCH TỪNG CÂU VỚI NÚT GHIM THỜI GIAN RIÊNG */}
-              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                {subtitleConfig.cues.map((cue, idx) => {
-                  const isActive = currentTime >= cue.startSec && currentTime < cue.endSec;
-                  return (
-                    <div
-                      key={cue.id}
-                      onClick={() => seekTo(cue.startSec)}
-                      className={`p-2.5 rounded-2xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-purple-600 text-white border-purple-600 shadow-md scale-[1.01]"
-                          : "bg-slate-50 hover:bg-purple-50/50 border-slate-200 text-slate-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
+              {subtitleConfig.cues.length === 0 ? (
+                <div className="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <Mic size={36} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-xs font-bold text-slate-700">Chưa có phụ đề nào.</p>
+                  <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                    Hãy bấm nút xanh <span className="font-bold text-blue-600">"🎤 AI Bóc Băng Lời Nói Thật"</span> ở góc trên để AI nghe âm thanh video của bạn.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+                  {subtitleConfig.cues.map((cue, idx) => {
+                    const isActive = currentTime >= cue.startSec && currentTime < cue.endSec;
+                    return (
+                      <div
+                        key={cue.id}
+                        onClick={() => seekTo(cue.startSec)}
+                        className={`p-2.5 rounded-2xl border flex items-center gap-2.5 transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-purple-600 text-white border-purple-600 shadow-md scale-[1.01]"
+                            : "bg-slate-50 hover:bg-purple-50/50 border-slate-200 text-slate-800"
+                        }`}
+                      >
                         <span className={`text-[10px] font-mono font-black px-2 py-1 rounded-lg shrink-0 ${
                           isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
                         }`}>
@@ -453,33 +458,15 @@ export default function AiVideoEditorPage() {
                               ),
                             }));
                           }}
-                          className={`flex-1 text-xs font-bold bg-transparent border-none outline-none truncate ${
+                          className={`flex-1 text-xs font-bold bg-transparent border-none outline-none ${
                             isActive ? "text-white" : "text-slate-800"
                           }`}
                         />
                       </div>
-
-                      {/* NÚT GHIM GIÂY HIỆN TẠI VÀO CÂU NÀY */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          pinCurrentTimeToCue(idx);
-                        }}
-                        title={`Ghim câu này bắt đầu tại ${formatTime(currentTime)}`}
-                        className={`p-1.5 rounded-xl text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all ${
-                          isActive
-                            ? "bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-sm"
-                            : "bg-white hover:bg-purple-100 text-purple-700 border border-slate-200"
-                        }`}
-                      >
-                        <Clock size={12} />
-                        Ghim {formatTime(currentTime)}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {aiExplanation && (
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-start gap-2.5">
@@ -491,12 +478,12 @@ export default function AiVideoEditorPage() {
               )}
             </div>
 
-            {/* BẢNG ĐIỀU CHỈNH BÙ TRỄ */}
+            {/* BẢNG BÙ TRỄ */}
             <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
                   <Sliders size={14} className="text-indigo-600" />
-                  Tinh Chỉnh Bù Trễ Giọng Nói
+                  Bù Trễ Giọng Nói
                 </span>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
                   {subtitleConfig.latencyOffset > 0 ? `+${subtitleConfig.latencyOffset}s` : `${subtitleConfig.latencyOffset}s`}
@@ -521,7 +508,7 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: VIDEO PLAYER VỚI BỐ CỤC PHỤ ĐỀ VÀ BANNER TÁCH RỜI HOÀN TOÀN */}
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI BỐ CỤC PHỤ ĐỀ TÁCH RỜI BANNER */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -554,14 +541,12 @@ export default function AiVideoEditorPage() {
                   style={{ transform: flipHorizontal ? "scaleX(-1)" : "scaleX(1)" }}
                 />
 
-                {/* 🌟 1. PHỤ ĐỀ ĐƯỢC TỰ ĐỘNG ĐẨY LÊN CAO KHI CÓ BANNER:
-                    - Nếu có Banner: bottom = 32% (Nằm phía trên Banner, không bao giờ đè nhau)
-                    - Nếu không có Banner: bottom = 18% */}
+                {/* 🌟 1. PHỤ ĐỀ NẰM GỌN 1/3 DƯỚI VIDEO 9:16, NẰM TRÊN BANNER */}
                 {activeSubtitleRender && (
                   <div
                     className="absolute pointer-events-none z-40 text-center transition-all duration-150"
                     style={{
-                      bottom: isBannerVisible ? "32%" : "18%", // ĐẨY LÊN TRÊN BANNER RÕ RÀNG!
+                      bottom: isBannerVisible ? "32%" : "18%",
                       left: "50%",
                       transform: "translateX(-50%)",
                       maxWidth: "270px",
@@ -594,7 +579,7 @@ export default function AiVideoEditorPage() {
                   </div>
                 )}
 
-                {/* 🌟 2. LOGO GÓC PHẢI */}
+                {/* LOGO GÓC PHẢI */}
                 {isLogoVisible && (
                   <div
                     className={`absolute pointer-events-none z-30 transition-all ${
@@ -613,7 +598,7 @@ export default function AiVideoEditorPage() {
                   </div>
                 )}
 
-                {/* 🌟 3. BANNER NẰM SÁT ĐÁY (BOTTOM 6%) */}
+                {/* BANNER NẰM ĐÁY */}
                 {isBannerVisible && (
                   <div
                     className="absolute left-4 right-4 pointer-events-none z-30 transition-all animate-in fade-in zoom-in-95 duration-200"
@@ -681,9 +666,15 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1.5">
-                    <CheckCircle2 size={12} className="text-emerald-600" /> Bố cục tách rời: Phụ đề nằm phía trên Banner
-                  </span>
+                  {subtitleConfig.cues.length > 0 ? (
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-emerald-600" /> Đã bóc băng ({subtitleConfig.cues.length} câu thật)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-3 py-1 rounded-xl">
+                      Chưa có phụ đề. Bấm nút xanh phía trên để bóc băng thật.
+                    </span>
+                  )}
                   {bannerConfig.enabled && (
                     <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
                       🏷️ Banner: {formatTime(bannerConfig.startSec)} ➔ {formatTime(bannerConfig.endSec)}
@@ -712,7 +703,7 @@ export default function AiVideoEditorPage() {
                           clearInterval(t);
                           setTimeout(() => {
                             setIsExporting(false);
-                            alert("Xuất video thành công! Video đã được gắn phụ đề chuẩn 100%, Logo và Banner.");
+                            alert("Xuất video thành công!");
                           }, 400);
                           return 100;
                         }
