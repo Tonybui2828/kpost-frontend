@@ -15,7 +15,10 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  X
+  X,
+  Trash2,
+  Sliders,
+  Clock
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -46,6 +49,7 @@ export interface LogoConfig {
   name: string;
   position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
   opacity: number;
+  size: number;
 }
 
 export interface BannerConfig {
@@ -123,14 +127,15 @@ export default function AiVideoEditorPage() {
     offsetSeconds: 0,
   });
 
-  // Logo & Banner
+  // Modal & Cấu hình Logo / Banner ĐẦY ĐỦ
   const [showModal, setShowModal] = useState<boolean>(false);
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
     imageSrc: "",
     name: "KPOST AI",
     position: "top-right",
-    opacity: 85,
+    opacity: 90,
+    size: 40,
   });
   const [bannerConfig, setBannerConfig] = useState<BannerConfig>({
     enabled: true,
@@ -143,6 +148,7 @@ export default function AiVideoEditorPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoImageInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -269,6 +275,24 @@ export default function AiVideoEditorPage() {
       setCurrentTime(0);
       setSubtitleCues([]);
       setTranscribeSuccessMsg("");
+    }
+  };
+
+  // Tải ảnh Logo PNG/JPG lên
+  const handleUploadLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          setLogoConfig((p) => ({
+            ...p,
+            imageSrc: reader.result as string,
+            enabled: true,
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -556,7 +580,12 @@ export default function AiVideoEditorPage() {
                         style={{ opacity: logoConfig.opacity / 100 }}
                       >
                         {logoConfig.imageSrc ? (
-                          <img src={logoConfig.imageSrc} alt="Logo" className="h-9 w-auto object-contain drop-shadow-md rounded-lg" />
+                          <img
+                            src={logoConfig.imageSrc}
+                            alt="Logo"
+                            style={{ height: `${logoConfig.size || 40}px` }}
+                            className="w-auto object-contain drop-shadow-md rounded-lg"
+                          />
                         ) : (
                           <div className="px-3 py-1 bg-blue-600/90 text-white font-black text-xs rounded-xl shadow-lg border border-white/20 backdrop-blur-xs flex items-center gap-1.5 tracking-wider uppercase">
                             <Sparkles size={11} className="text-amber-300" />
@@ -695,43 +724,211 @@ export default function AiVideoEditorPage() {
         </div>
       </div>
 
-      {/* MODAL LOGO & BANNER */}
+      {/* 🌟 MODAL THIẾT LẬP LOGO & BANNER ĐẦY ĐỦ CÓ Ô TẢI TỆP LOGO LÊN */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-              <h3 className="text-base font-black text-slate-900">Thiết Lập Logo & Banner</h3>
-              <button type="button" onClick={() => setShowModal(false)} className="text-slate-400 p-1">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Tên Logo:</label>
-                <input
-                  type="text"
-                  value={logoConfig.name}
-                  onChange={(e) => setLogoConfig((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full text-xs font-bold px-3 py-2 border rounded-xl"
-                />
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                  <ImageIcon size={18} />
+                </span>
+                <h3 className="text-base font-black text-slate-900">Thiết Lập Logo & Banner Video</h3>
               </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Tiêu đề Banner:</label>
-                <input
-                  type="text"
-                  value={bannerConfig.title}
-                  onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
-                  className="w-full text-xs font-bold px-3 py-2 border rounded-xl"
-                />
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
-                Xong
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* PHẦN 1: LOGO */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-purple-600" /> 1. Logo Thương Hiệu
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={logoConfig.enabled}
+                      onChange={(e) => setLogoConfig((p) => ({ ...p, enabled: e.target.checked }))}
+                      className="w-4 h-4 accent-purple-600 rounded"
+                    />
+                    Bật Logo
+                  </label>
+                </div>
+
+                {/* Ô TẢI TỆP ẢNH LOGO LÊN */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">
+                      Ảnh Logo (PNG trong suốt / JPG):
+                    </label>
+                    <div className="flex items-center gap-3">
+                      {logoConfig.imageSrc ? (
+                        <div className="relative group w-14 h-14 bg-white border border-slate-200 rounded-xl p-1 flex items-center justify-center shrink-0">
+                          <img
+                            src={logoConfig.imageSrc}
+                            alt="Logo preview"
+                            className="max-w-full max-h-full object-contain rounded"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setLogoConfig((p) => ({ ...p, imageSrc: "" }))}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
+                            title="Xóa logo"
+                          >
+                            <X size={11} />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <div className="flex-1">
+                        <button
+                          type="button"
+                          onClick={() => logoImageInputRef.current?.click()}
+                          className="w-full py-2.5 px-3 bg-white hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
+                        >
+                          <UploadCloud size={16} className="text-indigo-600" />
+                          {logoConfig.imageSrc ? "Đổi ảnh Logo khác" : "Chọn ảnh Logo từ máy tính..."}
+                        </button>
+                        <input
+                          ref={logoImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadLogoFile}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {!logoConfig.imageSrc && (
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Hoặc nhập Chữ Logo đại diện:
+                      </label>
+                      <input
+                        type="text"
+                        value={logoConfig.name}
+                        onChange={(e) => setLogoConfig((p) => ({ ...p, name: e.target.value }))}
+                        placeholder="VD: KPOST AI"
+                        className="w-full text-xs font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Vị trí góc:</label>
+                      <select
+                        value={logoConfig.position}
+                        onChange={(e) => setLogoConfig((p) => ({ ...p, position: e.target.value as any }))}
+                        className="w-full text-xs font-bold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none"
+                      >
+                        <option value="top-right">Góc trên - Phải</option>
+                        <option value="top-left">Góc trên - Trái</option>
+                        <option value="bottom-right">Góc dưới - Phải</option>
+                        <option value="bottom-left">Góc dưới - Trái</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Kích thước: {logoConfig.size || 40}px
+                      </label>
+                      <input
+                        type="range"
+                        min={24}
+                        max={70}
+                        value={logoConfig.size || 40}
+                        onChange={(e) => setLogoConfig((p) => ({ ...p, size: Number(e.target.value) }))}
+                        className="w-full accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PHẦN 2: BANNER QUẢNG CÁO */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    🏷️ 2. Banner Quảng Cáo / Giảm Giá
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bannerConfig.enabled}
+                      onChange={(e) => setBannerConfig((p) => ({ ...p, enabled: e.target.checked }))}
+                      className="w-4 h-4 accent-amber-500 rounded"
+                    />
+                    Bật Banner
+                  </label>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề chính:</label>
+                    <input
+                      type="text"
+                      value={bannerConfig.title}
+                      onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
+                      placeholder="VD: ⚡ FLASH SALE 50% - DUY NHẤT HÔM NAY"
+                      className="w-full text-xs font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Mô tả phụ (subtitle):</label>
+                    <input
+                      type="text"
+                      value={bannerConfig.subtitle || ""}
+                      onChange={(e) => setBannerConfig((p) => ({ ...p, subtitle: e.target.value }))}
+                      placeholder="VD: Miễn phí giao hàng toàn quốc • Bảo hành chính hãng"
+                      className="w-full text-xs font-medium px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Bắt đầu (giây):</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={videoDuration || 120}
+                        value={bannerConfig.startSec}
+                        onChange={(e) => setBannerConfig((p) => ({ ...p, startSec: Number(e.target.value) }))}
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Kết thúc (giây):</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={videoDuration || 120}
+                        value={bannerConfig.endSec}
+                        onChange={(e) => setBannerConfig((p) => ({ ...p, endSec: Number(e.target.value) }))}
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Lưu & Áp Dụng
               </button>
             </div>
           </div>
