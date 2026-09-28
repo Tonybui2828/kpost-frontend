@@ -119,6 +119,7 @@ export default function AiVideoEditorPage() {
   // Export State
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportProgress, setExportProgress] = useState<number>(0);
+  const exportAbortRef = useRef<boolean>(false);
 
   // Whisper Subtitles State
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
@@ -158,10 +159,10 @@ export default function AiVideoEditorPage() {
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // 60 FPS đồng bộ thời gian video chính xác
+  // 60 FPS đồng bộ thời gian video preview chính xác
   useEffect(() => {
     const updateLoop = () => {
-      if (videoRef.current && !videoRef.current.paused) {
+      if (videoRef.current && !videoRef.current.paused && !isExporting) {
         setCurrentTime(videoRef.current.currentTime);
       }
       animFrameRef.current = requestAnimationFrame(updateLoop);
@@ -171,7 +172,7 @@ export default function AiVideoEditorPage() {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, []);
+  }, [isExporting]);
 
   // 🌟 Trích xuất TOÀN BỘ ÂM THANH của video thành Blob WAV 16kHz Mono siêu nhẹ (~1.5MB cho 2 phút)
   const extractFullAudioBlob = async (fileOrUrl: File | string): Promise<Blob> => {
@@ -336,27 +337,162 @@ export default function AiVideoEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  // 🌟 TẢI VIDEO XUẤT KHẨU (RENDER BẰNG CANVAS TRỰC TIẾP TRÊN TRÌNH DUYỆT 100% CÓ SUB, LOGO, BANNER)
+  // 🌟 HÀM VẼ TOÀN BỘ OVERLAY (LOGO, BANNER, SUBTITLE) LÊN CANVAS
+  const drawOverlaysOnCanvas = (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    currentSec: number,
+    logoImg: HTMLImageElement | null
+  ) => {
+    // 1. VẼ LOGO
+    if (logoConfig.enabled) {
+      ctx.save();
+      ctx.globalAlpha = logoConfig.opacity / 100;
+      const logoSize = (logoConfig.size || 40) * (width / 400);
+
+      let posX = width - logoSize - 20;
+      let posY = 25;
+      if (logoConfig.position === "top-left") {
+        posX = 20;
+        posY = 25;
+      } else if (logoConfig.position === "bottom-right") {
+        posX = width - logoSize - 20;
+        posY = height - logoSize - 40;
+      } else if (logoConfig.position === "bottom-left") {
+        posX = 20;
+        posY = height - logoSize - 40;
+      }
+
+      if (logoImg && logoImg.complete) {
+        ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
+      } else {
+        ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+        const textWidth = ctx.measureText(logoConfig.name).width + 30;
+        ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = `bold ${Math.round(15 * (width / 400))}px Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
+      }
+      ctx.restore();
+    }
+
+    // 2. VẼ BANNER
+    if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
+      ctx.save();
+      const bannerHeight = Math.round(75 * (height / 800));
+      const bannerY = height - bannerHeight - 30;
+
+      ctx.fillStyle = "rgba(220, 38, 38, 0.95)";
+      ctx.roundRect(24, bannerY, width - 48, bannerHeight, 18);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.stroke();
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = `bold ${Math.round(18 * (width / 400))}px Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(bannerConfig.title, width / 2, bannerY + bannerHeight * 0.42);
+
+      if (bannerConfig.subtitle) {
+        ctx.fillStyle = "#FEF08A";
+        ctx.font = `bold ${Math.round(12 * (width / 400))}px Arial, sans-serif`;
+        ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerHeight * 0.78);
+      }
+      ctx.restore();
+    }
+
+    // 3. VẼ PHỤ ĐỀ TIKTOK
+    if (subtitleConfig.enabled && subtitleCues.length > 0) {
+      const adjTime = currentSec + subtitleConfig.offsetSeconds;
+      const matchedCue = subtitleCues.find(
+        (c) => adjTime >= c.startSec && adjTime <= c.endSec + 0.5
+      );
+
+      if (matchedCue) {
+        ctx.save();
+        const subY = height * 0.74; // Nằm ở 1/3 dưới
+        const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
+        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const words = matchedCue.words && matchedCue.words.length > 0
+          ? matchedCue.words
+          : matchedCue.text.split(" ").map((w) => ({ word: w, startSec: matchedCue.startSec, endSec: matchedCue.endSec }));
+
+        const spaceWidth = ctx.measureText(" ").width;
+        const wordWidths = words.map((w) => ctx.measureText(w.word).width);
+        const totalTextWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1);
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        const padX = 24;
+        const padY = 12;
+        ctx.roundRect((width - totalTextWidth) / 2 - padX, subY - fontSize / 2 - padY, totalTextWidth + padX * 2, fontSize + padY * 2, 16);
+        ctx.fill();
+
+        let startX = (width - totalTextWidth) / 2;
+        words.forEach((w, wIdx) => {
+          const isWordActive = adjTime >= w.startSec && adjTime <= w.endSec + 0.15;
+
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "#000000";
+          ctx.strokeText(w.word, startX + wordWidths[wIdx] / 2, subY);
+
+          ctx.fillStyle = isWordActive ? "#FACC15" : "#FFFFFF";
+          ctx.fillText(w.word, startX + wordWidths[wIdx] / 2, subY);
+
+          startX += wordWidths[wIdx] + spaceWidth;
+        });
+
+        ctx.restore();
+      }
+    }
+  };
+
+  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP (KHÔNG ẢNH HƯỞNG PLAYER, KHÔNG BỊ LOOP LẶP LẠI)
   const handleExportFullVideo = async () => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
       return;
     }
 
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
     setIsExporting(true);
     setExportProgress(0);
+    exportAbortRef.current = false;
+
+    // Tạm dừng video player chính để tránh xung đột âm thanh
+    if (videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+
+    // Tạo phần tử video ảo để render ngầm độc lập
+    const exportVideo = document.createElement("video");
+    exportVideo.src = videoUrl;
+    exportVideo.crossOrigin = "anonymous";
+    exportVideo.muted = false;
+    exportVideo.loop = false; // 🌟 QUAN TRỌNG: TUYỆT ĐỐI KHÔNG LOOP ĐỂ KẾT THÚC CHÍNH XÁC
+    exportVideo.playsInline = true;
 
     try {
-      // 1. Tạo Canvas ảo để vẽ từng khung hình
+      await new Promise((resolve, reject) => {
+        exportVideo.onloadedmetadata = resolve;
+        exportVideo.onerror = reject;
+      });
+
+      const totalDur = exportVideo.duration || videoDuration || 120;
+      const width = exportVideo.videoWidth || 720;
+      const height = exportVideo.videoHeight || 1280;
+
+      // 1. Tạo Canvas ảo
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Không thể khởi tạo Canvas 2D");
-
-      const width = videoEl.videoWidth || 720;
-      const height = videoEl.videoHeight || 1280;
       canvas.width = width;
       canvas.height = height;
 
@@ -375,21 +511,18 @@ export default function AiVideoEditorPage() {
       // 3. Chuẩn bị luồng Stream Video + Audio
       const canvasStream = canvas.captureStream(30);
 
-      // Thu âm thanh gốc của video
-      let combinedStream = canvasStream;
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioCtx.createMediaElementSource(videoEl);
+        const source = audioCtx.createMediaElementSource(exportVideo);
         const destination = audioCtx.createMediaStreamDestination();
         source.connect(destination);
-        source.connect(audioCtx.destination);
 
         const audioTracks = destination.stream.getAudioTracks();
         if (audioTracks.length > 0) {
           canvasStream.addTrack(audioTracks[0]);
         }
       } catch (e) {
-        console.warn("Không thể nối âm thanh trực tiếp (có thể đã nối trước đó)");
+        console.warn("Nối âm thanh video:", e);
       }
 
       // 4. Khởi tạo MediaRecorder
@@ -401,14 +534,27 @@ export default function AiVideoEditorPage() {
         mimeType = 'video/mp4';
       }
 
-      const recorder = new MediaRecorder(combinedStream, { mimeType });
+      const recorder = new MediaRecorder(canvasStream, { mimeType });
       const chunks: Blob[] = [];
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
+      const finishExport = () => {
+        if (recorder.state === "recording") {
+          recorder.stop();
+        }
+        exportVideo.pause();
+        exportVideo.src = "";
+      };
+
       recorder.onstop = () => {
+        if (chunks.length === 0) {
+          setIsExporting(false);
+          return;
+        }
+
         const exportedBlob = new Blob(chunks, { type: mimeType });
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
         const downloadUrl = URL.createObjectURL(exportedBlob);
@@ -420,150 +566,50 @@ export default function AiVideoEditorPage() {
         document.body.removeChild(a);
         URL.revokeObjectURL(downloadUrl);
 
-        setIsExporting(false);
         setExportProgress(100);
+        setTimeout(() => {
+          setIsExporting(false);
+        }, 600);
       };
 
-      // 5. Bắt đầu tua về 0 và play video để render
-      videoEl.currentTime = 0;
-      await new Promise((res) => setTimeout(res, 200));
+      // 5. Bắt đầu tua về 0 và play video ngầm
+      exportVideo.currentTime = 0;
+      recorder.start(1000); // Lưu chunk mỗi giây
+      await exportVideo.play();
 
-      recorder.start();
-      await videoEl.play();
+      let animationId: number;
 
-      const totalDur = videoEl.duration || videoDuration || 120;
-
-      const renderFrame = () => {
-        if (!isExporting && recorder.state !== "recording") return;
-
-        // Vẽ video nền
-        ctx.drawImage(videoEl, 0, 0, width, height);
-
-        const currentSec = videoEl.currentTime;
-        const progress = Math.min(99, Math.round((currentSec / totalDur) * 100));
-        setExportProgress(progress);
-
-        // A. VẼ LOGO
-        if (logoConfig.enabled && !compareOriginal) {
-          ctx.save();
-          ctx.globalAlpha = logoConfig.opacity / 100;
-          const logoSize = (logoConfig.size || 40) * (width / 400);
-
-          let posX = width - logoSize - 20;
-          let posY = 25;
-          if (logoConfig.position === "top-left") {
-            posX = 20;
-            posY = 25;
-          } else if (logoConfig.position === "bottom-right") {
-            posX = width - logoSize - 20;
-            posY = height - logoSize - 40;
-          } else if (logoConfig.position === "bottom-left") {
-            posX = 20;
-            posY = height - logoSize - 40;
-          }
-
-          if (logoImg && logoImg.complete) {
-            ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
-          } else {
-            ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-            const textWidth = ctx.measureText(logoConfig.name).width + 30;
-            ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
-            ctx.fill();
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = `bold ${Math.round(15 * (width / 400))}px Arial, sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
-          }
-          ctx.restore();
+      const renderLoop = () => {
+        if (exportAbortRef.current) {
+          finishExport();
+          return;
         }
 
-        // B. VẼ BANNER
-        if (bannerConfig.enabled && !compareOriginal && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
-          ctx.save();
-          const bannerHeight = Math.round(75 * (height / 800));
-          const bannerY = height - bannerHeight - 30;
+        const curTime = exportVideo.currentTime;
+        const currentProgress = Math.min(99, Math.round((curTime / totalDur) * 100));
+        setExportProgress(currentProgress);
 
-          ctx.fillStyle = "rgba(220, 38, 38, 0.95)";
-          ctx.roundRect(24, bannerY, width - 48, bannerHeight, 18);
-          ctx.fill();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.stroke();
+        // Vẽ video và overlay lên Canvas
+        ctx.drawImage(exportVideo, 0, 0, width, height);
+        drawOverlaysOnCanvas(ctx, width, height, curTime, logoImg);
 
-          ctx.fillStyle = "#FFFFFF";
-          ctx.font = `bold ${Math.round(18 * (width / 400))}px Arial, sans-serif`;
-          ctx.textAlign = "center";
-          ctx.fillText(bannerConfig.title, width / 2, bannerY + bannerHeight * 0.42);
-
-          if (bannerConfig.subtitle) {
-            ctx.fillStyle = "#FEF08A";
-            ctx.font = `bold ${Math.round(12 * (width / 400))}px Arial, sans-serif`;
-            ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerHeight * 0.78);
-          }
-          ctx.restore();
+        // 🌟 KIỂM TRA ĐIỀU KIỆN DỪNG: Khi video hết hoặc thời gian chạm ngưỡng
+        if (exportVideo.ended || curTime >= totalDur - 0.2) {
+          setExportProgress(100);
+          setTimeout(() => {
+            finishExport();
+          }, 300);
+          return;
         }
 
-        // C. VẼ PHỤ ĐỀ TIKTOK
-        if (subtitleConfig.enabled && !compareOriginal) {
-          const adjTime = currentSec + subtitleConfig.offsetSeconds;
-          const matchedCue = subtitleCues.find(
-            (c) => adjTime >= c.startSec && adjTime <= c.endSec + 0.5
-          );
-
-          if (matchedCue) {
-            ctx.save();
-            const subY = height * 0.74;
-            const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
-            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            const words = matchedCue.words && matchedCue.words.length > 0
-              ? matchedCue.words
-              : matchedCue.text.split(" ").map((w) => ({ word: w, startSec: matchedCue.startSec, endSec: matchedCue.endSec }));
-
-            const spaceWidth = ctx.measureText(" ").width;
-            const wordWidths = words.map((w) => ctx.measureText(w.word).width);
-            const totalTextWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1);
-
-            ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-            const padX = 24;
-            const padY = 12;
-            ctx.roundRect((width - totalTextWidth) / 2 - padX, subY - fontSize / 2 - padY, totalTextWidth + padX * 2, fontSize + padY * 2, 16);
-            ctx.fill();
-
-            let startX = (width - totalTextWidth) / 2;
-            words.forEach((w, wIdx) => {
-              const isWordActive = adjTime >= w.startSec && adjTime <= w.endSec + 0.15;
-
-              ctx.lineWidth = 4;
-              ctx.strokeStyle = "#000000";
-              ctx.strokeText(w.word, startX + wordWidths[wIdx] / 2, subY);
-
-              ctx.fillStyle = isWordActive ? "#FACC15" : "#FFFFFF";
-              ctx.fillText(w.word, startX + wordWidths[wIdx] / 2, subY);
-
-              startX += wordWidths[wIdx] + spaceWidth;
-            });
-
-            ctx.restore();
-          }
-        }
-
-        if (!videoEl.paused && !videoEl.ended) {
-          requestAnimationFrame(renderFrame);
-        } else if (videoEl.ended) {
-          recorder.stop();
-        }
+        animationId = requestAnimationFrame(renderLoop);
       };
 
-      requestAnimationFrame(renderFrame);
+      animationId = requestAnimationFrame(renderLoop);
 
-      videoEl.onended = () => {
-        if (recorder.state === "recording") {
-          recorder.stop();
-        }
+      exportVideo.onended = () => {
+        cancelAnimationFrame(animationId);
+        finishExport();
       };
     } catch (err: any) {
       console.error("Lỗi xuất video:", err);
@@ -622,7 +668,7 @@ export default function AiVideoEditorPage() {
             </p>
           </div>
 
-          {/* DÃY NÚT CHỨC NĂNG CÓ THÊM NÚT TẢI VIDEO VỀ */}
+          {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2.5">
             <button
               type="button"
@@ -649,7 +695,7 @@ export default function AiVideoEditorPage() {
               <ImageIcon size={16} /> Logo & Banner
             </button>
 
-            {/* 🌟 NÚT TẢI VIDEO VỀ ĐẦY ĐỦ PHỤ ĐỀ VÀ LOGO */}
+            {/* 🌟 NÚT TẢI VIDEO VỀ */}
             <button
               type="button"
               onClick={handleExportFullVideo}
@@ -684,7 +730,7 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
 
-        {/* TIẾN TRÌNH XUẤT VIDEO */}
+        {/* TIẾN TRÌNH XUẤT VIDEO CÓ NÚT HỦY */}
         {isExporting && (
           <div className="mb-6 p-6 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in">
             <div className="flex items-center justify-between mb-3">
@@ -692,10 +738,24 @@ export default function AiVideoEditorPage() {
                 <Download size={24} className="text-emerald-400 animate-bounce" />
                 <div>
                   <h3 className="text-base font-black text-white">Đang Render & Xuất Video Hoàn Chỉnh...</h3>
-                  <p className="text-xs text-emerald-200 mt-0.5">Video đang được gắn cứng phụ đề, logo và banner chất lượng cao</p>
+                  <p className="text-xs text-emerald-200 mt-0.5">
+                    Hệ thống đang gắn phụ đề, logo và banner vào video (Tự động tải về khi đủ 100%)
+                  </p>
                 </div>
               </div>
-              <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportAbortRef.current = true;
+                    setIsExporting(false);
+                  }}
+                  className="px-3 py-1 bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
             </div>
             <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
               <div
