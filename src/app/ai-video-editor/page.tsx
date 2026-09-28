@@ -351,7 +351,7 @@ export default function AiVideoEditorPage() {
               </h1>
             </div>
             <p className="text-sm text-slate-500 font-medium">
-              Không dùng chữ mẫu bịa đặt. AI Whisper nghe trực tiếp âm thanh từ video thật của bạn cho toàn bộ thời lượng, nhân vật nói đến đâu sáng chữ đến đó!
+              Đây là tính năng sub video tự động , chèn logo và banner tự động cho video của bạn . Đăng ký gói pro và sử dụng không giới hạn từ kpost.
             </p>
           </div>
 
@@ -368,7 +368,7 @@ export default function AiVideoEditorPage() {
                 </>
               ) : (
                 <>
-                  <Mic size={16} /> 🎤 AI Bóc Băng Lời Nói Thật
+                  <Mic size={16} /> 🎤 Bật sub tự động bằng AI
                 </>
               )}
             </button>
@@ -505,7 +505,7 @@ export default function AiVideoEditorPage() {
                     <Mic size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="text-xs font-bold text-slate-500">Chưa có phụ đề lời thoại.</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Bấm nút <span className="font-bold text-indigo-600">"🎤 AI Bóc Băng Lời Nói Thật"</span> để AI nghe và tạo phụ đề cho toàn bộ video!
+                      Bấm nút <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để AI nghe và tạo phụ đề cho toàn bộ video!
                     </p>
                   </div>
                 )}
