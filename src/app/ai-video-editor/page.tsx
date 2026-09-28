@@ -242,12 +242,14 @@ export default function AiVideoEditorPage() {
       setTranscribeProgress(85);
       setTranscribeStatus("Đang phân tách mốc thời gian và tạo phụ đề TikTok...");
 
-      if (res?.data?.success && res?.data?.data?.cues && res.data.data.cues.length > 0) {
-        const cues: SubtitleCue[] = res.data.data.cues;
-        setSubtitleCues(cues);
+      // Nhận kết quả từ cả 2 dạng data (res.data.data.cues hoặc res.data.cues)
+      const rawCues = res?.data?.data?.cues || res?.data?.cues || [];
+
+      if (rawCues && rawCues.length > 0) {
+        setSubtitleCues(rawCues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
         setTranscribeSuccessMsg(
-          `🎉 Whisper AI đã bóc băng thành công ${cues.length} câu lời thoại thật cho toàn bộ video!`
+          `🎉 Whisper AI đã bóc băng thành công ${rawCues.length} câu lời thoại thật cho toàn bộ video!`
         );
       } else {
         throw new Error(res?.data?.error || "Không nhận được lời thoại từ Whisper AI.");
@@ -286,13 +288,22 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // Tìm câu phụ đề đang hoạt động tại thời điểm hiện tại
+  // 🌟 TÌM CÂU PHỤ ĐỀ HIỆN TẠI VỚI CƠ CHẾ GIỮ HIỂN THỊ CHỐNG NGẮT QUÃNG
   const adjustedCurrentTime = currentTime + subtitleConfig.offsetSeconds;
   const currentSubtitleCue = useMemo(() => {
     if (!subtitleConfig.enabled || subtitleCues.length === 0) return null;
-    return subtitleCues.find(
-      (cue) => adjustedCurrentTime >= cue.startSec && adjustedCurrentTime <= cue.endSec + 0.2
+
+    // Tìm câu đang phát trong khoảng [startSec, endSec + 0.5s]
+    const matched = subtitleCues.find(
+      (cue) => adjustedCurrentTime >= cue.startSec && adjustedCurrentTime <= cue.endSec + 0.5
     );
+    if (matched) return matched;
+
+    // Giữ câu vừa nói xong thêm 0.8 giây để mắt người kịp đọc và không bị gián đoạn giữa các khoảng nghỉ
+    const recent = subtitleCues.find(
+      (cue) => adjustedCurrentTime > cue.endSec && adjustedCurrentTime <= cue.endSec + 0.8
+    );
+    return recent || null;
   }, [subtitleConfig.enabled, subtitleCues, adjustedCurrentTime]);
 
   useEffect(() => {
