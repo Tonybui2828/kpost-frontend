@@ -101,6 +101,7 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
 }
 
 export default function AiVideoEditorPage() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [videoName, setVideoName] = useState<string>("");
   const [videoDuration, setVideoDuration] = useState<number>(0);
@@ -160,7 +161,7 @@ export default function AiVideoEditorPage() {
     };
   }, []);
 
-  // Trích xuất TOÀN BỘ ÂM THANH của video (không bao giờ bị cắt 15s)
+  // Trích xuất âm thanh dự phòng qua Base64 WAV
   const extractFullAudioAsWavBase64 = async (url: string): Promise<string> => {
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
@@ -168,7 +169,6 @@ export default function AiVideoEditorPage() {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // Lấy chính xác toàn bộ thời lượng video thật
     const fullDuration = decodedBuffer.duration;
     if (fullDuration > 0) {
       setVideoDuration(fullDuration);
@@ -177,7 +177,6 @@ export default function AiVideoEditorPage() {
     const targetSampleRate = 16000;
     const numFrames = Math.ceil(targetSampleRate * fullDuration);
 
-    // Resample sang 16kHz mono cực nhanh
     const offlineCtx = new OfflineAudioContext(1, numFrames, targetSampleRate);
     const source = offlineCtx.createBufferSource();
     source.buffer = decodedBuffer;
@@ -201,7 +200,7 @@ export default function AiVideoEditorPage() {
     });
   };
 
-  // AI Bóc băng toàn bộ âm thanh thật bằng Whisper
+  // 🌟 AI Bóc băng: ƯU TIÊN GỬI FILE GỐC QUA FORMDATA (CHỐNG LẶP 30S)
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
@@ -209,30 +208,32 @@ export default function AiVideoEditorPage() {
     }
 
     setIsTranscribing(true);
-    setTranscribeProgress(15);
-    setTranscribeStatus("Đang trích xuất toàn bộ âm thanh của video (16kHz Mono)...");
+    setTranscribeProgress(20);
+    setTranscribeStatus("Đang chuẩn bị file video và âm thanh...");
 
     try {
-      const base64Audio = await extractFullAudioAsWavBase64(videoUrl);
-
-      setTranscribeProgress(45);
-      setTranscribeStatus("Đang gửi âm thanh sang OpenAI Whisper AI để bóc băng tiếng Việt...");
-
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       let res: any;
 
-      try {
-        res = await axios.post(
-          `${backendUrl}/ai-content/transcribe-video`,
-          {
-            audioBase64: base64Audio,
-            videoName: videoName,
-            duration: videoDuration || 120,
-          },
-          { timeout: 120000 }
-        );
-      } catch (err) {
-        res = await axios.post("/api/transcribe-video", {
+      // Ưu tiên 1: Gửi thẳng File gốc bằng FormData (giữ 100% âm thanh chân thực cả 2 phút)
+      if (selectedFile) {
+        setTranscribeProgress(40);
+        setTranscribeStatus("Đang tải file video lên máy chủ AI...");
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("duration", String(videoDuration || 120));
+
+        res = await axios.post(`${backendUrl}/ai-content/transcribe-video`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 180000,
+        });
+      } else {
+        // Fallback: Gửi base64 nếu không có file gốc
+        setTranscribeProgress(40);
+        setTranscribeStatus("Đang tách âm thanh gửi sang Whisper AI...");
+        const base64Audio = await extractFullAudioAsWavBase64(videoUrl);
+        res = await axios.post(`${backendUrl}/ai-content/transcribe-video`, {
           audioBase64: base64Audio,
           videoName: videoName,
           duration: videoDuration || 120,
@@ -272,6 +273,7 @@ export default function AiVideoEditorPage() {
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      setSelectedFile(file); // Lưu lại file gốc để gửi FormData
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       setVideoName(file.name);
