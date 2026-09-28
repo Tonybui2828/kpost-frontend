@@ -20,7 +20,9 @@ import {
   Sliders,
   Clock,
   Download,
-  FileDown
+  FileDown,
+  Edit2,
+  Check
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -127,12 +129,49 @@ export default function AiVideoEditorPage() {
   const [transcribeStatus, setTranscribeStatus] = useState<string>("");
   const [transcribeSuccessMsg, setTranscribeSuccessMsg] = useState<string>("");
   const [subtitleCues, setSubtitleCues] = useState<SubtitleCue[]>([]);
+  const [editingCueId, setEditingCueId] = useState<string | null>(null);
+  const [editingCueText, setEditingCueText] = useState<string>("");
   const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>({
     enabled: true,
     fontSize: 22,
     highlightColor: "#FACC15",
     offsetSeconds: 0,
   });
+
+  // Lưu chỉnh sửa câu phụ đề
+  const handleSaveCueEdit = (cueId: string) => {
+    if (!editingCueText.trim()) {
+      setEditingCueId(null);
+      return;
+    }
+
+    setSubtitleCues((prevCues) =>
+      prevCues.map((cue) => {
+        if (cue.id === cueId) {
+          const newText = editingCueText.trim();
+          const wordsList = newText.split(/\s+/).filter(Boolean);
+          const duration = Math.max(0.4, cue.endSec - cue.startSec);
+          const wordStep = duration / Math.max(1, wordsList.length);
+
+          const updatedWords = wordsList.map((w, idx) => ({
+            word: w,
+            startSec: Number((cue.startSec + idx * wordStep).toFixed(2)),
+            endSec: Number((cue.startSec + (idx + 1) * wordStep).toFixed(2)),
+          }));
+
+          return {
+            ...cue,
+            text: newText,
+            words: updatedWords,
+          };
+        }
+        return cue;
+      })
+    );
+
+    setEditingCueId(null);
+    setEditingCueText("");
+  };
 
   // Modal & Cấu hình Logo / Banner ĐẦY ĐỦ
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -838,38 +877,107 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* DANH SÁCH LỜI THOẠI TRẢI DÀI TOÀN BỘ VIDEO */}
-              <div ref={listContainerRef} className="space-y-2 max-h-[480px] overflow-y-auto pr-1 select-none">
+              <div ref={listContainerRef} className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
                 {subtitleCues.map((cue) => {
                   const isActive =
                     adjustedCurrentTime >= cue.startSec && adjustedCurrentTime <= cue.endSec + 0.2;
+                  const isEditing = editingCueId === cue.id;
+
                   return (
                     <div
                       id={`cue-item-${cue.id}`}
                       key={cue.id}
-                      onClick={() => seekToTimestamp(cue.startSec)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isActive
-                          ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20 scale-[1.01]"
+                          ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20"
                           : "bg-slate-50 hover:bg-purple-50/50 border-slate-200/80 text-slate-800"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md shrink-0 ${
-                            isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => seekToTimestamp(cue.startSec)}
+                          className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md shrink-0 cursor-pointer transition-all hover:scale-105 ${
+                            isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700 hover:bg-purple-200"
                           }`}
+                          title="Bấm để tua video tới mốc này"
                         >
                           {cue.timeLabel}
-                        </span>
-                        <span className={`text-xs font-bold truncate ${isActive ? "text-white" : "text-slate-800"}`}>
-                          {cue.text}
-                        </span>
+                        </button>
+
+                        {isEditing ? (
+                          <div className="flex items-center gap-1.5 flex-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingCueText}
+                              onChange={(e) => setEditingCueText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveCueEdit(cue.id);
+                                if (e.key === "Escape") setEditingCueId(null);
+                              }}
+                              className={`w-full text-xs font-bold px-2.5 py-1 rounded-xl outline-none border transition-all ${
+                                isActive
+                                  ? "bg-white text-slate-900 border-white focus:ring-2 focus:ring-amber-300"
+                                  : "bg-white text-slate-900 border-purple-400 focus:ring-2 focus:ring-purple-500"
+                              }`}
+                              placeholder="Nhập lời thoại chính xác..."
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveCueEdit(cue.id)}
+                              className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 cursor-pointer shadow-xs shrink-0"
+                              title="Lưu sửa đổi (Enter)"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingCueId(null)}
+                              className="p-1.5 rounded-lg bg-slate-400 text-white hover:bg-slate-500 cursor-pointer shrink-0"
+                              title="Hủy (Esc)"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            onClick={() => seekToTimestamp(cue.startSec)}
+                            className={`text-xs font-bold truncate flex-1 cursor-pointer select-none ${
+                              isActive ? "text-white" : "text-slate-800"
+                            }`}
+                            title="Bấm để tua video"
+                          >
+                            {cue.text}
+                          </span>
+                        )}
                       </div>
-                      {isActive && (
-                        <span className="text-[10px] font-black uppercase text-amber-300 shrink-0 animate-pulse">
-                          Đang nói
-                        </span>
-                      )}
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isActive && !isEditing && (
+                          <span className="text-[10px] font-black uppercase text-amber-300 shrink-0 animate-pulse">
+                            Đang nói
+                          </span>
+                        )}
+                        {!isEditing && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCueId(cue.id);
+                              setEditingCueText(cue.text);
+                            }}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-white/20 text-white hover:bg-white/30"
+                                : "text-slate-400 hover:text-purple-600 hover:bg-purple-100"
+                            }`}
+                            title="Sửa lời thoại câu này"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
