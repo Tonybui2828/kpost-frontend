@@ -22,7 +22,9 @@ import {
   Download,
   FileDown,
   Edit2,
-  Check
+  Check,
+  Music,
+  Palette
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -63,6 +65,25 @@ export interface BannerConfig {
   position: "bottom" | "top" | "center";
   startSec: number;
   endSec: number;
+}
+
+// 🌟 Hiệu ứng hình ảnh (Visual Filter Effects)
+export interface VisualEffectConfig {
+  filterType: "none" | "cinematic" | "bright" | "vintage" | "vibrant" | "cyberpunk" | "golden";
+  brightness: number; // 80 - 140
+  contrast: number;   // 80 - 140
+  saturation: number; // 50 - 180
+  speed: number;      // 0.8 - 1.5
+}
+
+// 🌟 Hiệu ứng âm thanh & Nhạc nền (Audio Effects)
+export interface SoundEffectConfig {
+  bgMusicEnabled: boolean;
+  bgMusicType: "none" | "upbeat" | "chill" | "corporate" | "epic";
+  bgMusicVolume: number; // 10 - 100
+  dingEffectEnabled: boolean; // Ding khi hiện Banner
+  whooshEffectEnabled: boolean; // Whoosh mở đầu
+  boostVoiceVolume: boolean; // Tăng âm lượng giọng nói
 }
 
 // Chuyển AudioBuffer sang file WAV 16-bit Mono siêu nhẹ
@@ -192,11 +213,64 @@ export default function AiVideoEditorPage() {
     endSec: 15,
   });
 
+  // 🌟 MODAL & CẤU HÌNH HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI
+  const [showEffectsModal, setShowEffectsModal] = useState<boolean>(false);
+  const [visualEffects, setVisualEffects] = useState<VisualEffectConfig>({
+    filterType: "none",
+    brightness: 105,
+    contrast: 110,
+    saturation: 120,
+    speed: 1.0,
+  });
+  const [soundEffects, setSoundEffects] = useState<SoundEffectConfig>({
+    bgMusicEnabled: false,
+    bgMusicType: "upbeat",
+    bgMusicVolume: 35,
+    dingEffectEnabled: true,
+    whooshEffectEnabled: true,
+    boostVoiceVolume: true,
+  });
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoImageInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
+
+  // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
+  const canvasFilterCss = useMemo(() => {
+    if (compareOriginal || visualEffects.filterType === "none") {
+      return "none";
+    }
+
+    let b = visualEffects.brightness;
+    let c = visualEffects.contrast;
+    let s = visualEffects.saturation;
+
+    switch (visualEffects.filterType) {
+      case "cinematic":
+        return `brightness(${b * 0.95}%) contrast(${c * 1.25}%) saturate(${s * 1.1}%) sepia(15%)`;
+      case "bright":
+        return `brightness(${b * 1.2}%) contrast(${c * 1.05}%) saturate(${s * 1.15}%)`;
+      case "vintage":
+        return `brightness(${b * 1.05}%) contrast(${c * 1.1}%) saturate(${s * 0.75}%) sepia(35%)`;
+      case "vibrant":
+        return `brightness(${b * 1.1}%) contrast(${c * 1.2}%) saturate(${s * 1.5}%)`;
+      case "cyberpunk":
+        return `brightness(${b * 1.05}%) contrast(${c * 1.3}%) saturate(${s * 1.4}%) hue-rotate(15deg)`;
+      case "golden":
+        return `brightness(${b * 1.1}%) contrast(${c * 1.15}%) saturate(${s * 1.25}%) sepia(25%)`;
+      default:
+        return `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+    }
+  }, [visualEffects, compareOriginal]);
+
+  // Cập nhật tốc độ video preview khi đổi speed
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = visualEffects.speed || 1.0;
+    }
+  }, [visualEffects.speed]);
 
   // 60 FPS đồng bộ thời gian video preview chính xác
   useEffect(() => {
@@ -247,7 +321,7 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
-  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT
+  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT BẰNG KPOST AI
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl && !selectedFile) {
       alert("Vui lòng tải video lên trước!");
@@ -263,7 +337,7 @@ export default function AiVideoEditorPage() {
       const wavBlob = await extractFullAudioBlob(inputSource);
 
       setTranscribeProgress(45);
-      setTranscribeStatus(`Đang gửi âm thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB) sang Whisper AI...`);
+      setTranscribeStatus(`Đang gửi âm thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB) sang KpostAI...`);
 
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       
@@ -285,10 +359,10 @@ export default function AiVideoEditorPage() {
         setSubtitleCues(rawCues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
         setTranscribeSuccessMsg(
-          `🎉 Whisper AI đã bóc băng thành công ${rawCues.length} câu lời thoại thật cho toàn bộ video!`
+          `🎉 KpostAI đã bóc băng thành công ${rawCues.length} câu lời thoại thật cho toàn bộ video!`
         );
       } else {
-        throw new Error(res?.data?.error || "Không nhận được lời thoại từ Whisper AI.");
+        throw new Error(res?.data?.error || "Không nhận được lời thoại từ KpostAI.");
       }
 
       setTranscribeProgress(100);
@@ -296,7 +370,7 @@ export default function AiVideoEditorPage() {
         setIsTranscribing(false);
       }, 500);
     } catch (err: any) {
-      console.error("Lỗi Whisper AI:", err);
+      console.error("Lỗi KpostAI:", err);
       setIsTranscribing(false);
       alert(
         "Lỗi bóc băng âm thanh: " +
@@ -493,7 +567,7 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP (KHÔNG ẢNH HƯỞNG PLAYER, KHÔNG BỊ LOOP LẶP LẠI)
+  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP (BAO GỒM CẢ FILTER HÌNH ẢNH & HIỆU ỨNG ÂM THANH)
   const handleExportFullVideo = async () => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
@@ -515,7 +589,7 @@ export default function AiVideoEditorPage() {
     exportVideo.src = videoUrl;
     exportVideo.crossOrigin = "anonymous";
     exportVideo.muted = false;
-    exportVideo.loop = false; // 🌟 QUAN TRỌNG: TUYỆT ĐỐI KHÔNG LOOP ĐỂ KẾT THÚC CHÍNH XÁC
+    exportVideo.loop = false; // TUYỆT ĐỐI KHÔNG LOOP ĐỂ KẾT THÚC CHÍNH XÁC
     exportVideo.playsInline = true;
 
     try {
@@ -554,7 +628,13 @@ export default function AiVideoEditorPage() {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = audioCtx.createMediaElementSource(exportVideo);
         const destination = audioCtx.createMediaStreamDestination();
-        source.connect(destination);
+
+        // 🌟 BỘ KHUẾCH ĐẠI ÂM LƯỢNG NẾU BẬT BOOST VOICE
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = soundEffects.boostVoiceVolume ? 1.4 : 1.0;
+
+        source.connect(gainNode);
+        gainNode.connect(destination);
 
         const audioTracks = destination.stream.getAudioTracks();
         if (audioTracks.length > 0) {
@@ -613,7 +693,7 @@ export default function AiVideoEditorPage() {
 
       // 5. Bắt đầu tua về 0 và play video ngầm
       exportVideo.currentTime = 0;
-      recorder.start(1000); // Lưu chunk mỗi giây
+      recorder.start(1000);
       await exportVideo.play();
 
       let animationId: number;
@@ -628,11 +708,18 @@ export default function AiVideoEditorPage() {
         const currentProgress = Math.min(99, Math.round((curTime / totalDur) * 100));
         setExportProgress(currentProgress);
 
-        // Vẽ video và overlay lên Canvas
+        // 🌟 ÁP DỤNG HIỆU ỨNG HÌNH ẢNH LÊN CANVAS RENDER
+        ctx.save();
+        if (canvasFilterCss !== "none") {
+          ctx.filter = canvasFilterCss;
+        }
         ctx.drawImage(exportVideo, 0, 0, width, height);
+        ctx.restore();
+
+        // Vẽ overlay chữ, logo, banner
         drawOverlaysOnCanvas(ctx, width, height, curTime, logoImg);
 
-        // 🌟 KIỂM TRA ĐIỀU KIỆN DỪNG: Khi video hết hoặc thời gian chạm ngưỡng
+        // KIỂM TRA ĐIỀU KIỆN DỪNG
         if (exportVideo.ended || curTime >= totalDur - 0.2) {
           setExportProgress(100);
           setTimeout(() => {
@@ -696,7 +783,7 @@ export default function AiVideoEditorPage() {
                 <Wand2 size={26} />
               </span>
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                AI Video Editor & Whisper Subtitles
+                AI Video Editor
                 <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
                   REAL AI 100%
                 </span>
@@ -732,6 +819,15 @@ export default function AiVideoEditorPage() {
               className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
             >
               <ImageIcon size={16} /> Logo & Banner
+            </button>
+
+            {/* 🌟 NÚT CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI */}
+            <button
+              type="button"
+              onClick={() => setShowEffectsModal(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] cursor-pointer"
+            >
+              <Sparkles size={16} /> Hiệu Ứng Video
             </button>
 
             {/* 🌟 NÚT TẢI VIDEO VỀ */}
@@ -778,7 +874,7 @@ export default function AiVideoEditorPage() {
                 <div>
                   <h3 className="text-base font-black text-white">Đang Render & Xuất Video Hoàn Chỉnh...</h3>
                   <p className="text-xs text-emerald-200 mt-0.5">
-                    Hệ thống đang gắn phụ đề, logo và banner vào video (Tự động tải về khi đủ 100%)
+                    Hệ thống đang gắn phụ đề, logo, banner và hiệu ứng vào video (Tự động tải về khi đủ 100%)
                   </p>
                 </div>
               </div>
@@ -812,7 +908,7 @@ export default function AiVideoEditorPage() {
               <div className="flex items-center gap-3">
                 <Mic size={24} className="text-cyan-400 animate-pulse" />
                 <div>
-                  <h3 className="text-base font-black text-white">OpenAI Whisper AI Đang Nghe & Bóc Băng Âm Thanh...</h3>
+                  <h3 className="text-base font-black text-white">KpostAI Đang Nghe & Bóc Băng Âm Thanh...</h3>
                   <p className="text-xs text-cyan-200 mt-0.5">{transcribeStatus}</p>
                 </div>
               </div>
@@ -987,7 +1083,7 @@ export default function AiVideoEditorPage() {
                     <Mic size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="text-xs font-bold text-slate-500">Chưa có phụ đề lời thoại.</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Bấm nút <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để AI nghe và tạo phụ đề cho toàn bộ video!
+                      Bấm nút <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để KpostAI nghe và tạo phụ đề cho toàn bộ video!
                     </p>
                   </div>
                 )}
@@ -1016,6 +1112,16 @@ export default function AiVideoEditorPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  {/* NÚT HIỆU ỨNG NHANH */}
+                  <button
+                    type="button"
+                    onClick={() => setShowEffectsModal(true)}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Palette size={13} />
+                    {visualEffects.filterType !== "none" ? "Đã bật hiệu ứng" : "Hiệu ứng"}
+                  </button>
+
                   {/* NÚT TẢI NHANH Ở TRÊN ĐẦU VIDEO */}
                   <button
                     type="button"
@@ -1052,6 +1158,10 @@ export default function AiVideoEditorPage() {
                       loop
                       playsInline
                       crossOrigin="anonymous"
+                      style={{
+                        filter: canvasFilterCss,
+                        transition: "filter 0.3s ease"
+                      }}
                       onLoadedMetadata={() => {
                         if (videoRef.current && videoRef.current.duration) {
                           setVideoDuration(videoRef.current.duration);
@@ -1209,6 +1319,11 @@ export default function AiVideoEditorPage() {
                       Đã bóc băng ({subtitleCues.length} câu thật)
                     </span>
                   )}
+                  {visualEffects.filterType !== "none" && (
+                    <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200">
+                      ✨ Bộ lọc: {visualEffects.filterType.toUpperCase()} ({visualEffects.speed}x)
+                    </span>
+                  )}
                   {bannerConfig.enabled && (
                     <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
                       🏷️ Banner: 00:{bannerConfig.startSec.toString().padStart(2, "0")} ➔ 00:{bannerConfig.endSec.toString().padStart(2, "0")}
@@ -1220,6 +1335,176 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
       </div>
+
+      {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI */}
+      {showEffectsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-purple-100 text-purple-600 rounded-xl">
+                  <Sparkles size={18} />
+                </span>
+                <h3 className="text-base font-black text-slate-900">Hiệu Ứng Hình Ảnh & Âm Thanh</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEffectsModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* PHẦN 1: HIỆU ỨNG HÌNH ẢNH (COLOR GRADING & FILTER) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
+                  <Palette size={14} className="text-purple-600" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
+                </span>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">Tông màu điện ảnh:</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "none", label: "Mặc định" },
+                        { id: "bright", label: "✨ Sáng nét" },
+                        { id: "cinematic", label: "🎬 Điện ảnh" },
+                        { id: "vibrant", label: "🌈 Rực rỡ" },
+                        { id: "golden", label: "☀️ Vàng ấm" },
+                        { id: "vintage", label: "🎞️ Hoài niệm" },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setVisualEffects((p) => ({ ...p, filterType: item.id as any }))}
+                          className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            visualEffects.filterType === item.id
+                              ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-purple-50"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Độ sáng: {visualEffects.brightness}%
+                      </label>
+                      <input
+                        type="range"
+                        min={80}
+                        max={140}
+                        value={visualEffects.brightness}
+                        onChange={(e) => setVisualEffects((p) => ({ ...p, brightness: Number(e.target.value) }))}
+                        className="w-full accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Độ bão hòa màu: {visualEffects.saturation}%
+                      </label>
+                      <input
+                        type="range"
+                        min={60}
+                        max={180}
+                        value={visualEffects.saturation}
+                        onChange={(e) => setVisualEffects((p) => ({ ...p, saturation: Number(e.target.value) }))}
+                        className="w-full accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                      Tốc độ phát: {visualEffects.speed}x (Tăng tốc để video TikTok cuốn hút hơn)
+                    </label>
+                    <div className="flex gap-2">
+                      {[1.0, 1.1, 1.2, 1.25, 1.5].map((spd) => (
+                        <button
+                          key={spd}
+                          type="button"
+                          onClick={() => setVisualEffects((p) => ({ ...p, speed: spd }))}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                            visualEffects.speed === spd
+                              ? "bg-purple-600 text-white border-purple-600"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {spd}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PHẦN 2: HIỆU ỨNG ÂM THANH (AUDIO EFFECTS) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
+                  <Music size={14} className="text-emerald-600" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
+                </span>
+
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">🎙️ Khuếch đại giọng nói (Voice Boost +40%)</p>
+                      <p className="text-[11px] text-slate-500">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={soundEffects.boostVoiceVolume}
+                      onChange={(e) => setSoundEffects((p) => ({ ...p, boostVoiceVolume: e.target.checked }))}
+                      className="w-4 h-4 accent-emerald-600 rounded"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">🔔 Hiệu ứng Ding khi hiện Banner</p>
+                      <p className="text-[11px] text-slate-500">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={soundEffects.dingEffectEnabled}
+                      onChange={(e) => setSoundEffects((p) => ({ ...p, dingEffectEnabled: e.target.checked }))}
+                      className="w-4 h-4 accent-emerald-600 rounded"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">⚡ Hiệu ứng Whoosh lướt cảnh mở đầu</p>
+                      <p className="text-[11px] text-slate-500">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={soundEffects.whooshEffectEnabled}
+                      onChange={(e) => setSoundEffects((p) => ({ ...p, whooshEffectEnabled: e.target.checked }))}
+                      className="w-4 h-4 accent-emerald-600 rounded"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowEffectsModal(false)}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Lưu & Áp Dụng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL THIẾT LẬP LOGO & BANNER */}
       {showModal && (
