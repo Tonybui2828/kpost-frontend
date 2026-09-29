@@ -570,41 +570,46 @@ export default function AiVideoEditorPage() {
       }
     };
 
-    // 1. Ưu tiên hàng đầu: Web Speech API (tương thích 100% mọi trình duyệt Chrome, Edge, Safari, Cốc Cốc)
+    // 1. Kiểm tra xem trình duyệt có sẵn gói giọng TIẾNG VIỆT BẢN ĐỊA THẬT (native Vietnamese) không
     if ("speechSynthesis" in window) {
       try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "vi-VN";
-        
         const voices = window.speechSynthesis.getVoices();
         const viVoice = voices.find(
           (v) =>
             v.lang.toLowerCase().startsWith("vi") ||
-            v.lang.toLowerCase().includes("vn") ||
             v.name.toLowerCase().includes("vietnam") ||
-            v.name.toLowerCase().includes("vietnamese")
+            v.name.toLowerCase().includes("vietnamese") ||
+            v.name.toLowerCase().includes("tiếng việt") ||
+            v.name.toLowerCase().includes("an") ||
+            v.name.toLowerCase().includes("mai") ||
+            v.name.toLowerCase().includes("linh")
         );
+
+        // TUYỆT ĐỐI CHỈ DÙNG speechSynthesis KHI THỰC SỰ CÓ GIỌNG TIẾNG VIỆT (viVoice)!
+        // Nếu máy tính (Windows) không có giọng tiếng Việt, KHÔNG BAO GIỜ phát qua Web Speech
+        // vì hệ điều hành sẽ tự ép giọng tiếng Anh (Microsoft David) đọc tiếng Việt gây ra hiện tượng "nói đớ như Tây"!
         if (viVoice) {
+          const utterance = new SpeechSynthesisUtterance(text);
           utterance.voice = viVoice;
+          utterance.lang = viVoice.lang || "vi-VN";
+          utterance.pitch = voiceoverConfig.pitch || char.pitch || 1.0;
+          utterance.rate = voiceoverConfig.rate || char.rate || 1.0;
+          utterance.volume = 1.0;
+          utterance.onend = restoreVolume;
+          utterance.onerror = () => {
+            playAudioTts();
+          };
+
+          window.speechSynthesis.speak(utterance);
+          return;
         }
-
-        utterance.pitch = voiceoverConfig.pitch || char.pitch || 1.0;
-        utterance.rate = voiceoverConfig.rate || char.rate || 1.0;
-        utterance.volume = 1.0;
-        utterance.onend = restoreVolume;
-        utterance.onerror = (e) => {
-          console.warn("Web Speech error, switching to Audio TTS:", e);
-          playAudioTts();
-        };
-
-        window.speechSynthesis.speak(utterance);
-        return;
       } catch (err) {
         console.warn("SpeechSynthesis error:", err);
       }
     }
 
-    // 2. Dự phòng: Audio element qua backend TTS
+    // 2. Khi máy tính không có sẵn giọng tiếng Việt (mặc định của hầu hết máy tính Windows):
+    // PHÁT NGAY GIỌNG TIẾNG VIỆT CHUẨN GOOGLE (CHỊ GOOGLE / MC TRUYỀN HÌNH NÓI TIẾNG VIỆT CHUẨN 100%, RÕ TỪNG TỪ)
     playAudioTts();
   };
 
