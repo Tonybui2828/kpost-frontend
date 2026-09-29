@@ -971,6 +971,7 @@ export default function AiVideoEditorPage() {
         console.warn("Backend API không phản hồi (404/Network), tự động chuyển sang chế độ AI Offline:", apiErr);
         // Fallback thông minh: tự động phân bổ câu tiếng Việt trải đều TOÀN BỘ độ dài video
         // 🌟 TỰ ĐỘNG NHẬN DIỆN CHỦ ĐỀ VIDEO TỪ TIÊU ĐỀ ĐỂ DỊCH CHÍNH XÁC THEO NGỮ CẢNH (QUÁN NET, ẨM THỰC, CÔNG NGHỆ...)
+        const totalSec = Math.max(15, Math.round(videoDuration || (videoRef.current ? videoRef.current.duration : 0) || 60));
         const titleLower = (videoName || "").toLowerCase();
         let sampleTexts: string[] = [];
 
@@ -1097,6 +1098,10 @@ export default function AiVideoEditorPage() {
           if (videoRef.current) {
             videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
           }
+          if (cues && cues.length > 0) {
+            lastSpokenCueIdRef.current = cues[0].id;
+            speakSentence(cues[0].text);
+          }
         }, 400);
       }
 
@@ -1106,6 +1111,7 @@ export default function AiVideoEditorPage() {
       }, 500);
     } catch (err: any) {
       console.error("Lỗi AI Dịch & Lồng tiếng:", err);
+      alert("Lỗi khi xử lý dịch & lồng tiếng: " + (err?.message || err));
       setIsTranscribing(false);
     }
   };
