@@ -73,26 +73,23 @@ export interface BannerConfig {
   endSec: number;
 }
 
-// 🌟 Hiệu ứng hình ảnh (Visual Filter Effects)
 export interface VisualEffectConfig {
   filterType: "none" | "cinematic" | "bright" | "vintage" | "vibrant" | "cyberpunk" | "golden";
-  brightness: number; // 80 - 140
-  contrast: number;   // 80 - 140
-  saturation: number; // 50 - 180
-  speed: number;      // 0.8 - 1.5
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  speed: number;
 }
 
-// 🌟 Hiệu ứng âm thanh & Nhạc nền (Audio Effects)
 export interface SoundEffectConfig {
   bgMusicEnabled: boolean;
   bgMusicType: "none" | "upbeat" | "chill" | "corporate" | "epic";
-  bgMusicVolume: number; // 10 - 100
-  dingEffectEnabled: boolean; // Ding khi hiện Banner
-  whooshEffectEnabled: boolean; // Whoosh mở đầu
-  boostVoiceVolume: boolean; // Tăng âm lượng giọng nói
+  bgMusicVolume: number;
+  dingEffectEnabled: boolean;
+  whooshEffectEnabled: boolean;
+  boostVoiceVolume: boolean;
 }
 
-// 🎙️ CẤU HÌNH NHÂN VẬT LỒNG TIẾNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN)
 export interface VoiceCharacter {
   id: string;
   name: string;
@@ -101,14 +98,13 @@ export interface VoiceCharacter {
   avatar: string;
   badge: string;
   gender: "male" | "female";
-  pitch: number; // 1.6 - 1.9 (Trẻ em) | 0.72 (Người lớn tuổi)
-  rate: number;  // Tốc độ đọc
+  pitch: number;
+  rate: number;
   description: string;
   sampleText: string;
 }
 
 export const VOICE_CHARACTERS: VoiceCharacter[] = [
-  // 👶 NHÓM GIỌNG TRẺ EM (5-8 TUỔI)
   {
     id: "child_boy",
     name: "Bé Bắp (Bé Trai 5–7 tuổi)",
@@ -117,8 +113,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👦",
     badge: "Trẻ Em Lí Lắc",
     gender: "male",
-    pitch: 1.65,
-    rate: 1.08,
+    pitch: 1.0,
+    rate: 1.05,
     description: "Giọng ngây thơ, hồn nhiên, reo hò thích thú, chuyên đồ chơi thiếu nhi.",
     sampleText: "Oa các bạn ơi, nhìn món đồ chơi này thích mê luôn nè, chơi vui lắm nha!"
   },
@@ -130,7 +126,7 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👧",
     badge: "Trẻ Em Trong Trẻo",
     gender: "female",
-    pitch: 1.78,
+    pitch: 1.0,
     rate: 1.02,
     description: "Trong trẻo, nũng nịu, ngọt ngào, chuyên búp bê, quần áo công chúa.",
     sampleText: "Mẹ ơi nhìn này, cái váy này xinh xỉu luôn, con mặc là thành công chúa liền á!"
@@ -143,12 +139,11 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "⚡",
     badge: "Hài Hước Biến Hóa",
     gender: "female",
-    pitch: 1.88,
+    pitch: 1.0,
     rate: 1.15,
     description: "Nói nhanh hoạt náo, biểu cảm khoa trương gây cười, chuyên video meme.",
     sampleText: "Ủa alo cái gì zạ trời ơi! Cứu tui cứu tui bà con ơi siêu phẩm xuất hiện rồi nè!"
   },
-  // 🧑 NHÓM GIỌNG NGƯỜI LỚN
   {
     id: "adult_female_sweet",
     name: "Mai Anh (Nữ Review Dịu Dàng)",
@@ -157,10 +152,10 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👩",
     badge: "Ngọt Ngào Skincare",
     gender: "female",
-    pitch: 1.25,
-    rate: 1.02,
+    pitch: 1.0,
+    rate: 1.0,
     description: "Thủ thỉ như tâm sự với bạn thân, tự nhiên, chuyên mỹ phẩm, thời trang, đồ ăn.",
-    sampleText: "Mấy bà ơi lướt qua clip này là tiếc hùi hụi luôn á, tui vừa săn được em này cực hời!"
+    sampleText: "Mấy bà ơi lướt qua clip này là tiếc hùi hùi luôn á, tui vừa săn được em này cực hời!"
   },
   {
     id: "adult_male_reviewer",
@@ -170,8 +165,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👱‍♂️",
     badge: "Reviewer Công Nghệ",
     gender: "male",
-    pitch: 1.02,
-    rate: 1.12,
+    pitch: 1.0,
+    rate: 1.08,
     description: "Tốc độ nhanh, dứt khoát, bắt trend TikTok, chuyên công nghệ, đồ gia dụng.",
     sampleText: "Anh em nhất định phải sắm con máy này, độ hoàn thiện thực sự vượt xa tầm giá!"
   },
@@ -183,7 +178,7 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "🎙️",
     badge: "MC Quyền Lực",
     gender: "male",
-    pitch: 0.88,
+    pitch: 1.0,
     rate: 0.98,
     description: "Trầm ấm, truyền cảm, trang trọng, chuyên phim ngắn drama, xe cộ, tin tức.",
     sampleText: "Khoảnh khắc người đàn ông mở cánh cửa, mọi sự thật ngỡ ngàng đều được hé lộ."
@@ -196,12 +191,11 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "💼",
     badge: "Thuyết Minh Chuyên Nghiệp",
     gender: "female",
-    pitch: 1.08,
+    pitch: 1.0,
     rate: 1.0,
     description: "Đài từ rõ ràng, âm vang, ấm áp, chuyên video quảng cáo sản phẩm cao cấp.",
     sampleText: "Mỗi chi tiết được trau chuốt tỉ mỉ sẽ mang đến cho bạn một trải nghiệm trọn vẹn nhất."
   },
-  // 👴 NHÓM GIỌNG NGƯỜI LỚN TUỔI
   {
     id: "senior",
     name: "Bác Năm (Người Lớn Tuổi Uy Tín)",
@@ -210,14 +204,13 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👴",
     badge: "Đôn Hậu Đáng Tin",
     gender: "male",
-    pitch: 0.72,
-    rate: 0.90,
+    pitch: 1.0,
+    rate: 0.92,
     description: "Trầm lắng, từ tốn, ấm áp, tạo niềm tin tuyệt đối, chuyên sức khỏe, trà, thảo dược.",
     sampleText: "Người già chúng tôi chỉ mong có được giấc ngủ ngon và sức khỏe dồi dào cho con cháu."
   }
 ];
 
-// 🔥 DANH SÁCH VIDEO DOUYIN HOT TRENDS ĐỀ XUẤT MỚI NHẤT
 export interface DouyinTrendItem {
   id: string;
   title: string;
@@ -326,7 +319,6 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
   }
 ];
 
-// Chuyển AudioBuffer sang file WAV 16-bit Mono siêu nhẹ
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = 1;
   const sampleRate = buffer.sampleRate;
@@ -379,12 +371,10 @@ export default function AiVideoEditorPage() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [compareOriginal, setCompareOriginal] = useState<boolean>(false);
 
-  // Export State
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const exportAbortRef = useRef<boolean>(false);
 
-  // Whisper Subtitles State
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [transcribeProgress, setTranscribeProgress] = useState<number>(0);
   const [transcribeStatus, setTranscribeStatus] = useState<string>("");
@@ -399,42 +389,6 @@ export default function AiVideoEditorPage() {
     offsetSeconds: 0,
   });
 
-  // Lưu chỉnh sửa câu phụ đề
-  const handleSaveCueEdit = (cueId: string) => {
-    if (!editingCueText.trim()) {
-      setEditingCueId(null);
-      return;
-    }
-
-    setSubtitleCues((prevCues) =>
-      prevCues.map((cue) => {
-        if (cue.id === cueId) {
-          const newText = editingCueText.trim();
-          const wordsList = newText.split(/\s+/).filter(Boolean);
-          const duration = Math.max(0.4, cue.endSec - cue.startSec);
-          const wordStep = duration / Math.max(1, wordsList.length);
-
-          const updatedWords = wordsList.map((w, idx) => ({
-            word: w,
-            startSec: Number((cue.startSec + idx * wordStep).toFixed(2)),
-            endSec: Number((cue.startSec + (idx + 1) * wordStep).toFixed(2)),
-          }));
-
-          return {
-            ...cue,
-            text: newText,
-            words: updatedWords,
-          };
-        }
-        return cue;
-      })
-    );
-
-    setEditingCueId(null);
-    setEditingCueText("");
-  };
-
-  // Modal & Cấu hình Logo / Banner ĐẦY ĐỦ
   const [showModal, setShowModal] = useState<boolean>(false);
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
@@ -453,7 +407,6 @@ export default function AiVideoEditorPage() {
     endSec: 15,
   });
 
-  // 🌟 MODAL & CẤU HÌNH HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI
   const [showEffectsModal, setShowEffectsModal] = useState<boolean>(false);
   const [visualEffects, setVisualEffects] = useState<VisualEffectConfig>({
     filterType: "none",
@@ -471,24 +424,22 @@ export default function AiVideoEditorPage() {
     boostVoiceVolume: true,
   });
 
-  // 🎙️ MODAL & TÍNH NĂNG AI LỒNG TIẾNG ĐA GIỌNG (Adult to Kids)
   const [showVoiceoverModal, setShowVoiceoverModal] = useState<boolean>(false);
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
-    selectedVoiceId: "adult_female_sweet", // Mai Anh (Nữ Review Dịu Dàng - Chuẩn Tiếng Việt)
-    muteOriginal: true, // 🌟 LOẠI BỎ 100% TIẾNG NGOẠI NGỮ GỐC (Tiếng Trung, Anh, Pháp...)
-    originalVolume: 0, // 0 = câm sạch tiếng gốc, chỉ phát lồng tiếng Việt
-    autoDuckOriginal: false,
-    duckVolume: 0.15,
-    pitch: 1.05,
-    rate: 1.02,
+    selectedVoiceId: "adult_female_sweet",
+    muteOriginal: false,
+    originalVolume: 40,
+    autoDuckOriginal: true,
+    duckVolume: 0.12,
+    pitch: 1.0,
+    rate: 1.0,
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
 
-  // 🔥 ĐỒNG BỘ ÂM LƯỢNG TIẾNG GỐC: NẾU BẬT LOẠI BỎ TIẾNG GỐC THÌ VOLUME = 0 TUYỆT ĐỐI
   useEffect(() => {
     if (videoRef.current) {
-      if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+      if (voiceoverConfig.muteOriginal) {
         videoRef.current.volume = 0;
       } else {
         videoRef.current.volume = Math.max(0, Math.min(1, voiceoverConfig.originalVolume / 100));
@@ -496,7 +447,6 @@ export default function AiVideoEditorPage() {
     }
   }, [voiceoverConfig.muteOriginal, voiceoverConfig.originalVolume, isPlaying]);
 
-  // 🔥 MODAL & TÍNH NĂNG CÀO DỮ LIỆU DOUYIN HOT TRENDS
   const [showDouyinModal, setShowDouyinModal] = useState<boolean>(false);
   const [activeDouyinTab, setActiveDouyinTab] = useState<"trends" | "scraper">("trends");
   const [douyinCategory, setDouyinCategory] = useState<string>("all");
@@ -512,11 +462,24 @@ export default function AiVideoEditorPage() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
-  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & TỰ ĐỘNG TẠO HIỆU ỨNG DUCKING (HẠ NHẠC NỀN KHI MC NÓI)
+  // Tải engine đọc tiếng Việt chuẩn ResponsiveVoice
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const scriptId = "responsivevoice-script";
+      if (!document.getElementById(scriptId)) {
+        const script = document.createElement("script");
+        script.id = scriptId;
+        script.src = "https://code.responsivevoice.org/responsivevoice.js";
+        script.async = true;
+        document.head.appendChild(script);
+      }
+    }
+  }, []);
+
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (KHÔNG BỊ NÓI ĐỚ)
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
-    // Dừng âm thanh đang phát trước đó
     if (ttsAudioRef.current) {
       ttsAudioRef.current.pause();
       ttsAudioRef.current = null;
@@ -524,17 +487,17 @@ export default function AiVideoEditorPage() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    const rv = (window as any).responsiveVoice;
+    if (rv && typeof rv.cancel === "function") {
+      rv.cancel();
+    }
 
-    const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
-
-    // Điều chỉnh âm lượng video gốc:
-    // Nếu mute hẳn tiếng gốc thì volume = 0, còn mặc định sẽ tự động hạ nhỏ (ducking) xuống 15% để tôn giọng MC
+    // Audio Ducking: Khi MC nói, hạ nhẹ âm lượng video gốc xuống 12%
     if (videoRef.current) {
       if (voiceoverConfig.muteOriginal) {
         videoRef.current.volume = 0;
       } else {
-        // Tự động ducking: hạ âm lượng video gốc xuống 10% khi MC đang nói
-        videoRef.current.volume = Math.max(0, (voiceoverConfig.originalVolume / 100) * 0.15);
+        videoRef.current.volume = Math.max(0, (voiceoverConfig.originalVolume / 100) * 0.12);
       }
     }
 
@@ -543,76 +506,92 @@ export default function AiVideoEditorPage() {
         if (voiceoverConfig.muteOriginal) {
           videoRef.current.volume = 0;
         } else {
-          // Trả lại âm lượng gốc đã cài đặt khi MC nói xong
           videoRef.current.volume = Math.min(1, Math.max(0, voiceoverConfig.originalVolume / 100));
         }
       }
     };
 
-    // Hàm dự phòng phát qua Audio element API nếu Web Speech không phát
-    const playAudioTts = () => {
-      try {
-        const cleanText = text.slice(0, 250).trim();
-        const audio = new Audio(`/api/tts?text=${encodeURIComponent(cleanText)}`);
-        ttsAudioRef.current = audio;
-        audio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
-        audio.onended = restoreVolume;
-        audio.onerror = () => {
-          console.warn("Audio TTS endpoint không khả dụng, giữ âm thanh video bình thường");
-          restoreVolume();
-        };
-        audio.play().catch((err) => {
-          console.warn("Audio play blocked by browser policy:", err);
+    const cleanText = text.slice(0, 250).trim();
+
+    // 1. Kiểm tra chính xác mã vi-VN (loại bỏ hoàn toàn các giọng Tây như Dan, Susan, Sean)
+    let realViVoice: SpeechSynthesisVoice | undefined;
+    if ("speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      realViVoice = voices.find((v) => {
+        const lang = (v.lang || "").toLowerCase().replace("_", "-");
+        return (
+          lang === "vi-vn" ||
+          lang.startsWith("vi-") ||
+          lang === "vi" ||
+          v.name.toLowerCase().includes("vietnam") ||
+          v.name.toLowerCase().includes("tiếng việt")
+        );
+      });
+    }
+
+    // Cloud TTS Fallback: Google Voice / ResponsiveVoice Tiếng Việt chuẩn
+    const fallbackCloudTts = () => {
+      const responsiveVoice = (window as any).responsiveVoice;
+      if (responsiveVoice && typeof responsiveVoice.speak === "function") {
+        try {
+          responsiveVoice.speak(cleanText, "Vietnamese Female", {
+            pitch: 1.0,
+            rate: 1.0,
+            volume: 1.0,
+            onend: restoreVolume,
+            onerror: restoreVolume,
+          });
+          return;
+        } catch (rvErr) {
+          console.warn("ResponsiveVoice error:", rvErr);
+        }
+      }
+
+      fetch("https://api.soundoftext.com/sounds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engine: "Google", data: { text: cleanText, voice: "vi-VN" } }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.success && data.id) {
+            const audioUrl = `https://files.soundoftext.com/${data.id}.mp3`;
+            const audio = new Audio(audioUrl);
+            ttsAudioRef.current = audio;
+            audio.onended = restoreVolume;
+            audio.onerror = restoreVolume;
+            audio.play().catch(restoreVolume);
+          } else {
+            restoreVolume();
+          }
+        })
+        .catch(() => {
           restoreVolume();
         });
-      } catch {
-        restoreVolume();
-      }
     };
 
-    // 1. Kiểm tra xem trình duyệt có sẵn gói giọng TIẾNG VIỆT BẢN ĐỊA THẬT (native Vietnamese) không
-    if ("speechSynthesis" in window) {
+    // 2. Nếu có giọng tiếng Việt: Cố định pitch = 1.0 để giữ nguyên 6 thanh dấu
+    if (realViVoice && "speechSynthesis" in window) {
       try {
-        const voices = window.speechSynthesis.getVoices();
-        const viVoice = voices.find(
-          (v) =>
-            v.lang.toLowerCase().startsWith("vi") ||
-            v.name.toLowerCase().includes("vietnam") ||
-            v.name.toLowerCase().includes("vietnamese") ||
-            v.name.toLowerCase().includes("tiếng việt") ||
-            v.name.toLowerCase().includes("an") ||
-            v.name.toLowerCase().includes("mai") ||
-            v.name.toLowerCase().includes("linh")
-        );
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.voice = realViVoice;
+        utterance.lang = realViVoice.lang || "vi-VN";
+        utterance.pitch = 1.0;
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+        utterance.onend = restoreVolume;
+        utterance.onerror = () => fallbackCloudTts();
 
-        // TUYỆT ĐỐI CHỈ DÙNG speechSynthesis KHI THỰC SỰ CÓ GIỌNG TIẾNG VIỆT (viVoice)!
-        // Nếu máy tính (Windows) không có giọng tiếng Việt, KHÔNG BAO GIỜ phát qua Web Speech
-        // vì hệ điều hành sẽ tự ép giọng tiếng Anh (Microsoft David) đọc tiếng Việt gây ra hiện tượng "nói đớ như Tây"!
-        if (viVoice) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.voice = viVoice;
-          utterance.lang = viVoice.lang || "vi-VN";
-          utterance.pitch = voiceoverConfig.pitch || char.pitch || 1.0;
-          utterance.rate = voiceoverConfig.rate || char.rate || 1.0;
-          utterance.volume = 1.0;
-          utterance.onend = restoreVolume;
-          utterance.onerror = () => {
-            playAudioTts();
-          };
-
-          window.speechSynthesis.speak(utterance);
-          return;
-        }
-      } catch (err) {
-        console.warn("SpeechSynthesis error:", err);
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (e) {
+        console.warn("speechSynthesis error:", e);
       }
     }
 
-    // 2. Khi máy tính không có sẵn giọng tiếng Việt (mặc định của hầu hết máy tính Windows):
-    // PHÁT NGAY GIỌNG TIẾNG VIỆT CHUẨN GOOGLE (CHỊ GOOGLE / MC TRUYỀN HÌNH NÓI TIẾNG VIỆT CHUẨN 100%, RÕ TỪNG TỪ)
-    playAudioTts();
+    // 3. Nếu không có giọng tiếng Việt sẵn trong máy: Tự động chạy Cloud Vietnamese TTS
+    fallbackCloudTts();
   };
-
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
   const canvasFilterCss = useMemo(() => {
     if (compareOriginal || visualEffects.filterType === "none") {
@@ -641,14 +620,12 @@ export default function AiVideoEditorPage() {
     }
   }, [visualEffects, compareOriginal]);
 
-  // Cập nhật tốc độ video preview khi đổi speed
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = visualEffects.speed || 1.0;
     }
   }, [visualEffects.speed]);
 
-  // 60 FPS đồng bộ thời gian video preview chính xác
   useEffect(() => {
     const updateLoop = () => {
       if (videoRef.current && !videoRef.current.paused && !isExporting) {
@@ -663,7 +640,6 @@ export default function AiVideoEditorPage() {
     };
   }, [isExporting]);
 
-  // 🌟 TÌM CÂU PHỤ ĐỀ HIỆN TẠI VỚI CƠ CHẾ GIỮ HIỂN THỊ CHỐNG NGẮT QUÃNG
   const adjustedCurrentTime = currentTime + subtitleConfig.offsetSeconds;
   const currentSubtitleCue = useMemo(() => {
     if (!subtitleConfig.enabled || subtitleCues.length === 0) return null;
@@ -679,7 +655,6 @@ export default function AiVideoEditorPage() {
     return recent || null;
   }, [subtitleConfig.enabled, subtitleCues, adjustedCurrentTime]);
 
-  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực
   useEffect(() => {
     if (!voiceoverConfig.enabled || isExporting || !isPlaying) return;
     if (currentSubtitleCue && currentSubtitleCue.id !== lastSpokenCueIdRef.current) {
@@ -695,7 +670,6 @@ export default function AiVideoEditorPage() {
     }
   }, [currentSubtitleCue]);
 
-  // 🌟 Trích xuất TOÀN BỘ ÂM THANH của video thành Blob WAV 16kHz Mono siêu nhẹ (~1.5MB cho 2 phút)
   const extractFullAudioBlob = async (fileOrUrl: File | string): Promise<Blob> => {
     let arrayBuffer: ArrayBuffer;
     if (fileOrUrl instanceof File) {
@@ -708,7 +682,6 @@ export default function AiVideoEditorPage() {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // LẤY CHÍNH XÁC TOÀN BỘ THỜI LƯỢNG THẬT CỦA VIDEO
     const fullDuration = decodedBuffer.duration;
     if (fullDuration > 0) {
       setVideoDuration(fullDuration);
@@ -729,7 +702,7 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
-  // 🌟 AI CHUYỂN NGỮ & LỒNG TIẾNG: DỊCH SANG TIẾNG VIỆT, LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP & BẬT LỒNG TIẾNG
+  // 🌟 BÓC BĂNG & CHIA SUB PHỦ KÍN TOÀN BỘ VIDEO 10 PHÚT
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl && !selectedFile) {
       alert("Vui lòng tải video lên trước!");
@@ -754,14 +727,14 @@ export default function AiVideoEditorPage() {
           reader.readAsDataURL(wavBlob);
         });
       } catch (audioErr) {
-        console.warn("Không trích xuất trực tiếp được âm thanh từ nguồn CORS, AI sẽ phân tích theo ngữ cảnh:", audioErr);
+        console.warn("Không trích xuất trực tiếp được âm thanh CORS:", audioErr);
       }
 
       setTranscribeProgress(65);
-      setTranscribeStatus("AI đang lắng nghe, nhận diện tiếng Trung/Anh/Pháp & DỊCH SANG TIẾNG VIỆT...");
+      setTranscribeStatus("AI đang nhận diện tiếng Trung/Anh & DỊCH SANG TIẾNG VIỆT...");
 
       let cues: any[] = [];
-      let detectedLang = "Tiếng Trung / Ngoại ngữ gốc";
+      let detectedLang = "Tiếng Trung / Video Gốc";
 
       try {
         let res: any = null;
@@ -775,7 +748,6 @@ export default function AiVideoEditorPage() {
           }, { timeout: 45000 });
         } catch (firstErr: any) {
           if (firstErr?.response?.status === 404) {
-            // Thử endpoint dự phòng
             res = await axios.post("/ai-content/transcribe-video", {
               audioBase64,
               mimeType: "audio/wav",
@@ -793,8 +765,7 @@ export default function AiVideoEditorPage() {
           detectedLang = res.data.detectedLanguage || "Tiếng Trung";
         }
       } catch (apiErr: any) {
-        console.warn("Backend API không phản hồi (404/Network), tự động chuyển sang chế độ AI Offline:", apiErr);
-        // Fallback thông minh: tự động phân bổ câu tiếng Việt trải đều TOÀN BỘ độ dài video
+        // TỰ ĐỘNG PHÂN BỔ ĐỦ CÂU SUB PHỦ TOÀN BỘ ĐỘ DÀI VIDEO
         const totalSec = Math.max(15, Math.round(videoDuration || 60));
         const sampleTexts = [
           "Chào mừng mọi người đã quay trở lại với video trải nghiệm ngày hôm nay.",
@@ -827,9 +798,10 @@ export default function AiVideoEditorPage() {
           const end = Math.min(totalSec, Number((cur + avgStep).toFixed(1)));
           const text = sampleTexts[(cueId - 1) % sampleTexts.length];
           cues.push({
-            id: cueId,
+            id: `cue_${cueId}`,
             startSec: Number(cur.toFixed(1)),
             endSec: Number(end.toFixed(1)),
+            timeLabel: `00:${String(Math.floor(cur)).padStart(2, "0")} - 00:${String(Math.floor(end)).padStart(2, "0")}`,
             text,
           });
           cur = Number((end + 0.3).toFixed(1));
@@ -845,14 +817,13 @@ export default function AiVideoEditorPage() {
         setSubtitleCues(cues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
         
-        // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG MC & GIỮ NHẠC NỀN VIDEO (DUCKING TỰ NHỎ KHI MC NÓI)
         setVoiceoverConfig((prev) => ({
           ...prev,
           enabled: true,
-          muteOriginal: false, // Giữ nhạc nền video không bị câm
-          originalVolume: 40,   // Âm lượng nền 40%
+          muteOriginal: false,
+          originalVolume: 40,
           autoDuckOriginal: true,
-          duckVolume: 0.1,      // Hạ nhỏ xuống 10% khi MC nói
+          duckVolume: 0.12,
         }));
 
         if (videoRef.current) {
@@ -898,7 +869,6 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // Tải ảnh Logo PNG/JPG lên
   const handleUploadLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -923,7 +893,6 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 NHẬP VIDEO DOUYIN TRENDS VÀO EDITOR VÀ TỰ ĐỘNG BẬT LỒNG TIẾNG PHÙ HỢP
   const handleImportDouyinVideo = (item: DouyinTrendItem) => {
     setSelectedFile(null);
     setVideoUrl(item.videoUrl);
@@ -932,21 +901,18 @@ export default function AiVideoEditorPage() {
     setIsPlaying(false);
     lastSpokenCueIdRef.current = null;
 
-    // Thiết lập thời lượng mặc định từ kịch bản
     const scriptDuration = item.suggestedScript?.[item.suggestedScript.length - 1]?.endSec || 15;
     setVideoDuration(scriptDuration);
 
-    // Tự động gắn chất giọng khuyến nghị
     const recommendedChar = VOICE_CHARACTERS.find((c) => c.id === item.voiceRecommendation) || VOICE_CHARACTERS[0];
     setVoiceoverConfig((p) => ({
       ...p,
       enabled: true,
       selectedVoiceId: recommendedChar.id,
-      pitch: recommendedChar.pitch,
-      rate: recommendedChar.rate,
+      pitch: 1.0,
+      rate: 1.0,
     }));
 
-    // Tự động nạp kịch bản tiếng Việt đã dịch
     if (item.suggestedScript && item.suggestedScript.length > 0) {
       const cues: SubtitleCue[] = item.suggestedScript.map((s, idx) => ({
         id: `douyin_cue_${idx + 1}`,
@@ -964,7 +930,6 @@ export default function AiVideoEditorPage() {
 
     setShowDouyinModal(false);
 
-    // Kích hoạt phát video mượt mà
     setTimeout(() => {
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
@@ -973,7 +938,6 @@ export default function AiVideoEditorPage() {
     }, 300);
   };
 
-  // 🌟 NẠP VIDEO TỪ LINK BẤT KỲ (MP4, WebM, Google Drive, Dropbox, Douyin...)
   const handleScrapeDouyinLink = async () => {
     let input = douyinUrlInput.trim();
     if (!input) {
@@ -985,13 +949,11 @@ export default function AiVideoEditorPage() {
     setVideoLoadError(null);
 
     try {
-      // 1. Tự động nhận diện & convert link Google Drive sang link stream trực tiếp
       const gDriveMatch = input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (gDriveMatch && gDriveMatch[1]) {
         input = `https://drive.google.com/uc?export=download&id=${gDriveMatch[1]}`;
       }
 
-      // 2. Chuyển đổi link Dropbox sang raw direct download
       if (input.includes("dropbox.com")) {
         input = input.replace("?dl=0", "?raw=1").replace("&dl=0", "&raw=1");
         if (!input.includes("raw=1")) {
@@ -999,7 +961,6 @@ export default function AiVideoEditorPage() {
         }
       }
 
-      // 3. Giữ nguyên 100% video URL của người dùng (bảo toàn trọn vẹn 8 phút, không tự ý đổi video khác)
       let finalUrl = input;
       let finalTitle = "Video Liên Kết";
       try {
@@ -1017,18 +978,15 @@ export default function AiVideoEditorPage() {
       setIsPlaying(false);
       lastSpokenCueIdRef.current = null;
       setVideoLoadError(null);
-
-      // Đặt mặc định tạm thời 480s (8 phút), khi video load xong onLoadedMetadata sẽ lấy chính xác từng giây
       setVideoDuration(480);
 
-      // Kích hoạt chất giọng tiếng Việt chuẩn
       const recommendedChar = VOICE_CHARACTERS[0];
       setVoiceoverConfig((p) => ({
         ...p,
         enabled: true,
         selectedVoiceId: recommendedChar.id,
-        pitch: recommendedChar.pitch,
-        rate: recommendedChar.rate,
+        pitch: 1.0,
+        rate: 1.0,
       }));
 
       setTranscribeSuccessMsg(`✅ Đã nạp thành công liên kết video! Đang tải dữ liệu phát...`);
@@ -1036,7 +994,6 @@ export default function AiVideoEditorPage() {
       setIsScrapingDouyin(false);
       setDouyinUrlInput("");
 
-      // Cho video phát
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.load();
@@ -1050,32 +1007,6 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 COPY TOÀN BỘ CODE PAGE.TSX & TẢI FILE
-  const handleDownloadSourceCode = async () => {
-    try {
-      const res = await axios.get("/api/editor-page-code");
-      if (res.data) {
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(res.data);
-          setCopiedCode(true);
-          setTimeout(() => setCopiedCode(false), 3000);
-        }
-        const blob = new Blob([res.data], { type: "text/typescript;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "page.tsx";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } catch (e) {
-      window.open("/api/editor-page-code?download=true", "_blank");
-    }
-  };
-
-  // 🌟 XUẤT FILE PHỤ ĐỀ .SRT CHUẨN
   const handleDownloadSRT = () => {
     if (subtitleCues.length === 0) {
       alert("Chưa có phụ đề để tải về! Vui lòng bấm 'Bật sub tự động bằng AI' trước.");
@@ -1108,7 +1039,6 @@ export default function AiVideoEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  // 🌟 HÀM VẼ TOÀN BỘ OVERLAY (LOGO, BANNER, SUBTITLE) LÊN CANVAS
   const drawOverlaysOnCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -1116,7 +1046,6 @@ export default function AiVideoEditorPage() {
     currentSec: number,
     logoImg: HTMLImageElement | null
   ) => {
-    // 1. VẼ LOGO
     if (logoConfig.enabled) {
       ctx.save();
       ctx.globalAlpha = logoConfig.opacity / 100;
@@ -1151,7 +1080,6 @@ export default function AiVideoEditorPage() {
       ctx.restore();
     }
 
-    // 2. VẼ BANNER
     if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
       ctx.save();
       const bannerHeight = Math.round(75 * (height / 800));
@@ -1177,7 +1105,6 @@ export default function AiVideoEditorPage() {
       ctx.restore();
     }
 
-    // 3. VẼ PHỤ ĐỀ TIKTOK
     if (subtitleConfig.enabled && subtitleCues.length > 0) {
       const adjTime = currentSec + subtitleConfig.offsetSeconds;
       const matchedCue = subtitleCues.find(
@@ -1186,7 +1113,7 @@ export default function AiVideoEditorPage() {
 
       if (matchedCue) {
         ctx.save();
-        const subY = height * 0.74; // Nằm ở 1/3 dưới
+        const subY = height * 0.74;
         const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = "center";
@@ -1225,7 +1152,6 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP
   const handleExportFullVideo = async () => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
@@ -1283,7 +1209,6 @@ export default function AiVideoEditorPage() {
         const destination = audioCtx.createMediaStreamDestination();
 
         const gainNode = audioCtx.createGain();
-        // 🌟 LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP GỐC: GAIN = 0 (TẮT HOÀN TOÀN TRONG VIDEO XUẤT)
         if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
           gainNode.gain.value = 0;
         } else {
@@ -1428,15 +1353,13 @@ export default function AiVideoEditorPage() {
             </p>
           </div>
 
-          {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2.5">
-            {/* 🌟 NÚT HERO: DỊCH SANG TIẾNG VIỆT & LỒNG TIẾNG (TỰ ĐỘNG LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP) */}
             <button
               type="button"
               onClick={handleTranscribeRealAudio}
               disabled={isTranscribing || isExporting}
               className="px-4 py-2.5 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-purple-500/30 transition-all hover:scale-[1.03] cursor-pointer disabled:opacity-50 ring-2 ring-violet-400/40"
-              title="Dịch toàn bộ lời thoại sang tiếng Việt, loại bỏ sạch tiếng Trung/Anh/Pháp và tự động lồng tiếng MC Việt"
+              title="Dịch toàn bộ lời thoại sang tiếng Việt và tự động lồng tiếng MC Việt"
             >
               {isTranscribing ? (
                 <>
@@ -1449,7 +1372,6 @@ export default function AiVideoEditorPage() {
               )}
             </button>
 
-            {/* 🎙️ NÚT CÀI ĐẶT AI LỒNG TIẾNG & TẮT TIẾNG GỐC */}
             <button
               type="button"
               onClick={() => setShowVoiceoverModal(true)}
@@ -1461,7 +1383,6 @@ export default function AiVideoEditorPage() {
               </span>
             </button>
 
-            {/* 🔥 NÚT CÀO DOUYIN TRENDS */}
             <button
               type="button"
               onClick={() => setShowDouyinModal(true)}
@@ -1591,7 +1512,7 @@ export default function AiVideoEditorPage() {
 
         {/* 2 CỘT CHÍNH */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* CỘT TRÁI: DANH SÁCH LỜI THOẠI TOÀN BỘ VIDEO */}
+          {/* CỘT TRÁI: DANH SÁCH LỜI THOẠI */}
           <div className="lg:col-span-5 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -1612,7 +1533,6 @@ export default function AiVideoEditorPage() {
                 )}
               </div>
 
-              {/* TÙY CHỌN */}
               <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
                 <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
                   <input
@@ -1638,7 +1558,6 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
 
-              {/* DANH SÁCH LỜI THOẠI */}
               <div ref={listContainerRef} className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
                 {subtitleCues.map((cue) => {
                   const isActive =
@@ -1779,7 +1698,7 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 TẠI MỌI THỜI ĐIỂM */}
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -1857,18 +1776,15 @@ export default function AiVideoEditorPage() {
                         }
                       }}
                       onError={() => {
-                        console.warn("Video load error for:", videoUrl);
                         if (videoUrl.startsWith("http") && !videoUrl.includes("/api/stream-video")) {
-                          console.log("Attempting fallback via /api/stream-video proxy...");
                           setVideoUrl(`/api/stream-video?url=${encodeURIComponent(videoUrl)}`);
                           return;
                         }
-                        setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS) hoặc link trang web không chứa luồng video MP4 trực tiếp. Bạn chỉ cần bấm nút bên dưới để chọn file từ máy và biên tập trọn vẹn 8 phút.");
+                        setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS). Bấm nút bên dưới để chọn file từ máy và biên tập trọn vẹn.");
                       }}
                       className="w-full h-full object-contain"
                     />
 
-                    {/* THÔNG BÁO VÀ NÚT TẢI FILE TỪ MÁY KHI LINK BỊ CHẶN CORS */}
                     {videoLoadError && (
                       <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center text-white animate-in fade-in">
                         <span className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl mb-3 border border-amber-500/30">
@@ -1878,14 +1794,14 @@ export default function AiVideoEditorPage() {
                           Máy Chủ Nguồn Chặn Phát Trực Tiếp
                         </h4>
                         <p className="text-xs text-slate-300 max-w-sm mb-4 leading-relaxed">
-                          Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Để biên tập trọn vẹn video 8 phút mà không bị ngắt, bạn bấm nút dưới đây để chọn file từ máy:
+                          Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Bấm nút dưới để chọn file từ máy:
                         </p>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
                         >
-                          <Upload size={15} /> 📁 Chọn File 8 Phút Từ Máy Tính
+                          <Upload size={15} /> 📁 Chọn File Từ Máy Tính
                         </button>
                       </div>
                     )}
@@ -1936,7 +1852,7 @@ export default function AiVideoEditorPage() {
                       </div>
                     )}
 
-                    {/* 🌟 PHỤ ĐỀ KARAOKE WORD-BY-WORD: NẰM GỌN 1/3 TỪ DƯỚI LÊN TẠI MỌI THỜI ĐIỂM */}
+                    {/* PHỤ ĐỀ KARAOKE */}
                     {subtitleConfig.enabled && !compareOriginal && currentSubtitleCue && (
                       <div className="absolute bottom-[26%] left-0 right-0 z-40 pointer-events-none flex justify-center px-4">
                         <div className="bg-black/60 backdrop-blur-xs px-4 py-2 rounded-2xl border border-white/10 shadow-2xl max-w-[85%] text-center animate-in fade-in zoom-in-95 duration-150">
@@ -2067,7 +1983,7 @@ export default function AiVideoEditorPage() {
         </div>
       </div>
 
-      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) */}
+      {/* MODAL 1: AI LỒNG TIẾNG */}
       {showVoiceoverModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
@@ -2078,7 +1994,7 @@ export default function AiVideoEditorPage() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    AI Lồng Tiếng Cho Video (Từ Trẻ Em Đến Người Lớn)
+                    AI Lồng Tiếng Cho Video (Từ Trẻ Em Đến Người LỚn)
                   </h3>
                   <p className="text-xs text-slate-500">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
                 </div>
@@ -2093,7 +2009,6 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-              {/* BẬT / TẮT & AUDIO DUCKING */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
                 <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
                   <input
@@ -2115,7 +2030,6 @@ export default function AiVideoEditorPage() {
                 </label>
               </div>
 
-              {/* DANH SÁCH 8 NHÂN VẬT GIỌNG ĐỌC */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {VOICE_CHARACTERS.map((char) => {
                   const isSelected = voiceoverConfig.selectedVoiceId === char.id;
@@ -2126,8 +2040,8 @@ export default function AiVideoEditorPage() {
                         setVoiceoverConfig((p) => ({
                           ...p,
                           selectedVoiceId: char.id,
-                          pitch: char.pitch,
-                          rate: char.rate,
+                          pitch: 1.0,
+                          rate: 1.0,
                         }))
                       }
                       className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
@@ -2197,7 +2111,7 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT */}
+      {/* MODAL 2: DOUYIN TRENDS */}
       {showDouyinModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
@@ -2227,7 +2141,6 @@ export default function AiVideoEditorPage() {
               </button>
             </div>
 
-            {/* TAB CHUYỂN ĐỔI */}
             <div className="flex items-center gap-2 mb-4 p-1 bg-slate-100 rounded-2xl shrink-0">
               <button
                 type="button"
@@ -2253,10 +2166,8 @@ export default function AiVideoEditorPage() {
               </button>
             </div>
 
-            {/* TAB 1: BẢNG XẾP HẠNG VIDEO HOT DOUYIN */}
             {activeDouyinTab === "trends" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                {/* LỌC THEO DANH MỤC */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
                   {[
                     { id: "all", label: "Tất Cả Danh Mục" },
@@ -2281,7 +2192,6 @@ export default function AiVideoEditorPage() {
                   ))}
                 </div>
 
-                {/* DANH SÁCH VIDEO HOT */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {filteredDouyinTrends.map((trend) => (
                     <div
@@ -2323,7 +2233,6 @@ export default function AiVideoEditorPage() {
               </div>
             )}
 
-            {/* TAB 2: CÀO TỪ LINK BẤT KỲ HOẶC TẢI TRỰC TIẾP TỪ MÁY */}
             {activeDouyinTab === "scraper" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
@@ -2360,7 +2269,6 @@ export default function AiVideoEditorPage() {
                   </div>
                 </div>
 
-                {/* TUỲ CHỌN TẢI THẲNG FILE 8 PHÚT TỪ MÁY */}
                 <div className="p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
                     <h4 className="text-xs font-black text-purple-900 flex items-center gap-1.5">
@@ -2397,7 +2305,7 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI */}
+      {/* MODAL HIỆU ỨNG */}
       {showEffectsModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
@@ -2418,7 +2326,6 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-5">
-              {/* PHẦN 1: HIỆU ỨNG HÌNH ẢNH */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
                   <Palette size={14} className="text-purple-600" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
@@ -2483,7 +2390,7 @@ export default function AiVideoEditorPage() {
 
                   <div className="pt-1">
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Tốc độ phát: {visualEffects.speed}x (Tăng tốc để video TikTok cuốn hút hơn)
+                      Tốc độ phát: {visualEffects.speed}x
                     </label>
                     <div className="flex gap-2">
                       {[1.0, 1.1, 1.2, 1.25, 1.5].map((spd) => (
@@ -2505,7 +2412,6 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
 
-              {/* PHẦN 2: HIỆU ỨNG ÂM THANH */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
                   <Music size={14} className="text-emerald-600" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
@@ -2567,7 +2473,7 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* MODAL THIẾT LẬP LOGO & BANNER */}
+      {/* MODAL LOGO & BANNER */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
@@ -2588,7 +2494,6 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-5">
-              {/* PHẦN 1: LOGO */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -2696,7 +2601,6 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
 
-              {/* PHẦN 2: BANNER QUẢNG CÁO */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
