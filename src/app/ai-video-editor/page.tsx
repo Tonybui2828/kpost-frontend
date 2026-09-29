@@ -628,6 +628,28 @@ export default function AiVideoEditorPage() {
     });
   };
 
+  // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC CỦA BACKEND KPOST (CHỐNG LỖI 404 KHI GỌI TỪ FRONTEND KPOST.VN)
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined") {
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        return "http://localhost:3001";
+      }
+    }
+    try {
+      // @ts-ignore
+      if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
+        // @ts-ignore
+        return import.meta.env.VITE_API_URL;
+      }
+    } catch {}
+    try {
+      if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+      }
+    } catch {}
+    return "https://api.kpost.vn";
+  };
+
   // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ GỐC (AI WHISPER BÓC BĂNG CHUẨN XÁC 100% LỜI THOẠI VIDEO TIẾNG VIỆT)
   const handleTranscribeWhisper = async () => {
     if (!videoUrl && !selectedFile) {
@@ -638,6 +660,8 @@ export default function AiVideoEditorPage() {
     setIsTranscribing(true);
     setTranscribeProgress(15);
     setTranscribeStatus("Đang trích xuất dữ liệu âm thanh từ video...");
+
+    const apiBase = getApiBaseUrl();
 
     try {
       let cues: SubtitleCue[] = [];
@@ -651,17 +675,33 @@ export default function AiVideoEditorPage() {
         formData.append("file", selectedFile);
         formData.append("duration", String(videoDuration || 60));
 
-        try {
-          res = await axios.post("/ai-content/transcribe-video", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-            timeout: 60000,
-          });
-        } catch (postErr: any) {
-          // Thử endpoint dự phòng có prefix /api
-          res = await axios.post("/api/transcribe-video", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-            timeout: 60000,
-          });
+        const targetUrls = [
+          `${apiBase}/ai-content/transcribe-video`,
+          `${apiBase}/api/transcribe-video`,
+          "/ai-content/transcribe-video",
+          "/api/transcribe-video",
+        ];
+
+        let success = false;
+        let lastErr: any = null;
+
+        for (const url of targetUrls) {
+          try {
+            res = await axios.post(url, formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+              timeout: 90000,
+            });
+            if (res?.data) {
+              success = true;
+              break;
+            }
+          } catch (e: any) {
+            lastErr = e;
+          }
+        }
+
+        if (!success && lastErr) {
+          throw lastErr;
         }
       } else {
         // Nếu dùng link video: trích xuất audio blob và gửi base64
@@ -676,11 +716,35 @@ export default function AiVideoEditorPage() {
           reader.readAsDataURL(wavBlob);
         });
 
-        res = await axios.post("/ai-content/transcribe-video", {
-          audioBase64,
-          duration: videoDuration || 60,
-          videoUrl,
-        }, { timeout: 60000 });
+        const targetUrls = [
+          `${apiBase}/ai-content/transcribe-video`,
+          `${apiBase}/api/transcribe-video`,
+          "/ai-content/transcribe-video",
+          "/api/transcribe-video",
+        ];
+
+        let success = false;
+        let lastErr: any = null;
+
+        for (const url of targetUrls) {
+          try {
+            res = await axios.post(url, {
+              audioBase64,
+              duration: videoDuration || 60,
+              videoUrl,
+            }, { timeout: 90000 });
+            if (res?.data) {
+              success = true;
+              break;
+            }
+          } catch (e: any) {
+            lastErr = e;
+          }
+        }
+
+        if (!success && lastErr) {
+          throw lastErr;
+        }
       }
 
       setTranscribeProgress(85);
@@ -863,27 +927,40 @@ export default function AiVideoEditorPage() {
 
       try {
         let res: any = null;
-        try {
-          res = await axios.post("/api/transcribe-and-translate", {
-            audioBase64,
-            mimeType: "audio/wav",
-            duration: videoDuration || 60,
-            videoTitle: videoName || "Video Douyin Viral",
-            sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
-          }, { timeout: 45000 });
-        } catch (firstErr: any) {
-          if (firstErr?.response?.status === 404) {
-            // Thử endpoint dự phòng
-            res = await axios.post("/ai-content/transcribe-video", {
+        const apiBase = getApiBaseUrl();
+        const translateUrls = [
+          `${apiBase}/ai-content/transcribe-and-translate`,
+          `${apiBase}/api/transcribe-and-translate`,
+          "/api/transcribe-and-translate",
+          "/ai-content/transcribe-and-translate",
+        ];
+
+        let translateSuccess = false;
+        for (const url of translateUrls) {
+          try {
+            res = await axios.post(url, {
               audioBase64,
               mimeType: "audio/wav",
               duration: videoDuration || 60,
               videoTitle: videoName || "Video Douyin Viral",
               sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
-            }, { timeout: 45000 });
-          } else {
-            throw firstErr;
-          }
+            }, { timeout: 60000 });
+            if (res?.data?.cues && res.data.cues.length > 0) {
+              translateSuccess = true;
+              break;
+            }
+          } catch {}
+        }
+
+        if (!translateSuccess) {
+          // Thử endpoint dự phòng transcribe-video
+          res = await axios.post(`${apiBase}/ai-content/transcribe-video`, {
+            audioBase64,
+            mimeType: "audio/wav",
+            duration: videoDuration || 60,
+            videoTitle: videoName || "Video Douyin Viral",
+            sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
+          }, { timeout: 60000 });
         }
 
         if (res?.data?.cues && res.data.cues.length > 0) {
