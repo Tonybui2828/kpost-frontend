@@ -477,6 +477,21 @@ export default function AiVideoEditorPage() {
   }, []);
 
   // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (KHÔNG BỊ NÓI ĐỚ)
+ // 🎙️ TỰ ĐỘNG BẮT DANH SÁCH GIỌNG NÓI HỆ THỐNG (CHROME, EDGE, SAFARI)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) setAvailableVoices(voices);
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (KHÔNG BAO GIỜ BỊ MẤT TIẾNG / ĐỚ)
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
@@ -487,17 +502,15 @@ export default function AiVideoEditorPage() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    const rv = (window as any).responsiveVoice;
-    if (rv && typeof rv.cancel === "function") {
-      rv.cancel();
-    }
 
-    // Audio Ducking: Khi MC nói, hạ nhẹ âm lượng video gốc xuống 12%
+    const cleanText = text.slice(0, 280).trim();
+
+    // Tự động hạ âm lượng video gốc xuống 15% khi MC đọc để làm nhạc nền
     if (videoRef.current) {
       if (voiceoverConfig.muteOriginal) {
         videoRef.current.volume = 0;
       } else {
-        videoRef.current.volume = Math.max(0, (voiceoverConfig.originalVolume / 100) * 0.12);
+        videoRef.current.volume = Math.max(0, (voiceoverConfig.originalVolume / 100) * 0.15);
       }
     }
 
@@ -511,86 +524,54 @@ export default function AiVideoEditorPage() {
       }
     };
 
-    const cleanText = text.slice(0, 250).trim();
+    // 1. Tìm giọng tiếng Việt bản địa (Google Tiếng Việt trên Chrome / Hoài My Natural trên Edge)
+    const currentVoices = availableVoices.length > 0
+      ? availableVoices
+      : ("speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
 
-    // 1. Kiểm tra chính xác mã vi-VN (loại bỏ hoàn toàn các giọng Tây như Dan, Susan, Sean)
-    let realViVoice: SpeechSynthesisVoice | undefined;
-    if ("speechSynthesis" in window) {
-      const voices = window.speechSynthesis.getVoices();
-      realViVoice = voices.find((v) => {
-        const lang = (v.lang || "").toLowerCase().replace("_", "-");
-        return (
-          lang === "vi-vn" ||
-          lang.startsWith("vi-") ||
-          lang === "vi" ||
-          v.name.toLowerCase().includes("vietnam") ||
-          v.name.toLowerCase().includes("tiếng việt")
-        );
-      });
-    }
+    const viVoice = currentVoices.find((v) => {
+      const l = (v.lang || "").toLowerCase().replace("_", "-");
+      const n = (v.name || "").toLowerCase();
+      return (
+        l === "vi-vn" ||
+        l.startsWith("vi") ||
+        n.includes("vietnam") ||
+        n.includes("tiếng việt") ||
+        n.includes("hoaimy") ||
+        n.includes("namminh")
+      );
+    });
 
-    // Cloud TTS Fallback: Google Voice / ResponsiveVoice Tiếng Việt chuẩn
-    const fallbackCloudTts = () => {
-      const responsiveVoice = (window as any).responsiveVoice;
-      if (responsiveVoice && typeof responsiveVoice.speak === "function") {
-        try {
-          responsiveVoice.speak(cleanText, "Vietnamese Female", {
-            pitch: 1.0,
-            rate: 1.0,
-            volume: 1.0,
-            onend: restoreVolume,
-            onerror: restoreVolume,
-          });
-          return;
-        } catch (rvErr) {
-          console.warn("ResponsiveVoice error:", rvErr);
-        }
-      }
-
-      fetch("https://api.soundoftext.com/sounds", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ engine: "Google", data: { text: cleanText, voice: "vi-VN" } }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data && data.success && data.id) {
-            const audioUrl = `https://files.soundoftext.com/${data.id}.mp3`;
-            const audio = new Audio(audioUrl);
-            ttsAudioRef.current = audio;
-            audio.onended = restoreVolume;
-            audio.onerror = restoreVolume;
-            audio.play().catch(restoreVolume);
-          } else {
-            restoreVolume();
-          }
-        })
-        .catch(() => {
-          restoreVolume();
-        });
-    };
-
-    // 2. Nếu có giọng tiếng Việt: Cố định pitch = 1.0 để giữ nguyên 6 thanh dấu
-    if (realViVoice && "speechSynthesis" in window) {
+    // 2. Phát âm thanh tiếng Việt tự nhiên, tròn vành rõ chữ
+    if (viVoice && "speechSynthesis" in window) {
       try {
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.voice = realViVoice;
-        utterance.lang = realViVoice.lang || "vi-VN";
-        utterance.pitch = 1.0;
-        utterance.rate = 1.0;
+        utterance.voice = viVoice;
+        utterance.lang = viVoice.lang || "vi-VN";
+        utterance.pitch = 1.0; // Giữ nguyên 1.0 để 6 thanh dấu tiếng Việt chuẩn xác
+        utterance.rate = 1.02;
         utterance.volume = 1.0;
         utterance.onend = restoreVolume;
-        utterance.onerror = () => fallbackCloudTts();
+        utterance.onerror = restoreVolume;
 
         window.speechSynthesis.speak(utterance);
         return;
-      } catch (e) {
-        console.warn("speechSynthesis error:", e);
+      } catch (err) {
+        console.warn("speechSynthesis error:", err);
       }
     }
 
-    // 3. Nếu không có giọng tiếng Việt sẵn trong máy: Tự động chạy Cloud Vietnamese TTS
-    fallbackCloudTts();
+    // 3. Dự phòng qua luồng audio Google TTS trực tiếp nếu trình duyệt chưa load giọng
+    try {
+      const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+      const audio = new Audio(directUrl);
+      ttsAudioRef.current = audio;
+      audio.onended = restoreVolume;
+      audio.onerror = restoreVolume;
+      audio.play().catch(restoreVolume);
+    } catch {
+      restoreVolume();
+    }
   };
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
   const canvasFilterCss = useMemo(() => {
@@ -768,26 +749,26 @@ export default function AiVideoEditorPage() {
         // TỰ ĐỘNG PHÂN BỔ ĐỦ CÂU SUB PHỦ TOÀN BỘ ĐỘ DÀI VIDEO
         const totalSec = Math.max(15, Math.round(videoDuration || 60));
         const sampleTexts = [
-          "Chào mừng mọi người đã quay trở lại với video trải nghiệm ngày hôm nay.",
-          "Hôm nay chúng ta sẽ cùng khám phá một trải nghiệm cực kỳ bất ngờ và cuốn hút.",
-          "Hãy cùng mình theo dõi từng chi tiết diễn ra ngay trước mắt nhé các bạn.",
-          "Ngay từ những khoảnh khắc đầu tiên, không gian xung quanh đã tạo cảm giác rất chân thật.",
-          "Mọi thao tác và hướng dẫn ở đây đều được thực hiện rất nhanh gọn và chu đáo.",
-          "Bạn có thể thấy rõ sự tỉ mỉ trong từng cử chỉ của nhân vật trong video.",
-          "Cảm giác được theo dõi trực tiếp thế này mang lại rất nhiều cảm xúc thú vị.",
-          "Mỗi một công đoạn đều đòi hỏi sự khéo léo và mức độ chính xác rất cao.",
-          "Đến đoạn này thì câu chuyện bắt đầu có những tình tiết bất ngờ và lôi cuốn hơn.",
-          "Hình ảnh thực tế cho thấy chất lượng phục vụ và thái độ vô cùng chuyên nghiệp.",
+          "Trời ơi các bác ơi, nhìn con hàng này mê chữ ê kéo dài nè!",
+          "Hôm nay chúng ta sẽ cùng khám phá một trải nghiệm cực kỳ bất ngờ và cuốn hút nha!",
+          "Hãy cùng mình theo dõi từng chi tiết diễn ra ngay trước mắt nhé các bạn ơi.",
+          "Ngay từ những khoảnh khắc đầu tiên, không gian xung quanh đã tạo cảm giác rất chân thật rồi.",
+          "Mọi thao tác ở đây đều được thực hiện rất nhanh gọn, mượt mà và cực kỳ chu đáo.",
+          "Bạn có thể thấy rõ sự tỉ mỉ trong từng cử chỉ của nhân vật trong video này.",
+          "Cảm giác được theo dõi trực tiếp thế này mang lại rất nhiều cảm xúc thú vị luôn á!",
+          "Mỗi một công đoạn đều đòi hỏi sự khéo léo và mức độ chính xác cực kỳ cao.",
+          "Đến đoạn này thì câu chuyện bắt đầu có những tình tiết bất ngờ và lôi cuốn hơn hẳn rồi nè!",
+          "Hình ảnh thực tế cho thấy chất lượng vô cùng xịn sò, không chê vào đâu được!",
           "Nếu bạn cũng đang tìm hiểu về chủ đề này thì chắc chắn đây là nội dung không thể bỏ lỡ.",
-          "Hãy chú ý quan sát chi tiết trên tay nhân vật, đây là điểm nhấn rất quan trọng đấy.",
-          "Sự phối hợp nhịp nhàng giữa các bên khiến mọi việc diễn ra vô cùng suôn sẻ.",
-          "Đó chính là lý do vì sao video này lại trở nên viral và nhận được nhiều lượt xem như vậy.",
+          "Hãy chú ý quan sát chi tiết trên tay nhân vật nha, đây là điểm nhấn đắt giá nhất đấy.",
+          "Sự phối hợp nhịp nhàng giữa các bên khiến mọi việc diễn ra vô cùng suôn sẻ và êm đẹp.",
+          "Đó chính là lý do vì sao video này lại trở nên viral triệu view và hot rần rần trên mạng xã hội.",
           "Từng thao tác giải thích đều rất rõ ràng, tạo sự tin tưởng tuyệt đối cho người xem.",
-          "Chúng ta đang dần tiến đến những phân đoạn thú vị và đáng mong đợi nhất.",
-          "Thực sự là một trải nghiệm rất đáng giá để học hỏi và mở rộng thêm kiến thức.",
+          "Chúng ta đang dần tiến đến những phân đoạn thú vị và đáng mong đợi nhất của video.",
+          "Thực sự là một trải nghiệm rất đáng giá để học hỏi và mở rộng thêm nhiều kiến thức mới.",
           "Nếu bạn có bất kỳ cảm nhận hay thắc mắc nào, hãy thoải mái để lại bình luận phía dưới nhé.",
-          "Đừng quên bấm theo dõi và thả tim để ủng hộ kênh trong những video sắp tới.",
-          "Cảm ơn tất cả mọi người đã luôn đồng hành và theo dõi video này cùng mình!",
+          "Đừng quên bấm theo dõi và thả tim để ủng hộ kênh trong những video hot trend sắp tới nha!",
+          "Cảm ơn tất cả mọi người đã luôn đồng hành và theo dõi trọn vẹn video này cùng mình!",
         ];
 
         let cur = 0.5;
