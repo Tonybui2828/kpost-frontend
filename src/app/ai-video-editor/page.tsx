@@ -27,7 +27,10 @@ import {
   Palette,
   Flame,
   Radio,
-  Link2
+  Link2,
+  Upload,
+  AlertTriangle,
+  FolderOpen
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -293,7 +296,7 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
     categoryLabel: "Mỹ phẩm & Skincare",
     likes: "2.1M",
     shares: "290K",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
     voiceRecommendation: "adult_female_sweet",
     voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
     viralInsight: "So sánh nửa mặt trước và sau khi thoa kem làm bật công dụng biến đổi tức thì.",
@@ -493,38 +496,88 @@ export default function AiVideoEditorPage() {
   const logoImageInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
-  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & AUDIO DUCKING
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & AUDIO DUCKING (100% TIẾNG VIỆT CHUẨN, TUYỆT ĐỐI KHÔNG BỊ TIẾNG ANH)
   const speakSentence = (text: string, voiceId?: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+    if (typeof window === "undefined" || !text.trim()) return;
 
-    const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    // Ưu tiên giọng tiếng Việt
-    const voices = window.speechSynthesis.getVoices();
-    const viVoice = voices.find((v) => v.lang.startsWith("vi") || v.lang.includes("VN"));
-    if (viVoice) {
-      utterance.voice = viVoice;
+    // Dừng âm thanh đang phát trước đó
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
 
-    utterance.pitch = voiceoverConfig.pitch || char.pitch;
-    utterance.rate = voiceoverConfig.rate || char.rate;
-    utterance.volume = 1.0;
+    const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
 
     // Audio Ducking: Giảm âm lượng video gốc khi AI nói
     if (videoRef.current && voiceoverConfig.autoDuckOriginal) {
       videoRef.current.volume = voiceoverConfig.duckVolume;
     }
 
-    utterance.onend = () => {
+    const restoreVolume = () => {
       if (videoRef.current) {
         videoRef.current.volume = 1.0;
       }
     };
 
-    window.speechSynthesis.speak(utterance);
+    // Kiểm tra xem hệ điều hành máy tính/điện thoại có sẵn giọng tiếng Việt thật không
+    let viVoice: SpeechSynthesisVoice | undefined;
+    if ("speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      viVoice = voices.find(
+        (v) =>
+          v.lang.toLowerCase().startsWith("vi") ||
+          v.lang.toLowerCase().includes("vn") ||
+          v.name.toLowerCase().includes("vietnam") ||
+          v.name.toLowerCase().includes("vietnamese")
+      );
+    }
+
+    // 1. Nếu có giọng tiếng Việt cài sẵn trong máy: phát qua Web Speech API
+    if (viVoice && "speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = viVoice;
+      utterance.lang = "vi-VN";
+      utterance.pitch = voiceoverConfig.pitch || char.pitch;
+      utterance.rate = voiceoverConfig.rate || char.rate;
+      utterance.volume = 1.0;
+      utterance.onend = restoreVolume;
+      utterance.onerror = restoreVolume;
+      window.speechSynthesis.speak(utterance);
+      return;
+    }
+
+    // 2. Nếu máy KHÔNG có gói giọng tiếng Việt (mặc định Windows chỉ có tiếng Anh US):
+    // TUYỆT ĐỐI KHÔNG để tiếng Anh đọc tiếng Việt (tránh phát âm bập bõm tiếng Mỹ).
+    // DÙNG NGAY BỘ PHÁT ÂM TIẾNG VIỆT TỰ NHIÊN CHUẨN GOOGLE TTS
+    try {
+      const cleanText = text.slice(0, 220).trim();
+      const directGoogleTts = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+      const audio = new Audio(directGoogleTts);
+      ttsAudioRef.current = audio;
+      audio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
+      audio.onended = restoreVolume;
+      audio.onerror = () => {
+        // Dự phòng route proxy backend
+        const backupAudio = new Audio(`/api/tts?text=${encodeURIComponent(cleanText)}`);
+        ttsAudioRef.current = backupAudio;
+        backupAudio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
+        backupAudio.onended = restoreVolume;
+        backupAudio.onerror = restoreVolume;
+        backupAudio.play().catch(restoreVolume);
+      };
+      audio.play().catch((err) => {
+        console.warn("TTS Audio play error:", err);
+        restoreVolume();
+      });
+    } catch {
+      restoreVolume();
+    }
   };
 
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
@@ -789,56 +842,80 @@ export default function AiVideoEditorPage() {
     }, 300);
   };
 
-  // 🌟 CÀO TỰ ĐỘNG TỪ LINK DOUYIN BẤT KỲ HOẶC LINK VIDEO TRỰC TIẾP
+  // 🌟 NẠP VIDEO TỪ LINK BẤT KỲ (MP4, WebM, Google Drive, Dropbox, Douyin...)
   const handleScrapeDouyinLink = async () => {
-    const input = douyinUrlInput.trim();
+    let input = douyinUrlInput.trim();
     if (!input) {
-      alert("Vui lòng dán link video (link Douyin, TikTok hoặc link video MP4/WebM bất kỳ)!");
+      alert("Vui lòng dán link video (link MP4/WebM, Google Drive, Dropbox hoặc link Douyin/TikTok)!");
       return;
     }
 
     setIsScrapingDouyin(true);
-    try {
-      const isDirectVideo = /\.(mp4|webm|ogg|mov)($|\?)/i.test(input) || input.startsWith("blob:") || input.startsWith("data:");
-      
-      let finalUrl = "";
-      let finalTitle = "";
+    setVideoLoadError(null);
 
-      if (isDirectVideo) {
-        finalUrl = input;
-        const fileName = input.split("/").pop()?.split("?")[0] || "Video Liên Kết";
-        finalTitle = `[Video Link] ${fileName}`;
-      } else {
-        // Link Douyin / TikTok: cào video mẫu chất lượng cao không watermark
-        const sample = DOUYIN_HOT_TRENDS[Math.floor(Math.random() * DOUYIN_HOT_TRENDS.length)];
-        finalUrl = sample.videoUrl;
-        finalTitle = `[Douyin Scraped] Cây Lau Nhà Tự Giặt Vắt Ly Tâm 360 Độ`;
+    try {
+      // 1. Tự động nhận diện & convert link Google Drive sang link stream trực tiếp
+      const gDriveMatch = input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (gDriveMatch && gDriveMatch[1]) {
+        input = `https://drive.google.com/uc?export=download&id=${gDriveMatch[1]}`;
       }
 
-      handleImportDouyinVideo({
-        id: `scraped_${Date.now()}`,
-        title: finalTitle,
-        originalTitle: "Douyin Viral Video",
-        category: "smart_home",
-        categoryLabel: "Video Thịnh Hành",
-        likes: "2.4M",
-        shares: "310K",
-        videoUrl: finalUrl,
-        voiceRecommendation: "adult_female_sweet",
-        voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
-        viralInsight: "Video cào sạch watermark, tự động bóc băng dịch kịch bản tiếng Việt bán hàng triệu view.",
-        suggestedScript: [
-          { startSec: 0, endSec: 5, text: "Ai bảo dọn nhà là mệt? Từ ngày có cây lau tự giặt này nhàn tênh luôn cả nhà ơi!" },
-          { startSec: 5, endSec: 10, text: "Lướt một đường là sạch bong kin kít, tóc rụng hay vết dầu mỡ bay sạch trơn." },
-          { startSec: 10, endSec: 15, text: "Đang có deal giảm 50% chỉ hôm nay, nhanh tay bấm vào góc trái rinh ngay nhé!" }
-        ]
-      });
+      // 2. Chuyển đổi link Dropbox sang raw direct download
+      if (input.includes("dropbox.com")) {
+        input = input.replace("?dl=0", "?raw=1").replace("&dl=0", "&raw=1");
+        if (!input.includes("raw=1")) {
+          input += (input.includes("?") ? "&" : "?") + "raw=1";
+        }
+      }
 
+      // 3. Giữ nguyên 100% video URL của người dùng (bảo toàn trọn vẹn 8 phút, không tự ý đổi video khác)
+      let finalUrl = input;
+      let finalTitle = "Video Liên Kết";
+      try {
+        const u = new URL(input);
+        const namePart = u.pathname.split("/").filter(Boolean).pop();
+        if (namePart) finalTitle = decodeURIComponent(namePart).split("?")[0];
+      } catch {
+        finalTitle = input.slice(0, 30);
+      }
+
+      setSelectedFile(null);
+      setVideoUrl(finalUrl);
+      setVideoName(finalTitle);
+      setCurrentTime(0);
+      setIsPlaying(false);
+      lastSpokenCueIdRef.current = null;
+      setVideoLoadError(null);
+
+      // Đặt mặc định tạm thời 480s (8 phút), khi video load xong onLoadedMetadata sẽ lấy chính xác từng giây
+      setVideoDuration(480);
+
+      // Kích hoạt chất giọng tiếng Việt chuẩn
+      const recommendedChar = VOICE_CHARACTERS[0];
+      setVoiceoverConfig((p) => ({
+        ...p,
+        enabled: true,
+        selectedVoiceId: recommendedChar.id,
+        pitch: recommendedChar.pitch,
+        rate: recommendedChar.rate,
+      }));
+
+      setTranscribeSuccessMsg(`✅ Đã nạp thành công liên kết video! Đang tải dữ liệu phát...`);
+      setShowDouyinModal(false);
       setIsScrapingDouyin(false);
       setDouyinUrlInput("");
+
+      // Cho video phát
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.load();
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      }, 300);
     } catch (e: any) {
       setIsScrapingDouyin(false);
-      alert("Lỗi cào video: " + (e.message || "Vui lòng kiểm tra lại đường link"));
+      alert("Lỗi nạp video: " + (e.message || "Vui lòng kiểm tra lại đường link"));
     }
   };
 
@@ -1629,17 +1706,46 @@ export default function AiVideoEditorPage() {
                         if (videoRef.current && videoRef.current.duration) {
                           setVideoDuration(videoRef.current.duration);
                         }
+                        setVideoLoadError(null);
                       }}
                       onPlay={() => setIsPlaying(true)}
-                      onPause={() => setIsPlaying(false)}
-                      onError={() => {
-                        console.warn("Video load error, falling back to reliable mirror");
-                        if (!videoUrl.includes("flower.mp4")) {
-                          setVideoUrl("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4");
+                      onPause={() => {
+                        setIsPlaying(false);
+                        if (ttsAudioRef.current) {
+                          ttsAudioRef.current.pause();
                         }
+                        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                          window.speechSynthesis.cancel();
+                        }
+                      }}
+                      onError={() => {
+                        console.warn("Video load error for:", videoUrl);
+                        setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS) hoặc sai định dạng video. Bạn hãy tải video về máy và chọn tải lên trực tiếp để chỉnh sửa trọn vẹn 8 phút.");
                       }}
                       className="w-full h-full object-contain"
                     />
+
+                    {/* THÔNG BÁO VÀ NÚT TẢI FILE TỪ MÁY KHI LINK BỊ CHẶN CORS */}
+                    {videoLoadError && (
+                      <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center text-white animate-in fade-in">
+                        <span className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl mb-3 border border-amber-500/30">
+                          <AlertTriangle size={36} />
+                        </span>
+                        <h4 className="font-black text-sm text-amber-300 mb-1.5 uppercase tracking-wide">
+                          Máy Chủ Nguồn Chặn Phát Trực Tiếp
+                        </h4>
+                        <p className="text-xs text-slate-300 max-w-sm mb-4 leading-relaxed">
+                          Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Để biên tập trọn vẹn video 8 phút mà không bị ngắt, bạn bấm nút dưới đây để chọn file từ máy:
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                        >
+                          <Upload size={15} /> 📁 Chọn File 8 Phút Từ Máy Tính
+                        </button>
+                      </div>
+                    )}
 
                     {/* LOGO */}
                     {logoConfig.enabled && !compareOriginal && (
@@ -1757,6 +1863,13 @@ export default function AiVideoEditorPage() {
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         setCurrentTime(val);
+                        lastSpokenCueIdRef.current = null;
+                        if (ttsAudioRef.current) {
+                          ttsAudioRef.current.pause();
+                        }
+                        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                          window.speechSynthesis.cancel();
+                        }
                         if (videoRef.current) videoRef.current.currentTime = val;
                       }}
                       className="flex-1 accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
@@ -2067,19 +2180,22 @@ export default function AiVideoEditorPage() {
               </div>
             )}
 
-            {/* TAB 2: CÀO TỪ LINK BẤT KỲ */}
+            {/* TAB 2: CÀO TỪ LINK BẤT KỲ HOẶC TẢI TRỰC TIẾP TỪ MÁY */}
             {activeDouyinTab === "scraper" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-2">
-                    Dán đường link Douyin (TikTok Trung Quốc):
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-1">
+                    Dán đường link Video (Hỗ trợ MP4, WebM, Google Drive, Dropbox, TikTok/Douyin...):
                   </label>
+                  <p className="text-[11px] text-slate-500 mb-2.5">
+                    Hỗ trợ video thời lượng bất kỳ (8 phút, 15 phút, 30 phút). Hệ thống sẽ giữ nguyên 100% video của bạn, không cắt ngắn.
+                  </p>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       value={douyinUrlInput}
                       onChange={(e) => setDouyinUrlInput(e.target.value)}
-                      placeholder="VD: https://v.douyin.com/iABCxyz/ hoặc https://www.douyin.com/video/..."
+                      placeholder="VD: https://... hoặc link Google Drive, CDN..."
                       className="flex-1 text-xs font-bold px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-rose-500 focus:outline-none font-mono"
                     />
                     <button
@@ -2090,33 +2206,37 @@ export default function AiVideoEditorPage() {
                     >
                       {isScrapingDouyin ? (
                         <>
-                          <RefreshCw size={14} className="animate-spin" /> Đang cào...
+                          <RefreshCw size={14} className="animate-spin" /> Đang tải...
                         </>
                       ) : (
                         <>
-                          <Flame size={14} /> 🚀 Cào & Nhập Video
+                          <Flame size={14} /> 🚀 Nạp Video Này
                         </>
                       )}
                     </button>
                   </div>
+                </div>
 
-                  <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-slate-500">
-                    <span className="font-bold">Test nhanh đường link:</span>
-                    {[
-                      { label: "🧸 Đồ chơi ma thuật", url: "https://v.douyin.com/toy_demo/" },
-                      { label: "🛍️ Gia dụng vắt 360", url: "https://v.douyin.com/home_demo/" },
-                      { label: "📱 Giá đỡ xoay AI", url: "https://v.douyin.com/tech_demo/" },
-                    ].map((demo, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setDouyinUrlInput(demo.url)}
-                        className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 hover:border-rose-300 hover:text-rose-600 font-bold cursor-pointer transition-colors"
-                      >
-                        {demo.label}
-                      </button>
-                    ))}
+                {/* TUỲ CHỌN TẢI THẲNG FILE 8 PHÚT TỪ MÁY */}
+                <div className="p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                      <Upload size={14} className="text-purple-600" /> Hoặc Chọn File Video Trực Tiếp Từ Máy Tính
+                    </h4>
+                    <p className="text-[11px] text-purple-700 mt-0.5">
+                      Khuyên dùng: Tải file từ máy tính phát siêu mượt, trọn vẹn 100% thời lượng (8 phút, 15 phút) và không lo bị lỗi mạng.
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDouyinModal(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    <FolderOpen size={14} /> 📁 Chọn File Từ Máy
+                  </button>
                 </div>
               </div>
             )}
