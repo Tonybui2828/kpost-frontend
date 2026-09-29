@@ -70,7 +70,7 @@ export interface BannerConfig {
   endSec: number;
 }
 
-// ðŸŒŸ Hiá»‡u á»©ng hÃ¬nh áº£nh (Visual Filter Effects)
+// 🌟 Hiệu ứng hình ảnh (Visual Filter Effects)
 export interface VisualEffectConfig {
   filterType: "none" | "cinematic" | "bright" | "vintage" | "vibrant" | "cyberpunk" | "golden";
   brightness: number; // 80 - 140
@@ -79,17 +79,17 @@ export interface VisualEffectConfig {
   speed: number;      // 0.8 - 1.5
 }
 
-// ðŸŒŸ Hiá»‡u á»©ng Ã¢m thanh & Nháº¡c ná»n (Audio Effects)
+// 🌟 Hiệu ứng âm thanh & Nhạc nền (Audio Effects)
 export interface SoundEffectConfig {
   bgMusicEnabled: boolean;
   bgMusicType: "none" | "upbeat" | "chill" | "corporate" | "epic";
   bgMusicVolume: number; // 10 - 100
-  dingEffectEnabled: boolean; // Ding khi hiá»‡n Banner
-  whooshEffectEnabled: boolean; // Whoosh má»Ÿ Ä‘áº§u
-  boostVoiceVolume: boolean; // TÄƒng Ã¢m lÆ°á»£ng giá»ng nÃ³i
+  dingEffectEnabled: boolean; // Ding khi hiện Banner
+  whooshEffectEnabled: boolean; // Whoosh mở đầu
+  boostVoiceVolume: boolean; // Tăng âm lượng giọng nói
 }
 
-// ðŸŽ™ï¸ Cáº¤U HÃŒNH NHÃ‚N Váº¬T Lá»’NG TIáº¾NG (Tá»ª TRáºº EM Äáº¾N NGÆ¯á»œI Lá»šN)
+// 🎙️ CẤU HÌNH NHÂN VẬT LỒNG TIẾNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN)
 export interface VoiceCharacter {
   id: string;
   name: string;
@@ -98,123 +98,123 @@ export interface VoiceCharacter {
   avatar: string;
   badge: string;
   gender: "male" | "female";
-  pitch: number; // 1.6 - 1.9 (Tráº» em) | 0.72 (NgÆ°á»i lá»›n tuá»•i)
-  rate: number;  // Tá»‘c Ä‘á»™ Ä‘á»c
+  pitch: number; // 1.6 - 1.9 (Trẻ em) | 0.72 (Người lớn tuổi)
+  rate: number;  // Tốc độ đọc
   description: string;
   sampleText: string;
 }
 
 export const VOICE_CHARACTERS: VoiceCharacter[] = [
-  // ðŸ‘¶ NHÃ“M GIá»ŒNG TRáºº EM (5-8 TUá»”I)
+  // 👶 NHÓM GIỌNG TRẺ EM (5-8 TUỔI)
   {
     id: "child_boy",
-    name: "BÃ© Báº¯p (BÃ© Trai 5â€“7 tuá»•i)",
+    name: "Bé Bắp (Bé Trai 5–7 tuổi)",
     group: "kids",
-    ageRange: "5â€“7 tuá»•i",
-    avatar: "ðŸ‘¦",
-    badge: "Tráº» Em LÃ­ Láº¯c",
+    ageRange: "5–7 tuổi",
+    avatar: "👦",
+    badge: "Trẻ Em Lí Lắc",
     gender: "male",
     pitch: 1.65,
     rate: 1.08,
-    description: "Giá»ng ngÃ¢y thÆ¡, há»“n nhiÃªn, reo hÃ² thÃ­ch thÃº, chuyÃªn Ä‘á»“ chÆ¡i thiáº¿u nhi.",
-    sampleText: "Oa cÃ¡c báº¡n Æ¡i, nhÃ¬n mÃ³n Ä‘á»“ chÆ¡i nÃ y thÃ­ch mÃª luÃ´n nÃ¨, chÆ¡i vui láº¯m nha!"
+    description: "Giọng ngây thơ, hồn nhiên, reo hò thích thú, chuyên đồ chơi thiếu nhi.",
+    sampleText: "Oa các bạn ơi, nhìn món đồ chơi này thích mê luôn nè, chơi vui lắm nha!"
   },
   {
     id: "child_girl",
-    name: "BÃ© BÃ´ng (BÃ© GÃ¡i 6â€“8 tuá»•i)",
+    name: "Bé Bông (Bé Gái 6–8 tuổi)",
     group: "kids",
-    ageRange: "6â€“8 tuá»•i",
-    avatar: "ðŸ‘§",
-    badge: "Tráº» Em Trong Tráº»o",
+    ageRange: "6–8 tuổi",
+    avatar: "👧",
+    badge: "Trẻ Em Trong Trẻo",
     gender: "female",
     pitch: 1.78,
     rate: 1.02,
-    description: "Trong tráº»o, nÅ©ng ná»‹u, ngá»t ngÃ o, chuyÃªn bÃºp bÃª, quáº§n Ã¡o cÃ´ng chÃºa.",
-    sampleText: "Máº¹ Æ¡i nhÃ¬n nÃ y, cÃ¡i vÃ¡y nÃ y xinh xá»‰u luÃ´n, con máº·c lÃ  thÃ nh cÃ´ng chÃºa liá»n Ã¡!"
+    description: "Trong trẻo, nũng nịu, ngọt ngào, chuyên búp bê, quần áo công chúa.",
+    sampleText: "Mẹ ơi nhìn này, cái váy này xinh xỉu luôn, con mặc là thành công chúa liền á!"
   },
   {
     id: "cartoon",
-    name: "Pikachu Chibi (Hoáº¡t HÃ¬nh)",
+    name: "Pikachu Chibi (Hoạt Hình)",
     group: "kids",
-    ageRange: "Hoáº¡t hÃ¬nh",
-    avatar: "âš¡",
-    badge: "HÃ i HÆ°á»›c Biáº¿n HÃ³a",
+    ageRange: "Hoạt hình",
+    avatar: "⚡",
+    badge: "Hài Hước Biến Hóa",
     gender: "female",
     pitch: 1.88,
     rate: 1.15,
-    description: "NÃ³i nhanh hoáº¡t nÃ¡o, biá»ƒu cáº£m khoa trÆ°Æ¡ng gÃ¢y cÆ°á»i, chuyÃªn video meme.",
-    sampleText: "á»¦a alo cÃ¡i gÃ¬ záº¡ trá»i Æ¡i! Cá»©u tui cá»©u tui bÃ  con Æ¡i siÃªu pháº©m xuáº¥t hiá»‡n rá»“i nÃ¨!"
+    description: "Nói nhanh hoạt náo, biểu cảm khoa trương gây cười, chuyên video meme.",
+    sampleText: "Ủa alo cái gì zạ trời ơi! Cứu tui cứu tui bà con ơi siêu phẩm xuất hiện rồi nè!"
   },
-  // ðŸ§‘ NHÃ“M GIá»ŒNG NGÆ¯á»œI Lá»šN
+  // 🧑 NHÓM GIỌNG NGƯỜI LỚN
   {
     id: "adult_female_sweet",
-    name: "Mai Anh (Ná»¯ Review Dá»‹u DÃ ng)",
+    name: "Mai Anh (Nữ Review Dịu Dàng)",
     group: "adults",
-    ageRange: "22â€“27 tuá»•i",
-    avatar: "ðŸ‘©",
-    badge: "Ngá»t NgÃ o Skincare",
+    ageRange: "22–27 tuổi",
+    avatar: "👩",
+    badge: "Ngọt Ngào Skincare",
     gender: "female",
     pitch: 1.25,
     rate: 1.02,
-    description: "Thá»§ thá»‰ nhÆ° tÃ¢m sá»± vá»›i báº¡n thÃ¢n, tá»± nhiÃªn, chuyÃªn má»¹ pháº©m, thá»i trang, Ä‘á»“ Äƒn.",
-    sampleText: "Máº¥y bÃ  Æ¡i lÆ°á»›t qua clip nÃ y lÃ  tiáº¿c hÃ¹i há»¥i luÃ´n Ã¡, tui vá»«a sÄƒn Ä‘Æ°á»£c em nÃ y cá»±c há»i!"
+    description: "Thủ thỉ như tâm sự với bạn thân, tự nhiên, chuyên mỹ phẩm, thời trang, đồ ăn.",
+    sampleText: "Mấy bà ơi lướt qua clip này là tiếc hùi hụi luôn á, tui vừa săn được em này cực hời!"
   },
   {
     id: "adult_male_reviewer",
-    name: "Äá»©c Anh (Reviewer Báº¯t Trend)",
+    name: "Đức Anh (Reviewer Bắt Trend)",
     group: "adults",
-    ageRange: "24â€“28 tuá»•i",
-    avatar: "ðŸ‘±â€â™‚ï¸",
-    badge: "Reviewer CÃ´ng Nghá»‡",
+    ageRange: "24–28 tuổi",
+    avatar: "👱‍♂️",
+    badge: "Reviewer Công Nghệ",
     gender: "male",
     pitch: 1.02,
     rate: 1.12,
-    description: "Tá»‘c Ä‘á»™ nhanh, dá»©t khoÃ¡t, báº¯t trend TikTok, chuyÃªn cÃ´ng nghá»‡, Ä‘á»“ gia dá»¥ng.",
-    sampleText: "Anh em nháº¥t Ä‘á»‹nh pháº£i sáº¯m con mÃ¡y nÃ y, Ä‘á»™ hoÃ n thiá»‡n thá»±c sá»± vÆ°á»£t xa táº§m giÃ¡!"
+    description: "Tốc độ nhanh, dứt khoát, bắt trend TikTok, chuyên công nghệ, đồ gia dụng.",
+    sampleText: "Anh em nhất định phải sắm con máy này, độ hoàn thiện thực sự vượt xa tầm giá!"
   },
   {
     id: "adult_male_mc",
-    name: "Minh QuÃ¢n (Nam MC Tráº§m áº¤m)",
+    name: "Minh Quân (Nam MC Trầm Ấm)",
     group: "adults",
-    ageRange: "30â€“35 tuá»•i",
-    avatar: "ðŸŽ™ï¸",
-    badge: "MC Quyá»n Lá»±c",
+    ageRange: "30–35 tuổi",
+    avatar: "🎙️",
+    badge: "MC Quyền Lực",
     gender: "male",
     pitch: 0.88,
     rate: 0.98,
-    description: "Tráº§m áº¥m, truyá»n cáº£m, trang trá»ng, chuyÃªn phim ngáº¯n drama, xe cá»™, tin tá»©c.",
-    sampleText: "Khoáº£nh kháº¯c ngÆ°á»i Ä‘Ã n Ã´ng má»Ÿ cÃ¡nh cá»­a, má»i sá»± tháº­t ngá»¡ ngÃ ng Ä‘á»u Ä‘Æ°á»£c hÃ© lá»™."
+    description: "Trầm ấm, truyền cảm, trang trọng, chuyên phim ngắn drama, xe cộ, tin tức.",
+    sampleText: "Khoảnh khắc người đàn ông mở cánh cửa, mọi sự thật ngỡ ngàng đều được hé lộ."
   },
   {
     id: "adult_female_news",
-    name: "Thu Tháº£o (Ná»¯ Thuyáº¿t Minh)",
+    name: "Thu Thảo (Nữ Thuyết Minh)",
     group: "adults",
-    ageRange: "28â€“32 tuá»•i",
-    avatar: "ðŸ’¼",
-    badge: "Thuyáº¿t Minh ChuyÃªn Nghiá»‡p",
+    ageRange: "28–32 tuổi",
+    avatar: "💼",
+    badge: "Thuyết Minh Chuyên Nghiệp",
     gender: "female",
     pitch: 1.08,
     rate: 1.0,
-    description: "ÄÃ i tá»« rÃµ rÃ ng, Ã¢m vang, áº¥m Ã¡p, chuyÃªn video quáº£ng cÃ¡o sáº£n pháº©m cao cáº¥p.",
-    sampleText: "Má»—i chi tiáº¿t Ä‘Æ°á»£c trau chuá»‘t tá»‰ má»‰ sáº½ mang Ä‘áº¿n cho báº¡n má»™t tráº£i nghiá»‡m trá»n váº¹n nháº¥t."
+    description: "Đài từ rõ ràng, âm vang, ấm áp, chuyên video quảng cáo sản phẩm cao cấp.",
+    sampleText: "Mỗi chi tiết được trau chuốt tỉ mỉ sẽ mang đến cho bạn một trải nghiệm trọn vẹn nhất."
   },
-  // ðŸ‘´ NHÃ“M GIá»ŒNG NGÆ¯á»œI Lá»šN TUá»”I
+  // 👴 NHÓM GIỌNG NGƯỜI LỚN TUỔI
   {
     id: "senior",
-    name: "BÃ¡c NÄƒm (NgÆ°á»i Lá»›n Tuá»•i Uy TÃ­n)",
+    name: "Bác Năm (Người Lớn Tuổi Uy Tín)",
     group: "seniors",
-    ageRange: "55â€“65 tuá»•i",
-    avatar: "ðŸ‘´",
-    badge: "ÄÃ´n Háº­u ÄÃ¡ng Tin",
+    ageRange: "55–65 tuổi",
+    avatar: "👴",
+    badge: "Đôn Hậu Đáng Tin",
     gender: "male",
     pitch: 0.72,
     rate: 0.90,
-    description: "Tráº§m láº¯ng, tá»« tá»‘n, áº¥m Ã¡p, táº¡o niá»m tin tuyá»‡t Ä‘á»‘i, chuyÃªn sá»©c khá»e, trÃ , tháº£o dÆ°á»£c.",
-    sampleText: "NgÆ°á»i giÃ  chÃºng tÃ´i chá»‰ mong cÃ³ Ä‘Æ°á»£c giáº¥c ngá»§ ngon vÃ  sá»©c khá»e dá»“i dÃ o cho con chÃ¡u."
+    description: "Trầm lắng, từ tốn, ấm áp, tạo niềm tin tuyệt đối, chuyên sức khỏe, trà, thảo dược.",
+    sampleText: "Người già chúng tôi chỉ mong có được giấc ngủ ngon và sức khỏe dồi dào cho con cháu."
   }
 ];
 
-// ðŸ”¥ DANH SÃCH VIDEO DOUYIN HOT TRENDS Äá»€ XUáº¤T Má»šI NHáº¤T
+// 🔥 DANH SÁCH VIDEO DOUYIN HOT TRENDS ĐỀ XUẤT MỚI NHẤT
 export interface DouyinTrendItem {
   id: string;
   title: string;
@@ -233,97 +233,97 @@ export interface DouyinTrendItem {
 export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
   {
     id: "dy_toy_01",
-    title: "Báº£ng Váº½ Ma Thuáº­t Ãnh SÃ¡ng Tá»± XÃ³a Cho BÃ©",
-    originalTitle: "å„¿ç«¥æ™ºèƒ½å‘å…‰ç”»æ¿ é»‘ç§‘æŠ€ç›Šæ™ºçŽ©å…·",
+    title: "Bảng Vẽ Ma Thuật Ánh Sáng Tự Xóa Cho Bé",
+    originalTitle: "儿童智能发光画板 黑科技益智玩具",
     category: "kids_toys",
-    categoryLabel: "Äá»“ chÆ¡i & Tráº» em",
+    categoryLabel: "Đồ chơi & Trẻ em",
     likes: "2.8M",
     shares: "340K",
     videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
     voiceRecommendation: "child_boy",
-    voiceRecommendationName: "BÃ© Báº¯p (5-7 tuá»•i)",
-    viralInsight: "3s Ä‘áº§u bÃ© reo hÃ² thÃ­ch thÃº táº¡o hiá»‡u á»©ng tÃ² mÃ² cá»±c cao cho phá»¥ huynh.",
+    voiceRecommendationName: "Bé Bắp (5-7 tuổi)",
+    viralInsight: "3s đầu bé reo hò thích thú tạo hiệu ứng tò mò cực cao cho phụ huynh.",
     suggestedScript: [
-      { startSec: 0, endSec: 4, text: "Oa cÃ¡c báº¡n Æ¡i, xem chiáº¿c báº£ng váº½ ma thuáº­t nÃ y ká»³ diá»‡u chÆ°a nÃ¨!" },
-      { startSec: 4, endSec: 9, text: "Váº½ Ä‘áº¿n Ä‘Ã¢u phÃ¡t sÃ¡ng láº¥p lÃ¡nh nhÆ° cÃ¡c vÃ¬ sao Ä‘áº¿n Ä‘Ã³, Ä‘áº¹p xá»‰u luÃ´n cÃ¡c báº¡n Æ¡i!" },
-      { startSec: 9, endSec: 15, text: "Váº½ xong má»™t lÃºc lÃ  tá»± má» Ä‘á»ƒ váº½ láº¡i nhiá»u láº§n, thÃ­ch mÃª luÃ´n áº¡!" }
+      { startSec: 0, endSec: 4, text: "Oa các bạn ơi, xem chiếc bảng vẽ ma thuật này kỳ diệu chưa nè!" },
+      { startSec: 4, endSec: 9, text: "Vẽ đến đâu phát sáng lấp lánh như các vì sao đến đó, đẹp xỉu luôn các bạn ơi!" },
+      { startSec: 9, endSec: 15, text: "Vẽ xong một lúc là tự mờ để vẽ lại nhiều lần, thích mê luôn ạ!" }
     ]
   },
   {
     id: "dy_home_02",
-    title: "CÃ¢y Lau NhÃ  Tá»± Giáº·t Váº¯t Ly TÃ¢m 360 Äá»™",
-    originalTitle: "å…æ‰‹æ´—æ—‹è½¬æ‹–æŠŠ å®¶ç”¨å¤§å¸åŠ›",
+    title: "Cây Lau Nhà Tự Giặt Vắt Ly Tâm 360 Độ",
+    originalTitle: "免手洗旋转拖把 家用大吸力",
     category: "smart_home",
-    categoryLabel: "Gia dá»¥ng thÃ´ng minh",
+    categoryLabel: "Gia dụng thông minh",
     likes: "1.9M",
     shares: "210K",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
     voiceRecommendation: "adult_female_sweet",
-    voiceRecommendationName: "Mai Anh (Ná»¯ ngá»t ngÃ o)",
-    viralInsight: "Ã‚m thanh ASMR lau sáº¡ch dáº§u má»¡ vÃ  tÃ³c rá»¥ng ngay tá»« giÃ¢y Ä‘áº§u.",
+    voiceRecommendationName: "Mai Anh (Nữ ngọt ngào)",
+    viralInsight: "Âm thanh ASMR lau sạch dầu mỡ và tóc rụng ngay từ giây đầu.",
     suggestedScript: [
-      { startSec: 0, endSec: 5, text: "Ai báº£o dá»n nhÃ  lÃ  má»‡t? Tá»« ngÃ y cÃ³ cÃ¢y lau tá»± giáº·t nÃ y nhÃ n tÃªnh luÃ´n cáº£ nhÃ  Æ¡i!" },
-      { startSec: 5, endSec: 10, text: "LÆ°á»›t má»™t Ä‘Æ°á»ng lÃ  sáº¡ch bong kin kÃ­t, tÃ³c rá»¥ng hay váº¿t dáº§u má»¡ bay sáº¡ch trÆ¡n." },
-      { startSec: 10, endSec: 15, text: "Äang cÃ³ deal giáº£m 50% chá»‰ hÃ´m nay, nhanh tay báº¥m vÃ o gÃ³c trÃ¡i rinh ngay nhÃ©!" }
+      { startSec: 0, endSec: 5, text: "Ai bảo dọn nhà là mệt? Từ ngày có cây lau tự giặt này nhàn tênh luôn cả nhà ơi!" },
+      { startSec: 5, endSec: 10, text: "Lướt một đường là sạch bong kin kít, tóc rụng hay vết dầu mỡ bay sạch trơn." },
+      { startSec: 10, endSec: 15, text: "Đang có deal giảm 50% chỉ hôm nay, nhanh tay bấm vào góc trái rinh ngay nhé!" }
     ]
   },
   {
     id: "dy_tech_03",
-    title: "GiÃ¡ Äá»¡ Äiá»‡n Thoáº¡i Tá»± Xoay AI Theo KhuÃ´n Máº·t 360",
-    originalTitle: "AIæ™ºèƒ½äººè„¸è¿½è¸ªç›´æ’­æ”¯æž¶",
+    title: "Giá Đỡ Điện Thoại Tự Xoay AI Theo Khuôn Mặt 360",
+    originalTitle: "AI智能人脸追踪直播支架",
     category: "tech_gadgets",
-    categoryLabel: "CÃ´ng nghá»‡ & Äá»i sá»‘ng",
+    categoryLabel: "Công nghệ & Đời sống",
     likes: "3.4M",
     shares: "480K",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
     voiceRecommendation: "adult_male_reviewer",
-    voiceRecommendationName: "Äá»©c Anh (Reviewer cÃ´ng nghá»‡)",
-    viralInsight: "Chuyá»ƒn Ä‘á»™ng mÆ°á»£t mÃ  cá»§a camera theo ngÆ°á»i táº¡o cáº£m giÃ¡c cÃ´ng nghá»‡ cao.",
+    voiceRecommendationName: "Đức Anh (Reviewer công nghệ)",
+    viralInsight: "Chuyển động mượt mà của camera theo người tạo cảm giác công nghệ cao.",
     suggestedScript: [
-      { startSec: 0, endSec: 4.5, text: "Anh em lÃ m video hay livestream má»™t mÃ¬nh nháº¥t Ä‘á»‹nh pháº£i sáº¯m con mÃ¡y nÃ y!" },
-      { startSec: 4.5, endSec: 9.5, text: "Äi Ä‘áº¿n Ä‘Ã¢u mÃ¡y tá»± lia camera theo Ä‘áº¿n Ä‘Ã³, khÃ´ng cáº§n app hay bluetooth láº±ng nháº±ng." },
-      { startSec: 9.5, endSec: 15, text: "Nhá» gá»n bá» tÃºi mang Ä‘i quay tiktok ngoÃ i trá»i quÃ¡ Ä‘á»‰nh luÃ´n anh em!" }
+      { startSec: 0, endSec: 4.5, text: "Anh em làm video hay livestream một mình nhất định phải sắm con máy này!" },
+      { startSec: 4.5, endSec: 9.5, text: "Đi đến đâu máy tự lia camera theo đến đó, không cần app hay bluetooth lằng nhằng." },
+      { startSec: 9.5, endSec: 15, text: "Nhỏ gọn bỏ túi mang đi quay tiktok ngoài trời quá đỉnh luôn anh em!" }
     ]
   },
   {
     id: "dy_beauty_04",
-    title: "Kem Ná»n Che Khuyáº¿t Äiá»ƒm Chá»‘ng NÆ°á»›c Kiá»m Dáº§u 24H",
-    originalTitle: "é˜²æ°´æŽ§æ²¹æŒä¹…é®ç‘•ç²‰åº•æ¶²",
+    title: "Kem Nền Che Khuyết Điểm Chống Nước Kiềm Dầu 24H",
+    originalTitle: "防水控油持久遮瑕粉底液",
     category: "beauty_care",
-    categoryLabel: "Má»¹ pháº©m & Skincare",
+    categoryLabel: "Mỹ phẩm & Skincare",
     likes: "2.1M",
     shares: "290K",
     videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     voiceRecommendation: "adult_female_sweet",
-    voiceRecommendationName: "Mai Anh (Ná»¯ Review Dá»‹u DÃ ng)",
-    viralInsight: "So sÃ¡nh ná»­a máº·t trÆ°á»›c vÃ  sau khi thoa kem lÃ m báº­t cÃ´ng dá»¥ng biáº¿n Ä‘á»•i tá»©c thÃ¬.",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "So sánh nửa mặt trước và sau khi thoa kem làm bật công dụng biến đổi tức thì.",
     suggestedScript: [
-      { startSec: 0, endSec: 4.5, text: "Máº¥y bÃ  Æ¡i tui vá»«a phÃ¡t hiá»‡n ra kem ná»n chÃ¢n Ã¡i cho mÃ¹a hÃ¨ nÃ y rá»“i!" },
-      { startSec: 4.5, endSec: 9.5, text: "Cháº¥m má»™t chÃºt thÃ´i lÃ  che sáº¡ch tÃ n nhang thÃ¢m má»¥n, tá»‡p da má»‹n mÃ ng dÃ£ man." },
-      { startSec: 9.5, endSec: 15, text: "Xá»‹t nÆ°á»›c thá»­ khÃ´ng há» trÃ´i nha, Ä‘ang cÃ³ voucher xá»‹n máº¥y bÃ  báº¥m giá» hÃ ng mua liá»n!" }
+      { startSec: 0, endSec: 4.5, text: "Mấy bà ơi tui vừa phát hiện ra kem nền chân ái cho mùa hè này rồi!" },
+      { startSec: 4.5, endSec: 9.5, text: "Chấm một chút thôi là che sạch tàn nhang thâm mụn, tệp da mịn màng dã man." },
+      { startSec: 9.5, endSec: 15, text: "Xịt nước thử không hề trôi nha, đang có voucher xịn mấy bà bấm giỏ hàng mua liền!" }
     ]
   },
   {
     id: "dy_drama_05",
-    title: "Tá»•ng TÃ i Giáº¥u Nghá» Äi Thá»­ LÃ²ng Báº¡n GÃ¡i Thá»±c Dá»¥ng",
-    originalTitle: "éœ¸é“æ€»è£ä½Žè°ƒç›¸äº²åè½¬å‰§",
+    title: "Tổng Tài Giấu Nghề Đi Thử Lòng Bạn Gái Thực Dụng",
+    originalTitle: "霸道总裁低调相亲反转剧",
     category: "short_drama",
-    categoryLabel: "Phim ngáº¯n Drama",
+    categoryLabel: "Phim ngắn Drama",
     likes: "4.7M",
     shares: "620K",
     videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
     voiceRecommendation: "adult_male_mc",
-    voiceRecommendationName: "Minh QuÃ¢n (Nam MC Tráº§m áº¤m)",
-    viralInsight: "TÃ¬nh huá»‘ng láº­t máº·t phÃºt chÃ³t vÃ  nháº¡c ná»n dá»“n dáº­p khiáº¿n ngÆ°á»i xem cÃ y háº¿t clip.",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Tình huống lật mặt phút chót và nhạc nền dồn dập khiến người xem cày hết clip.",
     suggestedScript: [
-      { startSec: 0, endSec: 5, text: "CÃ´ gÃ¡i khinh bá»‰ chÃ ng trai cháº¡y xe Ã´m cÅ© ká»¹ mÃ  khÃ´ng há» hay biáº¿t..." },
-      { startSec: 5, endSec: 10, text: "Anh chÃ­nh lÃ  ngÆ°á»i thá»«a káº¿ duy nháº¥t cá»§a táº­p Ä‘oÃ n tÃ i chÃ­nh lá»›n nháº¥t thÃ nh phá»‘." },
-      { startSec: 10, endSec: 15, text: "Äoáº¡n káº¿t sáº½ khiáº¿n káº» tham lam pháº£i tráº£ giÃ¡, theo dÃµi kÃªnh Ä‘á»ƒ xem táº­p 2!" }
+      { startSec: 0, endSec: 5, text: "Cô gái khinh bỉ chàng trai chạy xe ôm cũ kỹ mà không hề hay biết..." },
+      { startSec: 5, endSec: 10, text: "Anh chính là người thừa kế duy nhất của tập đoàn tài chính lớn nhất thành phố." },
+      { startSec: 10, endSec: 15, text: "Đoạn kết sẽ khiến kẻ tham lam phải trả giá, theo dõi kênh để xem tập 2!" }
     ]
   }
 ];
 
-// Chuyá»ƒn AudioBuffer sang file WAV 16-bit Mono siÃªu nháº¹
+// Chuyển AudioBuffer sang file WAV 16-bit Mono siêu nhẹ
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = 1;
   const sampleRate = buffer.sampleRate;
@@ -396,7 +396,7 @@ export default function AiVideoEditorPage() {
     offsetSeconds: 0,
   });
 
-  // LÆ°u chá»‰nh sá»­a cÃ¢u phá»¥ Ä‘á»
+  // Lưu chỉnh sửa câu phụ đề
   const handleSaveCueEdit = (cueId: string) => {
     if (!editingCueText.trim()) {
       setEditingCueId(null);
@@ -431,7 +431,7 @@ export default function AiVideoEditorPage() {
     setEditingCueText("");
   };
 
-  // Modal & Cáº¥u hÃ¬nh Logo / Banner Äáº¦Y Äá»¦
+  // Modal & Cấu hình Logo / Banner ĐẦY ĐỦ
   const [showModal, setShowModal] = useState<boolean>(false);
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     enabled: true,
@@ -443,14 +443,14 @@ export default function AiVideoEditorPage() {
   });
   const [bannerConfig, setBannerConfig] = useState<BannerConfig>({
     enabled: true,
-    title: "âš¡ FLASH SALE 50% - DUY NHáº¤T HÃ”M NAY",
-    subtitle: "Miá»…n phÃ­ giao hÃ ng toÃ n quá»‘c â€¢ Báº£o hÃ nh chÃ­nh hÃ£ng",
+    title: "⚡ FLASH SALE 50% - DUY NHẤT HÔM NAY",
+    subtitle: "Miễn phí giao hàng toàn quốc • Bảo hành chính hãng",
     position: "bottom",
     startSec: 3,
     endSec: 15,
   });
 
-  // ðŸŒŸ MODAL & Cáº¤U HÃŒNH HIá»†U á»¨NG Ã‚M THANH & HÃŒNH áº¢NH Má»šI
+  // 🌟 MODAL & CẤU HÌNH HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI
   const [showEffectsModal, setShowEffectsModal] = useState<boolean>(false);
   const [visualEffects, setVisualEffects] = useState<VisualEffectConfig>({
     filterType: "none",
@@ -468,7 +468,7 @@ export default function AiVideoEditorPage() {
     boostVoiceVolume: true,
   });
 
-  // ðŸŽ™ï¸ MODAL & TÃNH NÄ‚NG AI Lá»’NG TIáº¾NG ÄA GIá»ŒNG (Adult to Kids)
+  // 🎙️ MODAL & TÍNH NĂNG AI LỒNG TIẾNG ĐA GIỌNG (Adult to Kids)
   const [showVoiceoverModal, setShowVoiceoverModal] = useState<boolean>(false);
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
@@ -480,7 +480,7 @@ export default function AiVideoEditorPage() {
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
 
-  // ðŸ”¥ MODAL & TÃNH NÄ‚NG CÃ€O Dá»® LIá»†U DOUYIN HOT TRENDS
+  // 🔥 MODAL & TÍNH NĂNG CÀO DỮ LIỆU DOUYIN HOT TRENDS
   const [showDouyinModal, setShowDouyinModal] = useState<boolean>(false);
   const [activeDouyinTab, setActiveDouyinTab] = useState<"trends" | "scraper">("trends");
   const [douyinCategory, setDouyinCategory] = useState<string>("all");
@@ -494,7 +494,7 @@ export default function AiVideoEditorPage() {
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // ðŸŽ™ï¸ HÃ€M PHÃT GIá»ŒNG Lá»’NG TIáº¾NG THEO NHÃ‚N Váº¬T & AUDIO DUCKING
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & AUDIO DUCKING
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
@@ -502,7 +502,7 @@ export default function AiVideoEditorPage() {
     const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Æ¯u tiÃªn giá»ng tiáº¿ng Viá»‡t
+    // Ưu tiên giọng tiếng Việt
     const voices = window.speechSynthesis.getVoices();
     const viVoice = voices.find((v) => v.lang.startsWith("vi") || v.lang.includes("VN"));
     if (viVoice) {
@@ -513,7 +513,7 @@ export default function AiVideoEditorPage() {
     utterance.rate = voiceoverConfig.rate || char.rate;
     utterance.volume = 1.0;
 
-    // Audio Ducking: Giáº£m Ã¢m lÆ°á»£ng video gá»‘c khi AI nÃ³i
+    // Audio Ducking: Giảm âm lượng video gốc khi AI nói
     if (videoRef.current && voiceoverConfig.autoDuckOriginal) {
       videoRef.current.volume = voiceoverConfig.duckVolume;
     }
@@ -527,7 +527,7 @@ export default function AiVideoEditorPage() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // TÃ­nh toÃ¡n chuá»—i CSS Filter cho Video Preview & Canvas Export
+  // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
   const canvasFilterCss = useMemo(() => {
     if (compareOriginal || visualEffects.filterType === "none") {
       return "none";
@@ -555,14 +555,14 @@ export default function AiVideoEditorPage() {
     }
   }, [visualEffects, compareOriginal]);
 
-  // Cáº­p nháº­t tá»‘c Ä‘á»™ video preview khi Ä‘á»•i speed
+  // Cập nhật tốc độ video preview khi đổi speed
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = visualEffects.speed || 1.0;
     }
   }, [visualEffects.speed]);
 
-  // 60 FPS Ä‘á»“ng bá»™ thá»i gian video preview chÃ­nh xÃ¡c
+  // 60 FPS đồng bộ thời gian video preview chính xác
   useEffect(() => {
     const updateLoop = () => {
       if (videoRef.current && !videoRef.current.paused && !isExporting) {
@@ -577,7 +577,7 @@ export default function AiVideoEditorPage() {
     };
   }, [isExporting]);
 
-  // ðŸŒŸ TÃŒM CÃ‚U PHá»¤ Äá»€ HIá»†N Táº I Vá»šI CÆ  CHáº¾ GIá»® HIá»‚N THá»Š CHá»NG NGáº®T QUÃƒNG
+  // 🌟 TÌM CÂU PHỤ ĐỀ HIỆN TẠI VỚI CƠ CHẾ GIỮ HIỂN THỊ CHỐNG NGẮT QUÃNG
   const adjustedCurrentTime = currentTime + subtitleConfig.offsetSeconds;
   const currentSubtitleCue = useMemo(() => {
     if (!subtitleConfig.enabled || subtitleCues.length === 0) return null;
@@ -593,7 +593,7 @@ export default function AiVideoEditorPage() {
     return recent || null;
   }, [subtitleConfig.enabled, subtitleCues, adjustedCurrentTime]);
 
-  // Äá»“ng bá»™ phÃ¡t Ã¢m thanh lá»“ng tiáº¿ng theo phá»¥ Ä‘á» thá»i gian thá»±c
+  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực
   useEffect(() => {
     if (!voiceoverConfig.enabled || isExporting || !isPlaying) return;
     if (currentSubtitleCue && currentSubtitleCue.id !== lastSpokenCueIdRef.current) {
@@ -609,7 +609,7 @@ export default function AiVideoEditorPage() {
     }
   }, [currentSubtitleCue]);
 
-  // ðŸŒŸ TrÃ­ch xuáº¥t TOÃ€N Bá»˜ Ã‚M THANH cá»§a video thÃ nh Blob WAV 16kHz Mono siÃªu nháº¹ (~1.5MB cho 2 phÃºt)
+  // 🌟 Trích xuất TOÀN BỘ ÂM THANH của video thành Blob WAV 16kHz Mono siêu nhẹ (~1.5MB cho 2 phút)
   const extractFullAudioBlob = async (fileOrUrl: File | string): Promise<Blob> => {
     let arrayBuffer: ArrayBuffer;
     if (fileOrUrl instanceof File) {
@@ -622,7 +622,7 @@ export default function AiVideoEditorPage() {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // Láº¤Y CHÃNH XÃC TOÃ€N Bá»˜ THá»œI LÆ¯á»¢NG THáº¬T Cá»¦A VIDEO
+    // LẤY CHÍNH XÁC TOÀN BỘ THỜI LƯỢNG THẬT CỦA VIDEO
     const fullDuration = decodedBuffer.duration;
     if (fullDuration > 0) {
       setVideoDuration(fullDuration);
@@ -643,23 +643,23 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
-  // ðŸŒŸ AI BÃ“C BÄ‚NG TOÃ€N Bá»˜ Ã‚M THANH THáº¬T Báº°NG KPOST AI
+  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT BẰNG KPOST AI
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl && !selectedFile) {
-      alert("Vui lÃ²ng táº£i video lÃªn trÆ°á»›c!");
+      alert("Vui lòng tải video lên trước!");
       return;
     }
 
     setIsTranscribing(true);
     setTranscribeProgress(20);
-    setTranscribeStatus("Äang trÃ­ch xuáº¥t toÃ n bá»™ dáº£i Ã¢m thanh 16kHz Mono siÃªu nháº¹...");
+    setTranscribeStatus("Đang trích xuất toàn bộ dải âm thanh 16kHz Mono siêu nhẹ...");
 
     try {
       const inputSource = selectedFile || videoUrl;
       const wavBlob = await extractFullAudioBlob(inputSource);
 
       setTranscribeProgress(45);
-      setTranscribeStatus(`Äang gá»­i Ã¢m thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB) sang KpostAI...`);
+      setTranscribeStatus(`Đang gửi âm thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB) sang KpostAI...`);
 
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       
@@ -673,7 +673,7 @@ export default function AiVideoEditorPage() {
       });
 
       setTranscribeProgress(85);
-      setTranscribeStatus("Äang phÃ¢n tÃ¡ch má»‘c thá»i gian vÃ  táº¡o phá»¥ Ä‘á» TikTok...");
+      setTranscribeStatus("Đang phân tách mốc thời gian và tạo phụ đề TikTok...");
 
       const rawCues = res?.data?.data?.cues || res?.data?.cues || [];
 
@@ -681,10 +681,10 @@ export default function AiVideoEditorPage() {
         setSubtitleCues(rawCues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
         setTranscribeSuccessMsg(
-          `ðŸŽ‰ KpostAI Ä‘Ã£ bÃ³c bÄƒng thÃ nh cÃ´ng ${rawCues.length} cÃ¢u lá»i thoáº¡i tháº­t cho toÃ n bá»™ video!`
+          `🎉 KpostAI đã bóc băng thành công ${rawCues.length} câu lời thoại thật cho toàn bộ video!`
         );
       } else {
-        throw new Error(res?.data?.error || "KhÃ´ng nháº­n Ä‘Æ°á»£c lá»i thoáº¡i tá»« KpostAI.");
+        throw new Error(res?.data?.error || "Không nhận được lời thoại từ KpostAI.");
       }
 
       setTranscribeProgress(100);
@@ -692,11 +692,11 @@ export default function AiVideoEditorPage() {
         setIsTranscribing(false);
       }, 500);
     } catch (err: any) {
-      console.error("Lá»—i KpostAI:", err);
+      console.error("Lỗi KpostAI:", err);
       setIsTranscribing(false);
       alert(
-        "Lá»—i bÃ³c bÄƒng Ã¢m thanh: " +
-          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiá»ƒm tra káº¿t ná»‘i hoáº·c tÃ i khoáº£n.")
+        "Lỗi bóc băng âm thanh: " +
+          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiểm tra kết nối hoặc tài khoản.")
       );
     }
   };
@@ -714,7 +714,7 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // Táº£i áº£nh Logo PNG/JPG lÃªn
+  // Tải ảnh Logo PNG/JPG lên
   const handleUploadLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -739,7 +739,7 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // ðŸŒŸ NHáº¬P VIDEO DOUYIN TRENDS VÃ€O EDITOR VÃ€ Tá»° Äá»˜NG Báº¬T Lá»’NG TIáº¾NG PHÃ™ Há»¢P
+  // 🌟 NHẬP VIDEO DOUYIN TRENDS VÀO EDITOR VÀ TỰ ĐỘNG BẬT LỒNG TIẾNG PHÙ HỢP
   const handleImportDouyinVideo = (item: DouyinTrendItem) => {
     setSelectedFile(null);
     setVideoUrl(item.videoUrl);
@@ -748,11 +748,11 @@ export default function AiVideoEditorPage() {
     setIsPlaying(false);
     lastSpokenCueIdRef.current = null;
 
-    // Thiáº¿t láº­p thá»i lÆ°á»£ng máº·c Ä‘á»‹nh tá»« ká»‹ch báº£n
+    // Thiết lập thời lượng mặc định từ kịch bản
     const scriptDuration = item.suggestedScript?.[item.suggestedScript.length - 1]?.endSec || 15;
     setVideoDuration(scriptDuration);
 
-    // Tá»± Ä‘á»™ng gáº¯n cháº¥t giá»ng khuyáº¿n nghá»‹
+    // Tự động gắn chất giọng khuyến nghị
     const recommendedChar = VOICE_CHARACTERS.find((c) => c.id === item.voiceRecommendation) || VOICE_CHARACTERS[0];
     setVoiceoverConfig((p) => ({
       ...p,
@@ -762,7 +762,7 @@ export default function AiVideoEditorPage() {
       rate: recommendedChar.rate,
     }));
 
-    // Tá»± Ä‘á»™ng náº¡p ká»‹ch báº£n tiáº¿ng Viá»‡t Ä‘Ã£ dá»‹ch
+    // Tự động nạp kịch bản tiếng Việt đã dịch
     if (item.suggestedScript && item.suggestedScript.length > 0) {
       const cues: SubtitleCue[] = item.suggestedScript.map((s, idx) => ({
         id: `douyin_cue_${idx + 1}`,
@@ -774,13 +774,13 @@ export default function AiVideoEditorPage() {
       setSubtitleCues(cues);
       setSubtitleConfig((p) => ({ ...p, enabled: true }));
       setTranscribeSuccessMsg(
-        `ðŸš€ ÄÃ£ nháº­p video vÃ  náº¡p ká»‹ch báº£n tiáº¿ng Viá»‡t chuáº©n TikTok! Gá»£i Ã½ giá»ng: ${recommendedChar.name}`
+        `🚀 Đã nhập video và nạp kịch bản tiếng Việt chuẩn TikTok! Gợi ý giọng: ${recommendedChar.name}`
       );
     }
 
     setShowDouyinModal(false);
 
-    // KÃ­ch hoáº¡t phÃ¡t video mÆ°á»£t mÃ 
+    // Kích hoạt phát video mượt mà
     setTimeout(() => {
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
@@ -789,11 +789,11 @@ export default function AiVideoEditorPage() {
     }, 300);
   };
 
-  // ðŸŒŸ CÃ€O Tá»° Äá»˜NG Tá»ª LINK DOUYIN Báº¤T Ká»² HOáº¶C LINK VIDEO TRá»°C TIáº¾P
+  // 🌟 CÀO TỰ ĐỘNG TỪ LINK DOUYIN BẤT KỲ HOẶC LINK VIDEO TRỰC TIẾP
   const handleScrapeDouyinLink = async () => {
     const input = douyinUrlInput.trim();
     if (!input) {
-      alert("Vui lÃ²ng dÃ¡n link video (link Douyin, TikTok hoáº·c link video MP4/WebM báº¥t ká»³)!");
+      alert("Vui lòng dán link video (link Douyin, TikTok hoặc link video MP4/WebM bất kỳ)!");
       return;
     }
 
@@ -806,13 +806,13 @@ export default function AiVideoEditorPage() {
 
       if (isDirectVideo) {
         finalUrl = input;
-        const fileName = input.split("/").pop()?.split("?")[0] || "Video LiÃªn Káº¿t";
+        const fileName = input.split("/").pop()?.split("?")[0] || "Video Liên Kết";
         finalTitle = `[Video Link] ${fileName}`;
       } else {
-        // Link Douyin / TikTok: cÃ o video máº«u cháº¥t lÆ°á»£ng cao khÃ´ng watermark
+        // Link Douyin / TikTok: cào video mẫu chất lượng cao không watermark
         const sample = DOUYIN_HOT_TRENDS[Math.floor(Math.random() * DOUYIN_HOT_TRENDS.length)];
         finalUrl = sample.videoUrl;
-        finalTitle = `[Douyin Scraped] CÃ¢y Lau NhÃ  Tá»± Giáº·t Váº¯t Ly TÃ¢m 360 Äá»™`;
+        finalTitle = `[Douyin Scraped] Cây Lau Nhà Tự Giặt Vắt Ly Tâm 360 Độ`;
       }
 
       handleImportDouyinVideo({
@@ -820,17 +820,17 @@ export default function AiVideoEditorPage() {
         title: finalTitle,
         originalTitle: "Douyin Viral Video",
         category: "smart_home",
-        categoryLabel: "Video Thá»‹nh HÃ nh",
+        categoryLabel: "Video Thịnh Hành",
         likes: "2.4M",
         shares: "310K",
         videoUrl: finalUrl,
         voiceRecommendation: "adult_female_sweet",
-        voiceRecommendationName: "Mai Anh (Ná»¯ Review Dá»‹u DÃ ng)",
-        viralInsight: "Video cÃ o sáº¡ch watermark, tá»± Ä‘á»™ng bÃ³c bÄƒng dá»‹ch ká»‹ch báº£n tiáº¿ng Viá»‡t bÃ¡n hÃ ng triá»‡u view.",
+        voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+        viralInsight: "Video cào sạch watermark, tự động bóc băng dịch kịch bản tiếng Việt bán hàng triệu view.",
         suggestedScript: [
-          { startSec: 0, endSec: 5, text: "Ai báº£o dá»n nhÃ  lÃ  má»‡t? Tá»« ngÃ y cÃ³ cÃ¢y lau tá»± giáº·t nÃ y nhÃ n tÃªnh luÃ´n cáº£ nhÃ  Æ¡i!" },
-          { startSec: 5, endSec: 10, text: "LÆ°á»›t má»™t Ä‘Æ°á»ng lÃ  sáº¡ch bong kin kÃ­t, tÃ³c rá»¥ng hay váº¿t dáº§u má»¡ bay sáº¡ch trÆ¡n." },
-          { startSec: 10, endSec: 15, text: "Äang cÃ³ deal giáº£m 50% chá»‰ hÃ´m nay, nhanh tay báº¥m vÃ o gÃ³c trÃ¡i rinh ngay nhÃ©!" }
+          { startSec: 0, endSec: 5, text: "Ai bảo dọn nhà là mệt? Từ ngày có cây lau tự giặt này nhàn tênh luôn cả nhà ơi!" },
+          { startSec: 5, endSec: 10, text: "Lướt một đường là sạch bong kin kít, tóc rụng hay vết dầu mỡ bay sạch trơn." },
+          { startSec: 10, endSec: 15, text: "Đang có deal giảm 50% chỉ hôm nay, nhanh tay bấm vào góc trái rinh ngay nhé!" }
         ]
       });
 
@@ -838,11 +838,11 @@ export default function AiVideoEditorPage() {
       setDouyinUrlInput("");
     } catch (e: any) {
       setIsScrapingDouyin(false);
-      alert("Lá»—i cÃ o video: " + (e.message || "Vui lÃ²ng kiá»ƒm tra láº¡i Ä‘Æ°á»ng link"));
+      alert("Lỗi cào video: " + (e.message || "Vui lòng kiểm tra lại đường link"));
     }
   };
 
-  // ðŸŒŸ COPY TOÃ€N Bá»˜ CODE PAGE.TSX & Táº¢I FILE
+  // 🌟 COPY TOÀN BỘ CODE PAGE.TSX & TẢI FILE
   const handleDownloadSourceCode = async () => {
     try {
       const res = await axios.get("/api/editor-page-code");
@@ -867,10 +867,10 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // ðŸŒŸ XUáº¤T FILE PHá»¤ Äá»€ .SRT CHUáº¨N
+  // 🌟 XUẤT FILE PHỤ ĐỀ .SRT CHUẨN
   const handleDownloadSRT = () => {
     if (subtitleCues.length === 0) {
-      alert("ChÆ°a cÃ³ phá»¥ Ä‘á» Ä‘á»ƒ táº£i vá»! Vui lÃ²ng báº¥m 'Báº­t sub tá»± Ä‘á»™ng báº±ng AI' trÆ°á»›c.");
+      alert("Chưa có phụ đề để tải về! Vui lòng bấm 'Bật sub tự động bằng AI' trước.");
       return;
     }
 
@@ -900,7 +900,7 @@ export default function AiVideoEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ðŸŒŸ HÃ€M Váº¼ TOÃ€N Bá»˜ OVERLAY (LOGO, BANNER, SUBTITLE) LÃŠN CANVAS
+  // 🌟 HÀM VẼ TOÀN BỘ OVERLAY (LOGO, BANNER, SUBTITLE) LÊN CANVAS
   const drawOverlaysOnCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -908,7 +908,7 @@ export default function AiVideoEditorPage() {
     currentSec: number,
     logoImg: HTMLImageElement | null
   ) => {
-    // 1. Váº¼ LOGO
+    // 1. VẼ LOGO
     if (logoConfig.enabled) {
       ctx.save();
       ctx.globalAlpha = logoConfig.opacity / 100;
@@ -943,7 +943,7 @@ export default function AiVideoEditorPage() {
       ctx.restore();
     }
 
-    // 2. Váº¼ BANNER
+    // 2. VẼ BANNER
     if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
       ctx.save();
       const bannerHeight = Math.round(75 * (height / 800));
@@ -969,7 +969,7 @@ export default function AiVideoEditorPage() {
       ctx.restore();
     }
 
-    // 3. Váº¼ PHá»¤ Äá»€ TIKTOK
+    // 3. VẼ PHỤ ĐỀ TIKTOK
     if (subtitleConfig.enabled && subtitleCues.length > 0) {
       const adjTime = currentSec + subtitleConfig.offsetSeconds;
       const matchedCue = subtitleCues.find(
@@ -978,7 +978,7 @@ export default function AiVideoEditorPage() {
 
       if (matchedCue) {
         ctx.save();
-        const subY = height * 0.74; // Náº±m á»Ÿ 1/3 dÆ°á»›i
+        const subY = height * 0.74; // Nằm ở 1/3 dưới
         const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = "center";
@@ -1017,10 +1017,10 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // ðŸŒŸ Táº¢I VIDEO XUáº¤T KHáº¨U: DÃ™NG VIDEO áº¢O Äá»˜C Láº¬P
+  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP
   const handleExportFullVideo = async () => {
     if (!videoUrl) {
-      alert("Vui lÃ²ng táº£i video lÃªn trÆ°á»›c!");
+      alert("Vui lòng tải video lên trước!");
       return;
     }
 
@@ -1052,7 +1052,7 @@ export default function AiVideoEditorPage() {
 
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("KhÃ´ng thá»ƒ khá»Ÿi táº¡o Canvas 2D");
+      if (!ctx) throw new Error("Không thể khởi tạo Canvas 2D");
       canvas.width = width;
       canvas.height = height;
 
@@ -1085,7 +1085,7 @@ export default function AiVideoEditorPage() {
           canvasStream.addTrack(audioTracks[0]);
         }
       } catch (e) {
-        console.warn("Ná»‘i Ã¢m thanh video:", e);
+        console.warn("Nối âm thanh video:", e);
       }
 
       let mimeType = 'video/webm;codecs=vp9';
@@ -1177,9 +1177,9 @@ export default function AiVideoEditorPage() {
         finishExport();
       };
     } catch (err: any) {
-      console.error("Lá»—i xuáº¥t video:", err);
+      console.error("Lỗi xuất video:", err);
       setIsExporting(false);
-      alert("Lá»—i xuáº¥t video: " + (err?.message || "Vui lÃ²ng thá»­ láº¡i"));
+      alert("Lỗi xuất video: " + (err?.message || "Vui lòng thử lại"));
     }
   };
 
@@ -1211,30 +1211,30 @@ export default function AiVideoEditorPage() {
               </h1>
             </div>
             <p className="text-sm text-slate-500 font-medium">
-              Tá»± Ä‘á»™ng bÃ³c bÄƒng lá»i thoáº¡i, lá»“ng tiáº¿ng Ä‘a cháº¥t giá»ng tá»« tráº» em Ä‘áº¿n ngÆ°á»i lá»›n vÃ  cÃ o video Douyin hot trend.
+              Tự động bóc băng lời thoại, lồng tiếng đa chất giọng từ trẻ em đến người lớn và cào video Douyin hot trend.
             </p>
           </div>
 
-          {/* DÃƒY NÃšT CHá»¨C NÄ‚NG */}
+          {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2.5">
-            {/* ðŸ”¥ NÃšT CÃ€O DOUYIN TRENDS */}
+            {/* 🔥 NÚT CÀO DOUYIN TRENDS */}
             <button
               type="button"
               onClick={() => setShowDouyinModal(true)}
               className="px-4 py-2.5 bg-gradient-to-r from-rose-600 via-red-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-rose-500/25 transition-all hover:scale-[1.02] cursor-pointer"
             >
-              <Flame size={16} className="text-amber-300 animate-pulse" /> ðŸ”¥ CÃ o Douyin Trends
+              <Flame size={16} className="text-amber-300 animate-pulse" /> 🔥 Cào Douyin Trends
             </button>
 
-            {/* ðŸŽ™ï¸ NÃšT AI Lá»’NG TIáº¾NG ÄA CHáº¤T GIá»ŒNG */}
+            {/* 🎙️ NÚT AI LỒNG TIẾNG ĐA CHẤT GIỌNG */}
             <button
               type="button"
               onClick={() => setShowVoiceoverModal(true)}
               className="px-4 py-2.5 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] cursor-pointer"
             >
-              <Radio size={16} className="text-emerald-300 animate-pulse" /> ðŸŽ™ï¸ AI Lá»“ng Tiáº¿ng
+              <Radio size={16} className="text-emerald-300 animate-pulse" /> 🎙️ AI Lồng Tiếng
               <span className="bg-emerald-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded-full font-black">
-                {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "ðŸ‘¦"}
+                {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "👦"}
               </span>
             </button>
 
@@ -1246,11 +1246,11 @@ export default function AiVideoEditorPage() {
             >
               {isTranscribing ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Äang bÃ³c bÄƒng...
+                  <RefreshCw size={16} className="animate-spin" /> Đang bóc băng...
                 </>
               ) : (
                 <>
-                  <Mic size={16} /> ðŸŽ¤ Báº­t sub tá»± Ä‘á»™ng báº±ng AI
+                  <Mic size={16} /> 🎤 Bật sub tự động bằng AI
                 </>
               )}
             </button>
@@ -1268,7 +1268,7 @@ export default function AiVideoEditorPage() {
               onClick={() => setShowEffectsModal(true)}
               className="px-4 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] cursor-pointer"
             >
-              <Sparkles size={16} /> Hiá»‡u á»¨ng Video
+              <Sparkles size={16} /> Hiệu Ứng Video
             </button>
 
             <button
@@ -1279,11 +1279,11 @@ export default function AiVideoEditorPage() {
             >
               {isExporting ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Äang xuáº¥t ({exportProgress}%)
+                  <RefreshCw size={16} className="animate-spin" /> Đang xuất ({exportProgress}%)
                 </>
               ) : (
                 <>
-                  <Download size={16} /> â¬‡ï¸ Táº£i Video Vá» MÃ¡y
+                  <Download size={16} /> ⬇️ Tải Video Về Máy
                 </>
               )}
             </button>
@@ -1293,7 +1293,7 @@ export default function AiVideoEditorPage() {
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
             >
-              <UploadCloud size={16} /> Táº£i Video LÃªn
+              <UploadCloud size={16} /> Tải Video Lên
             </button>
             <input
               ref={fileInputRef}
@@ -1311,21 +1311,21 @@ export default function AiVideoEditorPage() {
               }}
               className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer border border-slate-200"
             >
-              <Link2 size={16} /> ðŸ”— DÃ¡n Link Video
+              <Link2 size={16} /> 🔗 Dán Link Video
             </button>
           </div>
         </div>
 
-        {/* TIáº¾N TRÃŒNH XUáº¤T VIDEO */}
+        {/* TIẾN TRÌNH XUẤT VIDEO */}
         {isExporting && (
           <div className="mb-6 p-6 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <Download size={24} className="text-emerald-400 animate-bounce" />
                 <div>
-                  <h3 className="text-base font-black text-white">Äang Render & Xuáº¥t Video HoÃ n Chá»‰nh...</h3>
+                  <h3 className="text-base font-black text-white">Đang Render & Xuất Video Hoàn Chỉnh...</h3>
                   <p className="text-xs text-emerald-200 mt-0.5">
-                    Há»‡ thá»‘ng Ä‘ang gáº¯n phá»¥ Ä‘á», logo, banner vÃ  hiá»‡u á»©ng vÃ o video (Tá»± Ä‘á»™ng táº£i vá» khi Ä‘á»§ 100%)
+                    Hệ thống đang gắn phụ đề, logo, banner và hiệu ứng vào video (Tự động tải về khi đủ 100%)
                   </p>
                 </div>
               </div>
@@ -1339,7 +1339,7 @@ export default function AiVideoEditorPage() {
                   }}
                   className="px-3 py-1 bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
                 >
-                  Há»§y
+                  Hủy
                 </button>
               </div>
             </div>
@@ -1352,14 +1352,14 @@ export default function AiVideoEditorPage() {
           </div>
         )}
 
-        {/* TIáº¾N TRÃŒNH BÃ“C BÄ‚NG */}
+        {/* TIẾN TRÌNH BÓC BĂNG */}
         {isTranscribing && (
           <div className="mb-6 p-6 bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <Mic size={24} className="text-cyan-400 animate-pulse" />
                 <div>
-                  <h3 className="text-base font-black text-white">KpostAI Äang Nghe & BÃ³c BÄƒng Ã‚m Thanh...</h3>
+                  <h3 className="text-base font-black text-white">KpostAI Đang Nghe & Bóc Băng Âm Thanh...</h3>
                   <p className="text-xs text-cyan-200 mt-0.5">{transcribeStatus}</p>
                 </div>
               </div>
@@ -1374,16 +1374,16 @@ export default function AiVideoEditorPage() {
           </div>
         )}
 
-        {/* 2 Cá»˜T CHÃNH */}
+        {/* 2 CỘT CHÍNH */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Cá»˜T TRÃI: DANH SÃCH Lá»œI THOáº I TOÃ€N Bá»˜ VIDEO */}
+          {/* CỘT TRÁI: DANH SÁCH LỜI THOẠI TOÀN BỘ VIDEO */}
           <div className="lg:col-span-5 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Type size={18} className="text-purple-600" />
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                    Lá»i Thoáº¡i Video ({subtitleCues.length} CÃ¢u)
+                    Lời Thoại Video ({subtitleCues.length} Câu)
                   </h3>
                 </div>
                 {subtitleCues.length > 0 && (
@@ -1392,12 +1392,12 @@ export default function AiVideoEditorPage() {
                     onClick={handleDownloadSRT}
                     className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <FileDown size={13} /> Táº£i file .SRT
+                    <FileDown size={13} /> Tải file .SRT
                   </button>
                 )}
               </div>
 
-              {/* TÃ™Y CHá»ŒN */}
+              {/* TÙY CHỌN */}
               <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
                 <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
                   <input
@@ -1406,24 +1406,24 @@ export default function AiVideoEditorPage() {
                     onChange={(e) => setSubtitleConfig((p) => ({ ...p, enabled: e.target.checked }))}
                     className="w-4 h-4 accent-purple-600 rounded"
                   />
-                  Hiá»‡n phá»¥ Ä‘á» trÃªn video
+                  Hiện phụ đề trên video
                 </label>
                 <div className="flex items-center gap-2 font-medium text-slate-600">
-                  <span>Cá»¡ chá»¯:</span>
+                  <span>Cỡ chữ:</span>
                   <select
                     value={subtitleConfig.fontSize}
                     onChange={(e) => setSubtitleConfig((p) => ({ ...p, fontSize: Number(e.target.value) }))}
                     className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold"
                   >
-                    <option value={18}>Nhá» (18px)</option>
-                    <option value={22}>Vá»«a (22px)</option>
+                    <option value={18}>Nhỏ (18px)</option>
+                    <option value={22}>Vừa (22px)</option>
                     <option value={26}>To (26px)</option>
-                    <option value={30}>Ráº¥t to (30px)</option>
+                    <option value={30}>Rất to (30px)</option>
                   </select>
                 </div>
               </div>
 
-              {/* DANH SÃCH Lá»œI THOáº I */}
+              {/* DANH SÁCH LỜI THOẠI */}
               <div ref={listContainerRef} className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
                 {subtitleCues.map((cue) => {
                   const isActive =
@@ -1447,7 +1447,7 @@ export default function AiVideoEditorPage() {
                           className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md shrink-0 cursor-pointer transition-all hover:scale-105 ${
                             isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700 hover:bg-purple-200"
                           }`}
-                          title="Báº¥m Ä‘á»ƒ tua video tá»›i má»‘c nÃ y"
+                          title="Bấm để tua video tới mốc này"
                         >
                           {cue.timeLabel}
                         </button>
@@ -1468,13 +1468,13 @@ export default function AiVideoEditorPage() {
                                   ? "bg-white text-slate-900 border-white focus:ring-2 focus:ring-amber-300"
                                   : "bg-white text-slate-900 border-purple-400 focus:ring-2 focus:ring-purple-500"
                               }`}
-                              placeholder="Nháº­p lá»i thoáº¡i chÃ­nh xÃ¡c..."
+                              placeholder="Nhập lời thoại chính xác..."
                             />
                             <button
                               type="button"
                               onClick={() => handleSaveCueEdit(cue.id)}
                               className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 cursor-pointer shadow-xs shrink-0"
-                              title="LÆ°u sá»­a Ä‘á»•i (Enter)"
+                              title="Lưu sửa đổi (Enter)"
                             >
                               <Check size={14} />
                             </button>
@@ -1482,7 +1482,7 @@ export default function AiVideoEditorPage() {
                               type="button"
                               onClick={() => setEditingCueId(null)}
                               className="p-1.5 rounded-lg bg-slate-400 text-white hover:bg-slate-500 cursor-pointer shrink-0"
-                              title="Há»§y (Esc)"
+                              title="Hủy (Esc)"
                             >
                               <X size={14} />
                             </button>
@@ -1493,7 +1493,7 @@ export default function AiVideoEditorPage() {
                             className={`text-xs font-bold truncate flex-1 cursor-pointer select-none ${
                               isActive ? "text-white" : "text-slate-800"
                             }`}
-                            title="Báº¥m Ä‘á»ƒ tua video"
+                            title="Bấm để tua video"
                           >
                             {cue.text}
                           </span>
@@ -1503,7 +1503,7 @@ export default function AiVideoEditorPage() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isActive && !isEditing && (
                           <span className="text-[10px] font-black uppercase text-amber-300 shrink-0 animate-pulse">
-                            Äang nÃ³i
+                            Đang nói
                           </span>
                         )}
                         <button
@@ -1517,7 +1517,7 @@ export default function AiVideoEditorPage() {
                               ? "bg-white/20 text-white hover:bg-white/30"
                               : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
                           }`}
-                          title="Báº¥m Ä‘á»ƒ nghe AI Ä‘á»c cÃ¢u nÃ y"
+                          title="Bấm để nghe AI đọc câu này"
                         >
                           <Volume2 size={13} />
                         </button>
@@ -1534,7 +1534,7 @@ export default function AiVideoEditorPage() {
                                 ? "bg-white/20 text-white hover:bg-white/30"
                                 : "text-slate-400 hover:text-purple-600 hover:bg-purple-100"
                             }`}
-                            title="Sá»­a lá»i thoáº¡i cÃ¢u nÃ y"
+                            title="Sửa lời thoại câu này"
                           >
                             <Edit2 size={13} />
                           </button>
@@ -1547,9 +1547,9 @@ export default function AiVideoEditorPage() {
                 {subtitleCues.length === 0 && !isTranscribing && (
                   <div className="py-12 text-center px-4">
                     <Mic size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-xs font-bold text-slate-500">ChÆ°a cÃ³ phá»¥ Ä‘á» lá»i thoáº¡i.</p>
+                    <p className="text-xs font-bold text-slate-500">Chưa có phụ đề lời thoại.</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Báº¥m nÃºt <span className="font-bold text-rose-600">"ðŸ”¥ CÃ o Douyin Trends"</span> hoáº·c <span className="font-bold text-indigo-600">"ðŸŽ¤ Báº­t sub tá»± Ä‘á»™ng báº±ng AI"</span> Ä‘á»ƒ náº¡p video vÃ  ká»‹ch báº£n!
+                      Bấm nút <span className="font-bold text-rose-600">"🔥 Cào Douyin Trends"</span> hoặc <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để nạp video và kịch bản!
                     </p>
                   </div>
                 )}
@@ -1564,7 +1564,7 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* Cá»˜T PHáº¢I: VIDEO PLAYER Vá»šI PHá»¤ Äá»€ Dá»ŒC 9:16 Táº I Má»ŒI THá»œI ÄIá»‚M */}
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 TẠI MỌI THỜI ĐIỂM */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -1584,7 +1584,7 @@ export default function AiVideoEditorPage() {
                     className="px-2.5 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Palette size={13} />
-                    {visualEffects.filterType !== "none" ? "ÄÃ£ báº­t hiá»‡u á»©ng" : "Hiá»‡u á»©ng"}
+                    {visualEffects.filterType !== "none" ? "Đã bật hiệu ứng" : "Hiệu ứng"}
                   </button>
 
                   <button
@@ -1594,7 +1594,7 @@ export default function AiVideoEditorPage() {
                     className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
                   >
                     <Download size={13} />
-                    {isExporting ? `Äang xuáº¥t ${exportProgress}%` : "Táº£i Video"}
+                    {isExporting ? `Đang xuất ${exportProgress}%` : "Tải Video"}
                   </button>
 
                   <button
@@ -1607,7 +1607,7 @@ export default function AiVideoEditorPage() {
                     }`}
                   >
                     <Eye size={13} />
-                    {compareOriginal ? "Äang xem: Gá»C" : "Xem báº£n gá»‘c"}
+                    {compareOriginal ? "Đang xem: GỐC" : "Xem bản gốc"}
                   </button>
                 </div>
               </div>
@@ -1687,7 +1687,7 @@ export default function AiVideoEditorPage() {
                       </div>
                     )}
 
-                    {/* ðŸŒŸ PHá»¤ Äá»€ KARAOKE WORD-BY-WORD: Náº°M Gá»ŒN 1/3 Tá»ª DÆ¯á»šI LÃŠN Táº I Má»ŒI THá»œI ÄIá»‚M */}
+                    {/* 🌟 PHỤ ĐỀ KARAOKE WORD-BY-WORD: NẰM GỌN 1/3 TỪ DƯỚI LÊN TẠI MỌI THỜI ĐIỂM */}
                     {subtitleConfig.enabled && !compareOriginal && currentSubtitleCue && (
                       <div className="absolute bottom-[26%] left-0 right-0 z-40 pointer-events-none flex justify-center px-4">
                         <div className="bg-black/60 backdrop-blur-xs px-4 py-2 rounded-2xl border border-white/10 shadow-2xl max-w-[85%] text-center animate-in fade-in zoom-in-95 duration-150">
@@ -1785,23 +1785,23 @@ export default function AiVideoEditorPage() {
                   {subtitleCues.length > 0 && (
                     <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200 flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-emerald-600" />
-                      ÄÃ£ cÃ³ ({subtitleCues.length} cÃ¢u phá»¥ Ä‘á»)
+                      Đã có ({subtitleCues.length} câu phụ đề)
                     </span>
                   )}
                   {voiceoverConfig.enabled && (
                     <span className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-xl border border-violet-200 flex items-center gap-1">
                       <Radio size={13} />
-                      Äang lá»“ng tiáº¿ng: {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
+                      Đang lồng tiếng: {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
                     </span>
                   )}
                   {visualEffects.filterType !== "none" && (
                     <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200">
-                      âœ¨ Bá»™ lá»c: {visualEffects.filterType.toUpperCase()} ({visualEffects.speed}x)
+                      ✨ Bộ lọc: {visualEffects.filterType.toUpperCase()} ({visualEffects.speed}x)
                     </span>
                   )}
                   {bannerConfig.enabled && (
                     <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
-                      ðŸ·ï¸ Banner: 00:{bannerConfig.startSec.toString().padStart(2, "0")} âž” 00:{bannerConfig.endSec.toString().padStart(2, "0")}
+                      🏷️ Banner: 00:{bannerConfig.startSec.toString().padStart(2, "0")} ➔ 00:{bannerConfig.endSec.toString().padStart(2, "0")}
                     </span>
                   )}
                 </div>
@@ -1811,7 +1811,7 @@ export default function AiVideoEditorPage() {
         </div>
       </div>
 
-      {/* ðŸŒŸ MODAL 1: AI Lá»’NG TIáº¾NG ÄA CHáº¤T GIá»ŒNG (Tá»ª TRáºº EM Äáº¾N NGÆ¯á»œI Lá»šN) */}
+      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) */}
       {showVoiceoverModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
@@ -1822,9 +1822,9 @@ export default function AiVideoEditorPage() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    AI Lá»“ng Tiáº¿ng Cho Video (Tá»« Tráº» Em Äáº¿n NgÆ°á»i Lá»›n)
+                    AI Lồng Tiếng Cho Video (Từ Trẻ Em Đến Người Lớn)
                   </h3>
-                  <p className="text-xs text-slate-500">Tá»± Ä‘á»™ng nÃ³i theo phá»¥ Ä‘á» timeline, há»— trá»£ Audio Ducking háº¡ Ã¢m lÆ°á»£ng video gá»‘c</p>
+                  <p className="text-xs text-slate-500">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
                 </div>
               </div>
               <button
@@ -1837,7 +1837,7 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-              {/* Báº¬T / Táº®T & AUDIO DUCKING */}
+              {/* BẬT / TẮT & AUDIO DUCKING */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
                 <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
                   <input
@@ -1846,7 +1846,7 @@ export default function AiVideoEditorPage() {
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, enabled: e.target.checked }))}
                     className="w-4 h-4 accent-violet-600 rounded"
                   />
-                  Báº­t AI tá»± Ä‘á»™ng lá»“ng tiáº¿ng khi phÃ¡t video
+                  Bật AI tự động lồng tiếng khi phát video
                 </label>
                 <label className="flex items-center gap-2 font-bold text-slate-600 cursor-pointer">
                   <input
@@ -1855,11 +1855,11 @@ export default function AiVideoEditorPage() {
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, autoDuckOriginal: e.target.checked }))}
                     className="w-4 h-4 accent-violet-600 rounded"
                   />
-                  Tá»± Ä‘á»™ng giáº£m Ã¢m lÆ°á»£ng video gá»‘c khi AI nÃ³i (Audio Ducking)
+                  Tự động giảm âm lượng video gốc khi AI nói (Audio Ducking)
                 </label>
               </div>
 
-              {/* DANH SÃCH 8 NHÃ‚N Váº¬T GIá»ŒNG Äá»ŒC */}
+              {/* DANH SÁCH 8 NHÂN VẬT GIỌNG ĐỌC */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {VOICE_CHARACTERS.map((char) => {
                   const isSelected = voiceoverConfig.selectedVoiceId === char.id;
@@ -1890,7 +1890,7 @@ export default function AiVideoEditorPage() {
                               ? "bg-blue-100 text-blue-800"
                               : "bg-emerald-100 text-emerald-800"
                           }`}>
-                            {char.badge} â€¢ {char.ageRange}
+                            {char.badge} • {char.ageRange}
                           </span>
                         </div>
                         <h4 className="text-xs font-black text-slate-900">{char.name}</h4>
@@ -1908,11 +1908,11 @@ export default function AiVideoEditorPage() {
                           }}
                           className="px-2.5 py-1 bg-violet-100 hover:bg-violet-200 text-violet-700 text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          <Volume2 size={12} /> Nghe thá»­ máº«u
+                          <Volume2 size={12} /> Nghe thử mẫu
                         </button>
                         {isSelected && (
                           <span className="text-[10px] font-black text-violet-700 uppercase flex items-center gap-1">
-                            <Check size={12} /> Äang chá»n
+                            <Check size={12} /> Đang chọn
                           </span>
                         )}
                       </div>
@@ -1924,7 +1924,7 @@ export default function AiVideoEditorPage() {
 
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
               <span className="text-xs font-bold text-slate-600">
-                NhÃ¢n váº­t Ä‘ang chá»n:{" "}
+                Nhân vật đang chọn:{" "}
                 <strong className="text-violet-700">
                   {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
                 </strong>
@@ -1934,14 +1934,14 @@ export default function AiVideoEditorPage() {
                 onClick={() => setShowVoiceoverModal(false)}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
               >
-                LÆ°u & Ãp Dá»¥ng
+                Lưu & Áp Dụng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ðŸŒŸ MODAL 2: CÃ€O Dá»® LIá»†U DOUYIN.COM & Äá»€ XUáº¤T VIDEO HOT Má»šI NHáº¤T */}
+      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT */}
       {showDouyinModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
@@ -1952,13 +1952,13 @@ export default function AiVideoEditorPage() {
                 </span>
                 <div>
                   <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    Douyin Hot Trends & CÃ o Video BÃ¡n HÃ ng Triá»‡u View
+                    Douyin Hot Trends & Cào Video Bán Hàng Triệu View
                     <span className="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
                       DOUYIN.COM
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Äá» xuáº¥t video hot má»›i nháº¥t, tá»± Ä‘á»™ng trÃ­ch xuáº¥t ká»‹ch báº£n tiáº¿ng Viá»‡t vÃ  gÃ¡n giá»ng lá»“ng tiáº¿ng tá»‘i Æ°u
+                    Đề xuất video hot mới nhất, tự động trích xuất kịch bản tiếng Việt và gán giọng lồng tiếng tối ưu
                   </p>
                 </div>
               </div>
@@ -1971,7 +1971,7 @@ export default function AiVideoEditorPage() {
               </button>
             </div>
 
-            {/* TAB CHUYá»‚N Äá»”I */}
+            {/* TAB CHUYỂN ĐỔI */}
             <div className="flex items-center gap-2 mb-4 p-1 bg-slate-100 rounded-2xl shrink-0">
               <button
                 type="button"
@@ -1982,7 +1982,7 @@ export default function AiVideoEditorPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Flame size={14} /> ðŸ† Äá» Xuáº¥t Video Hot Douyin Má»›i Nháº¥t
+                <Flame size={14} /> 🏆 Đề Xuất Video Hot Douyin Mới Nhất
               </button>
               <button
                 type="button"
@@ -1993,22 +1993,22 @@ export default function AiVideoEditorPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Link2 size={14} /> ðŸ”— CÃ o Video Tá»« Link Douyin Báº¥t Ká»³
+                <Link2 size={14} /> 🔗 Cào Video Từ Link Douyin Bất Kỳ
               </button>
             </div>
 
-            {/* TAB 1: Báº¢NG Xáº¾P Háº NG VIDEO HOT DOUYIN */}
+            {/* TAB 1: BẢNG XẾP HẠNG VIDEO HOT DOUYIN */}
             {activeDouyinTab === "trends" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                {/* Lá»ŒC THEO DANH Má»¤C */}
+                {/* LỌC THEO DANH MỤC */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
                   {[
-                    { id: "all", label: "Táº¥t Cáº£ Danh Má»¥c" },
-                    { id: "kids_toys", label: "ðŸ§¸ Äá»“ ChÆ¡i & Máº¹ BÃ©" },
-                    { id: "smart_home", label: "ðŸ›ï¸ Gia Dá»¥ng ThÃ´ng Minh" },
-                    { id: "tech_gadgets", label: "ðŸ“± Äá»“ CÃ´ng Nghá»‡" },
-                    { id: "beauty_care", label: "ðŸ’„ Má»¹ Pháº©m & Skincare" },
-                    { id: "short_drama", label: "ðŸŽ¬ Phim Ngáº¯n Drama" },
+                    { id: "all", label: "Tất Cả Danh Mục" },
+                    { id: "kids_toys", label: "🧸 Đồ Chơi & Mẹ Bé" },
+                    { id: "smart_home", label: "🛍️ Gia Dụng Thông Minh" },
+                    { id: "tech_gadgets", label: "📱 Đồ Công Nghệ" },
+                    { id: "beauty_care", label: "💄 Mỹ Phẩm & Skincare" },
+                    { id: "short_drama", label: "🎬 Phim Ngắn Drama" },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -2025,7 +2025,7 @@ export default function AiVideoEditorPage() {
                   ))}
                 </div>
 
-                {/* DANH SÃCH VIDEO HOT */}
+                {/* DANH SÁCH VIDEO HOT */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {filteredDouyinTrends.map((trend) => (
                     <div
@@ -2037,20 +2037,20 @@ export default function AiVideoEditorPage() {
                           <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">
                             {trend.categoryLabel}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-500">â¤ï¸ {trend.likes} â€¢ â†—ï¸ {trend.shares}</span>
+                          <span className="text-[10px] font-bold text-slate-500">❤️ {trend.likes} • ↗️ {trend.shares}</span>
                         </div>
                         <h4 className="text-xs font-black text-slate-900 leading-snug">{trend.title}</h4>
-                        <p className="text-[10px] text-slate-400 font-mono italic mt-0.5">ðŸ‡¨ðŸ‡³ {trend.originalTitle}</p>
+                        <p className="text-[10px] text-slate-400 font-mono italic mt-0.5">🇨🇳 {trend.originalTitle}</p>
 
                         <div className="mt-2.5 p-2 bg-amber-50 border border-amber-200/80 rounded-xl">
                           <p className="text-[10px] text-amber-950 font-bold leading-relaxed">
-                            ðŸ’¡ <strong>AI Viral:</strong> {trend.viralInsight}
+                            💡 <strong>AI Viral:</strong> {trend.viralInsight}
                           </p>
                         </div>
 
                         <div className="mt-2 text-[11px] font-bold text-violet-800 bg-violet-50 p-2 rounded-xl border border-violet-100 flex items-center gap-1.5">
                           <Radio size={12} className="text-violet-600 shrink-0" />
-                          <span>Gá»£i Ã½ giá»ng: {trend.voiceRecommendationName}</span>
+                          <span>Gợi ý giọng: {trend.voiceRecommendationName}</span>
                         </div>
                       </div>
 
@@ -2059,7 +2059,7 @@ export default function AiVideoEditorPage() {
                         onClick={() => handleImportDouyinVideo(trend)}
                         className="w-full py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
                       >
-                        ðŸš€ Nháº­p Video & Báº­t Lá»“ng Tiáº¿ng
+                        🚀 Nhập Video & Bật Lồng Tiếng
                       </button>
                     </div>
                   ))}
@@ -2067,19 +2067,19 @@ export default function AiVideoEditorPage() {
               </div>
             )}
 
-            {/* TAB 2: CÃ€O Tá»ª LINK Báº¤T Ká»² */}
+            {/* TAB 2: CÀO TỪ LINK BẤT KỲ */}
             {activeDouyinTab === "scraper" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                   <label className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-2">
-                    DÃ¡n Ä‘Æ°á»ng link Douyin (TikTok Trung Quá»‘c):
+                    Dán đường link Douyin (TikTok Trung Quốc):
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       value={douyinUrlInput}
                       onChange={(e) => setDouyinUrlInput(e.target.value)}
-                      placeholder="VD: https://v.douyin.com/iABCxyz/ hoáº·c https://www.douyin.com/video/..."
+                      placeholder="VD: https://v.douyin.com/iABCxyz/ hoặc https://www.douyin.com/video/..."
                       className="flex-1 text-xs font-bold px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-rose-500 focus:outline-none font-mono"
                     />
                     <button
@@ -2090,22 +2090,22 @@ export default function AiVideoEditorPage() {
                     >
                       {isScrapingDouyin ? (
                         <>
-                          <RefreshCw size={14} className="animate-spin" /> Äang cÃ o...
+                          <RefreshCw size={14} className="animate-spin" /> Đang cào...
                         </>
                       ) : (
                         <>
-                          <Flame size={14} /> ðŸš€ CÃ o & Nháº­p Video
+                          <Flame size={14} /> 🚀 Cào & Nhập Video
                         </>
                       )}
                     </button>
                   </div>
 
                   <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-slate-500">
-                    <span className="font-bold">Test nhanh Ä‘Æ°á»ng link:</span>
+                    <span className="font-bold">Test nhanh đường link:</span>
                     {[
-                      { label: "ðŸ§¸ Äá»“ chÆ¡i ma thuáº­t", url: "https://v.douyin.com/toy_demo/" },
-                      { label: "ðŸ›ï¸ Gia dá»¥ng váº¯t 360", url: "https://v.douyin.com/home_demo/" },
-                      { label: "ðŸ“± GiÃ¡ Ä‘á»¡ xoay AI", url: "https://v.douyin.com/tech_demo/" },
+                      { label: "🧸 Đồ chơi ma thuật", url: "https://v.douyin.com/toy_demo/" },
+                      { label: "🛍️ Gia dụng vắt 360", url: "https://v.douyin.com/home_demo/" },
+                      { label: "📱 Giá đỡ xoay AI", url: "https://v.douyin.com/tech_demo/" },
                     ].map((demo, idx) => (
                       <button
                         key={idx}
@@ -2127,14 +2127,14 @@ export default function AiVideoEditorPage() {
                 onClick={() => setShowDouyinModal(false)}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
               >
-                ÄÃ³ng
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ðŸŒŸ MODAL CHÃˆN HIá»†U á»¨NG Ã‚M THANH & HÃŒNH áº¢NH Má»šI */}
+      {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI */}
       {showEffectsModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
@@ -2143,7 +2143,7 @@ export default function AiVideoEditorPage() {
                 <span className="p-2 bg-purple-100 text-purple-600 rounded-xl">
                   <Sparkles size={18} />
                 </span>
-                <h3 className="text-base font-black text-slate-900">Hiá»‡u á»¨ng HÃ¬nh áº¢nh & Ã‚m Thanh</h3>
+                <h3 className="text-base font-black text-slate-900">Hiệu Ứng Hình Ảnh & Âm Thanh</h3>
               </div>
               <button
                 type="button"
@@ -2155,23 +2155,23 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-5">
-              {/* PHáº¦N 1: HIá»†U á»¨NG HÃŒNH áº¢NH */}
+              {/* PHẦN 1: HIỆU ỨNG HÌNH ẢNH */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
-                  <Palette size={14} className="text-purple-600" /> 1. Bá»™ Lá»c MÃ u & Hiá»‡u á»¨ng HÃ¬nh áº¢nh (Visual)
+                  <Palette size={14} className="text-purple-600" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
                 </span>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">TÃ´ng mÃ u Ä‘iá»‡n áº£nh:</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">Tông màu điện ảnh:</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { id: "none", label: "Máº·c Ä‘á»‹nh" },
-                        { id: "bright", label: "âœ¨ SÃ¡ng nÃ©t" },
-                        { id: "cinematic", label: "ðŸŽ¬ Äiá»‡n áº£nh" },
-                        { id: "vibrant", label: "ðŸŒˆ Rá»±c rá»¡" },
-                        { id: "golden", label: "â˜€ï¸ VÃ ng áº¥m" },
-                        { id: "vintage", label: "ðŸŽžï¸ HoÃ i niá»‡m" },
+                        { id: "none", label: "Mặc định" },
+                        { id: "bright", label: "✨ Sáng nét" },
+                        { id: "cinematic", label: "🎬 Điện ảnh" },
+                        { id: "vibrant", label: "🌈 Rực rỡ" },
+                        { id: "golden", label: "☀️ Vàng ấm" },
+                        { id: "vintage", label: "🎞️ Hoài niệm" },
                       ].map((item) => (
                         <button
                           key={item.id}
@@ -2192,7 +2192,7 @@ export default function AiVideoEditorPage() {
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                        Äá»™ sÃ¡ng: {visualEffects.brightness}%
+                        Độ sáng: {visualEffects.brightness}%
                       </label>
                       <input
                         type="range"
@@ -2205,7 +2205,7 @@ export default function AiVideoEditorPage() {
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                        Äá»™ bÃ£o hÃ²a mÃ u: {visualEffects.saturation}%
+                        Độ bão hòa màu: {visualEffects.saturation}%
                       </label>
                       <input
                         type="range"
@@ -2220,7 +2220,7 @@ export default function AiVideoEditorPage() {
 
                   <div className="pt-1">
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Tá»‘c Ä‘á»™ phÃ¡t: {visualEffects.speed}x (TÄƒng tá»‘c Ä‘á»ƒ video TikTok cuá»‘n hÃºt hÆ¡n)
+                      Tốc độ phát: {visualEffects.speed}x (Tăng tốc để video TikTok cuốn hút hơn)
                     </label>
                     <div className="flex gap-2">
                       {[1.0, 1.1, 1.2, 1.25, 1.5].map((spd) => (
@@ -2242,17 +2242,17 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
 
-              {/* PHáº¦N 2: HIá»†U á»¨NG Ã‚M THANH */}
+              {/* PHẦN 2: HIỆU ỨNG ÂM THANH */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
-                  <Music size={14} className="text-emerald-600" /> 2. Hiá»‡u á»¨ng Ã‚m Thanh & Khuáº¿ch Äáº¡i (Audio)
+                  <Music size={14} className="text-emerald-600" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
                 </span>
 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
                     <div>
-                      <p className="text-xs font-bold text-slate-800">ðŸŽ™ï¸ Khuáº¿ch Ä‘áº¡i giá»ng nÃ³i (Voice Boost +40%)</p>
-                      <p className="text-[11px] text-slate-500">GiÃºp giá»ng nÃ³i rÃµ rÃ ng, ná»•i báº­t hÆ¡n so vá»›i Ã¢m thanh táº¡p Ã¢m</p>
+                      <p className="text-xs font-bold text-slate-800">🎙️ Khuếch đại giọng nói (Voice Boost +40%)</p>
+                      <p className="text-[11px] text-slate-500">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
                     </div>
                     <input
                       type="checkbox"
@@ -2264,8 +2264,8 @@ export default function AiVideoEditorPage() {
 
                   <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
                     <div>
-                      <p className="text-xs font-bold text-slate-800">ðŸ”” Hiá»‡u á»©ng Ding khi hiá»‡n Banner</p>
-                      <p className="text-[11px] text-slate-500">PhÃ¡t Ã¢m thanh thÃ´ng bÃ¡o thu hÃºt máº¯t nhÃ¬n khi banner giáº£m giÃ¡ xuáº¥t hiá»‡n</p>
+                      <p className="text-xs font-bold text-slate-800">🔔 Hiệu ứng Ding khi hiện Banner</p>
+                      <p className="text-[11px] text-slate-500">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
                     </div>
                     <input
                       type="checkbox"
@@ -2277,8 +2277,8 @@ export default function AiVideoEditorPage() {
 
                   <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-purple-300 transition-all">
                     <div>
-                      <p className="text-xs font-bold text-slate-800">âš¡ Hiá»‡u á»©ng Whoosh lÆ°á»›t cáº£nh má»Ÿ Ä‘áº§u</p>
-                      <p className="text-[11px] text-slate-500">Ã‚m thanh lÆ°á»›t giÃ³ chuyÃªn nghiá»‡p trong 2 giÃ¢y Ä‘áº§u video</p>
+                      <p className="text-xs font-bold text-slate-800">⚡ Hiệu ứng Whoosh lướt cảnh mở đầu</p>
+                      <p className="text-[11px] text-slate-500">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
                     </div>
                     <input
                       type="checkbox"
@@ -2297,14 +2297,14 @@ export default function AiVideoEditorPage() {
                 onClick={() => setShowEffectsModal(false)}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
               >
-                LÆ°u & Ãp Dá»¥ng
+                Lưu & Áp Dụng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL THIáº¾T Láº¬P LOGO & BANNER */}
+      {/* MODAL THIẾT LẬP LOGO & BANNER */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
@@ -2313,7 +2313,7 @@ export default function AiVideoEditorPage() {
                 <span className="p-2 bg-amber-100 text-amber-600 rounded-xl">
                   <ImageIcon size={18} />
                 </span>
-                <h3 className="text-base font-black text-slate-900">Thiáº¿t Láº­p Logo & Banner Video</h3>
+                <h3 className="text-base font-black text-slate-900">Thiết Lập Logo & Banner Video</h3>
               </div>
               <button
                 type="button"
@@ -2325,11 +2325,11 @@ export default function AiVideoEditorPage() {
             </div>
 
             <div className="space-y-5">
-              {/* PHáº¦N 1: LOGO */}
+              {/* PHẦN 1: LOGO */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-purple-600" /> 1. Logo ThÆ°Æ¡ng Hiá»‡u
+                    <Sparkles size={14} className="text-purple-600" /> 1. Logo Thương Hiệu
                   </span>
                   <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
@@ -2338,14 +2338,14 @@ export default function AiVideoEditorPage() {
                       onChange={(e) => setLogoConfig((p) => ({ ...p, enabled: e.target.checked }))}
                       className="w-4 h-4 accent-purple-600 rounded"
                     />
-                    Báº­t Logo
+                    Bật Logo
                   </label>
                 </div>
 
                 <div className="space-y-3">
                   <div>
                     <label className="text-[11px] font-bold text-slate-600 block mb-1.5">
-                      áº¢nh Logo (PNG trong suá»‘t / JPG):
+                      Ảnh Logo (PNG trong suốt / JPG):
                     </label>
                     <div className="flex items-center gap-3">
                       {logoConfig.imageSrc ? (
@@ -2359,7 +2359,7 @@ export default function AiVideoEditorPage() {
                             type="button"
                             onClick={() => setLogoConfig((p) => ({ ...p, imageSrc: "" }))}
                             className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
-                            title="XÃ³a logo"
+                            title="Xóa logo"
                           >
                             <X size={11} />
                           </button>
@@ -2373,7 +2373,7 @@ export default function AiVideoEditorPage() {
                           className="w-full py-2.5 px-3 bg-white hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
                         >
                           <UploadCloud size={16} className="text-indigo-600" />
-                          {logoConfig.imageSrc ? "Äá»•i áº£nh Logo khÃ¡c" : "Chá»n áº£nh Logo tá»« mÃ¡y tÃ­nh..."}
+                          {logoConfig.imageSrc ? "Đổi ảnh Logo khác" : "Chọn ảnh Logo từ máy tính..."}
                         </button>
                         <input
                           ref={logoImageInputRef}
@@ -2389,7 +2389,7 @@ export default function AiVideoEditorPage() {
                   {!logoConfig.imageSrc && (
                     <div>
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                        Hoáº·c nháº­p Chá»¯ Logo Ä‘áº¡i diá»‡n:
+                        Hoặc nhập Chữ Logo đại diện:
                       </label>
                       <input
                         type="text"
@@ -2403,22 +2403,22 @@ export default function AiVideoEditorPage() {
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Vá»‹ trÃ­ gÃ³c:</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Vị trí góc:</label>
                       <select
                         value={logoConfig.position}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, position: e.target.value as any }))}
                         className="w-full text-xs font-bold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none"
                       >
-                        <option value="top-right">GÃ³c trÃªn - Pháº£i</option>
-                        <option value="top-left">GÃ³c trÃªn - TrÃ¡i</option>
-                        <option value="bottom-right">GÃ³c dÆ°á»›i - Pháº£i</option>
-                        <option value="bottom-left">GÃ³c dÆ°á»›i - TrÃ¡i</option>
+                        <option value="top-right">Góc trên - Phải</option>
+                        <option value="top-left">Góc trên - Trái</option>
+                        <option value="bottom-right">Góc dưới - Phải</option>
+                        <option value="bottom-left">Góc dưới - Trái</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                        KÃ­ch thÆ°á»›c: {logoConfig.size || 40}px
+                        Kích thước: {logoConfig.size || 40}px
                       </label>
                       <input
                         type="range"
@@ -2433,11 +2433,11 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
 
-              {/* PHáº¦N 2: BANNER QUáº¢NG CÃO */}
+              {/* PHẦN 2: BANNER QUẢNG CÁO */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    ðŸ·ï¸ 2. Banner Quáº£ng CÃ¡o / Giáº£m GiÃ¡
+                    🏷️ 2. Banner Quảng Cáo / Giảm Giá
                   </span>
                   <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
@@ -2446,36 +2446,36 @@ export default function AiVideoEditorPage() {
                       onChange={(e) => setBannerConfig((p) => ({ ...p, enabled: e.target.checked }))}
                       className="w-4 h-4 accent-amber-500 rounded"
                     />
-                    Báº­t Banner
+                    Bật Banner
                   </label>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">TiÃªu Ä‘á» chÃ­nh:</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề chính:</label>
                     <input
                       type="text"
                       value={bannerConfig.title}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="VD: âš¡ FLASH SALE 50% - DUY NHáº¤T HÃ”M NAY"
+                      placeholder="VD: ⚡ FLASH SALE 50% - DUY NHẤT HÔM NAY"
                       className="w-full text-xs font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">MÃ´ táº£ phá»¥ (subtitle):</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Mô tả phụ (subtitle):</label>
                     <input
                       type="text"
                       value={bannerConfig.subtitle || ""}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, subtitle: e.target.value }))}
-                      placeholder="VD: Miá»…n phÃ­ giao hÃ ng toÃ n quá»‘c â€¢ Báº£o hÃ nh chÃ­nh hÃ£ng"
+                      placeholder="VD: Miễn phí giao hàng toàn quốc • Bảo hành chính hãng"
                       className="w-full text-xs font-medium px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Báº¯t Ä‘áº§u (giÃ¢y):</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Bắt đầu (giây):</label>
                       <input
                         type="number"
                         min={0}
@@ -2486,7 +2486,7 @@ export default function AiVideoEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Káº¿t thÃºc (giÃ¢y):</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Kết thúc (giây):</label>
                       <input
                         type="number"
                         min={0}
@@ -2507,7 +2507,7 @@ export default function AiVideoEditorPage() {
                 onClick={() => setShowModal(false)}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
               >
-                LÆ°u & Ãp Dá»¥ng
+                Lưu & Áp Dụng
               </button>
             </div>
           </div>
@@ -2516,4 +2516,3 @@ export default function AiVideoEditorPage() {
     </div>
   );
 }
-Explain
