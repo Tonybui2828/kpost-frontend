@@ -667,6 +667,72 @@ export default function AiVideoEditorPage() {
     return "https://api.kpost.vn";
   };
 
+  // 🌟 HÀM FORMAT GIÂY SANG ĐỊNH DẠNG MM:SS
+  const formatSecToTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  // 🌟 HÀM TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO NHỊP NÓI CỦA NHÂN VẬT
+  const chunkCuesInto3To5Words = (originalCues: SubtitleCue[]): SubtitleCue[] => {
+    const chunked: SubtitleCue[] = [];
+    let cueIndex = 1;
+
+    for (const cue of originalCues) {
+      const text = (cue.text || "").trim();
+      if (!text) continue;
+
+      // Tách thành mảng các từ
+      const words = text.split(/\s+/).filter(Boolean);
+      if (words.length <= 5) {
+        chunked.push({
+          ...cue,
+          id: `sub_cue_${cueIndex++}`,
+          text,
+          timeLabel: `${formatSecToTime(cue.startSec)} - ${formatSecToTime(cue.endSec)}`,
+        });
+        continue;
+      }
+
+      // Chia nhỏ thành các cụm 3 - 5 từ
+      const numWords = words.length;
+      const totalDur = Math.max(0.6, cue.endSec - cue.startSec);
+      let wordIdx = 0;
+
+      while (wordIdx < numWords) {
+        const remaining = numWords - wordIdx;
+        let size = 4; // Mặc định 4 từ mỗi đoạn
+        if (remaining <= 5) {
+          size = remaining;
+        } else if (remaining === 6) {
+          size = 3;
+        } else if (remaining === 7) {
+          size = 4;
+        }
+
+        const chunkWords = words.slice(wordIdx, wordIdx + size);
+        const chunkText = chunkWords.join(" ");
+
+        // Thời gian tỷ lệ thuận theo số lượng từ trong câu
+        const startSec = Number((cue.startSec + (wordIdx / numWords) * totalDur).toFixed(2));
+        const endSec = Number(Math.min(cue.endSec, cue.startSec + ((wordIdx + size) / numWords) * totalDur).toFixed(2));
+
+        chunked.push({
+          id: `sub_cue_${cueIndex++}`,
+          startSec,
+          endSec,
+          timeLabel: `${formatSecToTime(startSec)} - ${formatSecToTime(endSec)}`,
+          text: chunkText,
+        });
+
+        wordIdx += size;
+      }
+    }
+
+    return chunked;
+  };
+
   // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ GỐC (AI WHISPER BÓC BĂNG CHUẨN XÁC 100% LỜI THOẠI VIDEO TIẾNG VIỆT)
   const handleTranscribeWhisper = async () => {
     if (!videoUrl && !selectedFile) {
@@ -821,25 +887,19 @@ export default function AiVideoEditorPage() {
         });
       }
 
-      // 🚨 KIỂM TRA & LOẠI BỎ LỖI ẢO GIÁC LẶP TỪ CỦA WHISPER (NHƯ "ơn Cảm ơn", "Cảm ơn Cảm" LẶP 192 LẦN)
-      if (cues && cues.length >= 4) {
-        const texts = cues.map((c) => c.text.trim().toLowerCase());
-        const countMap: Record<string, number> = {};
-        let maxCount = 0;
-        for (const t of texts) {
-          countMap[t] = (countMap[t] || 0) + 1;
-          if (countMap[t] > maxCount) maxCount = countMap[t];
+      // 🚨 BẢO TOÀN LỜI NÓI NHÂN VẬT THẬT CỦA VIDEO: Chỉ lọc bỏ các câu lặp trùng lặp liên tiếp nếu có
+      if (cues && cues.length > 0) {
+        const deduplicated: SubtitleCue[] = [];
+        let prevText = "";
+        for (const cue of cues) {
+          const t = (cue.text || "").trim();
+          if (t.toLowerCase() === prevText.toLowerCase()) {
+            continue; // Bỏ câu lặp ngay sau câu trước
+          }
+          prevText = t;
+          deduplicated.push(cue);
         }
-        // Nếu có 1 câu bị lặp từ 3 lần trở lên hoặc chiếm hơn 15% tổng số câu
-        const hasRepetitionLoop = maxCount >= 3 && maxCount / cues.length > 0.15;
-        // Nếu có quá nhiều câu lặp cụm "cảm ơn" hoặc quá ngắn (< 10 ký tự)
-        const shortOrThank = texts.filter((t) => t.includes("cảm ơn") || t.length <= 8).length;
-        const hasThankSpam = shortOrThank / cues.length > 0.3;
-
-        if (hasRepetitionLoop || hasThankSpam) {
-          console.warn("Phát hiện ảo giác lặp từ của Whisper ('ơn Cảm ơn' spam), loại bỏ để chuyển sang kịch bản chuẩn.");
-          cues = [];
-        }
+        cues = deduplicated;
       }
 
       // 🛡️ DỰ PHÒNG CHUẨN XÁC NẾU FILE KHÔNG CÓ TIẾNG / ÂM THANH QUÁ NHỎ HOẶC BỊ ẢO GIÁC:
@@ -916,6 +976,11 @@ export default function AiVideoEditorPage() {
           curT = Number((endT + 0.3).toFixed(1));
           cId++;
         }
+      }
+
+      // 🌟 TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI NHÂN VẬT
+      if (cues && cues.length > 0) {
+        cues = chunkCuesInto3To5Words(cues);
       }
 
       if (cues && cues.length > 0) {
@@ -1302,6 +1367,11 @@ export default function AiVideoEditorPage() {
       setTranscribeProgress(90);
       setTranscribeStatus("Đang kích hoạt MC Tiếng Việt lồng tiếng & hiệu ứng ducking âm thanh...");
 
+      // 🌟 TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI NHÂN VẬT
+      if (cues && cues.length > 0) {
+        cues = chunkCuesInto3To5Words(cues);
+      }
+
       if (cues && cues.length > 0) {
         setSubtitleCues(cues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
@@ -1652,8 +1722,8 @@ export default function AiVideoEditorPage() {
 
       if (matchedCue) {
         ctx.save();
-        const subY = height * 0.74; // Nằm ở 1/3 dưới
-        const fontSize = Math.round((subtitleConfig.fontSize || 22) * (width / 360));
+        const subY = height * 0.75; // Nằm chuẩn 1/4 từ góc dưới màn hình lên (25% từ đáy)
+        const fontSize = Math.round((subtitleConfig.fontSize || 20) * (width / 360));
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -2416,38 +2486,18 @@ export default function AiVideoEditorPage() {
                       </div>
                     )}
 
-                    {/* 🌟 PHỤ ĐỀ KARAOKE WORD-BY-WORD: NẰM GỌN 1/3 TỪ DƯỚI LÊN TẠI MỌI THỜI ĐIỂM */}
+                    {/* 🌟 PHỤ ĐỀ CHUẨN 3-5 TỪ: NẰM 1/4 TỪ GÓC DƯỚI MÀN HÌNH LÊN VÀ NẰM GỌN TRONG VIDEO */}
                     {subtitleConfig.enabled && !compareOriginal && currentSubtitleCue && (
-                      <div className="absolute bottom-[26%] left-0 right-0 z-40 pointer-events-none flex justify-center px-4">
-                        <div className="bg-black/60 backdrop-blur-xs px-4 py-2 rounded-2xl border border-white/10 shadow-2xl max-w-[85%] text-center animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute bottom-[25%] left-0 right-0 z-40 pointer-events-none flex justify-center px-4">
+                        <div className="bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 shadow-2xl max-w-[80%] text-center animate-in fade-in zoom-in-95 duration-100">
                           <p
-                            className="font-black leading-tight tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
+                            className="font-black leading-snug tracking-wide text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
                             style={{
-                              fontSize: `${subtitleConfig.fontSize}px`,
-                              textShadow: "0 0 6px rgba(0,0,0,0.9), 0 2px 4px #000",
+                              fontSize: `${Math.min(22, Math.max(16, subtitleConfig.fontSize || 20))}px`,
+                              textShadow: "0 0 8px rgba(0,0,0,0.95), 0 2px 4px #000",
                             }}
                           >
-                            {currentSubtitleCue.words && currentSubtitleCue.words.length > 0 ? (
-                              currentSubtitleCue.words.map((w, wIdx) => {
-                                const isWordActive =
-                                  adjustedCurrentTime >= w.startSec &&
-                                  adjustedCurrentTime <= w.endSec + 0.15;
-                                return (
-                                  <span
-                                    key={wIdx}
-                                    className={`transition-all duration-100 ${
-                                      isWordActive
-                                        ? "text-yellow-300 scale-110 font-black drop-shadow-[0_0_10px_rgba(250,204,21,0.9)]"
-                                        : "text-white opacity-90"
-                                    }`}
-                                  >
-                                    {w.word}
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-yellow-300">{currentSubtitleCue.text}</span>
-                            )}
+                            {currentSubtitleCue.text}
                           </p>
                         </div>
                       </div>
