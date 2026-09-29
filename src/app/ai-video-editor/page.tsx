@@ -567,55 +567,50 @@ export default function AiVideoEditorPage() {
     const apiBase = getApiBaseUrl();
     const cleanSnippet = cleanText.slice(0, 250);
     const encoded = encodeURIComponent(cleanSnippet);
-    const googleProxyUrl = `${apiBase}/api/tts?text=${encoded}`;
-    const googleDirectUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
 
-    let isAudioHandled = false;
+    // Danh sách các nguồn phát âm thanh Google tiếng Việt (tự động thử lần lượt)
+    const audioSources = [
+      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
+      `/api/tts?text=${encoded}`,
+      `${apiBase}/api/tts?text=${encoded}`,
+    ];
 
-    const playWithAudioObj = (url: string, nextFallback?: () => void) => {
-      try {
-        const audio = new Audio(url);
-        ttsAudioRef.current = audio;
-        audio.playbackRate = voiceoverConfig.rate || 1.0;
-        audio.onended = () => {
-          isAudioHandled = true;
-          restoreVolume();
-        };
-        audio.onerror = () => {
-          if (!isAudioHandled && nextFallback) nextFallback();
-          else restoreVolume();
-        };
-        const p = audio.play();
-        if (p !== undefined) {
-          p.catch(() => {
-            if (!isAudioHandled && nextFallback) nextFallback();
-            else restoreVolume();
-          });
+    let currentSrcIdx = 0;
+    let isHandled = false;
+
+    const tryNextAudioSource = () => {
+      if (isHandled) return;
+      if (currentSrcIdx < audioSources.length) {
+        const srcUrl = audioSources[currentSrcIdx];
+        currentSrcIdx++;
+
+        try {
+          const audio = new Audio();
+          audio.src = srcUrl;
+          ttsAudioRef.current = audio;
+          audio.playbackRate = voiceoverConfig.rate || 1.0;
+          audio.onended = () => {
+            isHandled = true;
+            restoreVolume();
+          };
+          audio.onerror = () => {
+            tryNextAudioSource();
+          };
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                isHandled = true;
+              })
+              .catch(() => {
+                tryNextAudioSource();
+              });
+          }
+        } catch {
+          tryNextAudioSource();
         }
-      } catch (e) {
-        if (!isAudioHandled && nextFallback) nextFallback();
-        else restoreVolume();
-      }
-    };
-
-    // 1. Thử gọi qua API backend Google TTS proxy (api.kpost.vn/api/tts)
-    playWithAudioObj(googleProxyUrl, () => {
-      // 2. Thử gọi Google TTS trực tiếp
-      playWithAudioObj(googleDirectUrl, () => {
-        // 3. Fallback ResponsiveVoice nếu có
-        if (typeof window !== "undefined" && (window as any).responsiveVoice && (window as any).responsiveVoice.voiceSupport()) {
-          try {
-            (window as any).responsiveVoice.speak(cleanSnippet, "Vietnamese Female", {
-              pitch: voiceoverConfig.pitch || 1.0,
-              rate: voiceoverConfig.rate || 1.0,
-              onend: restoreVolume,
-              onerror: restoreVolume,
-            });
-            return;
-          } catch {}
-        }
-
-        // 4. Fallback SpeechSynthesis: CHỈ DÙNG KHI CÓ GIỌNG VIỆT THẬT (LOẠI BỎ 100% GIỌNG TÂY)
+      } else {
+        // Fallback cuối cùng nếu toàn bộ API audio bị chặn: SpeechSynthesis
         if ("speechSynthesis" in window) {
           const allVoices = window.speechSynthesis.getVoices();
           const realViVoice = allVoices.find((v) => {
@@ -643,10 +638,11 @@ export default function AiVideoEditorPage() {
             } catch {}
           }
         }
-
         restoreVolume();
-      });
-    });
+      }
+    };
+
+    tryNextAudioSource();
   };
 
   // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC CỦA BACKEND KPOST (CHỐNG LỖI 404 KHI GỌI TỪ FRONTEND KPOST.VN)
@@ -2328,6 +2324,9 @@ export default function AiVideoEditorPage() {
                         setVideoLoadError(null);
                       }}
                       onPlay={() => setIsPlaying(true)}
+                      onSeeked={() => {
+                        lastSpokenCueIdRef.current = null;
+                      }}
                       onPause={() => {
                         setIsPlaying(false);
                         if (ttsAudioRef.current) {
