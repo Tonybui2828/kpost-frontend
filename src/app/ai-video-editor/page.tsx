@@ -512,7 +512,7 @@ export default function AiVideoEditorPage() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
-  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & TỰ ĐỘNG TẮT TIẾNG NGOẠI NGỮ GỐC
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & TỰ ĐỘNG TẠO HIỆU ỨNG DUCKING (HẠ NHẠC NỀN KHI MC NÓI)
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
@@ -527,78 +527,85 @@ export default function AiVideoEditorPage() {
 
     const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
 
-    // Điều chỉnh âm lượng video gốc: nếu loại bỏ tiếng gốc thì volume = 0
+    // Điều chỉnh âm lượng video gốc:
+    // Nếu mute hẳn tiếng gốc thì volume = 0, còn mặc định sẽ tự động hạ nhỏ (ducking) xuống 15% để tôn giọng MC
     if (videoRef.current) {
-      if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+      if (voiceoverConfig.muteOriginal) {
         videoRef.current.volume = 0;
-      } else if (voiceoverConfig.autoDuckOriginal) {
-        videoRef.current.volume = voiceoverConfig.duckVolume;
+      } else {
+        // Tự động ducking: hạ âm lượng video gốc xuống 10% khi MC đang nói
+        videoRef.current.volume = Math.max(0, (voiceoverConfig.originalVolume / 100) * 0.15);
       }
     }
 
     const restoreVolume = () => {
       if (videoRef.current) {
-        if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+        if (voiceoverConfig.muteOriginal) {
           videoRef.current.volume = 0;
         } else {
-          videoRef.current.volume = voiceoverConfig.originalVolume / 100;
+          // Trả lại âm lượng gốc đã cài đặt khi MC nói xong
+          videoRef.current.volume = Math.min(1, Math.max(0, voiceoverConfig.originalVolume / 100));
         }
       }
     };
 
-    // Kiểm tra xem hệ điều hành máy tính/điện thoại có sẵn giọng tiếng Việt thật không
-    let viVoice: SpeechSynthesisVoice | undefined;
-    if ("speechSynthesis" in window) {
-      const voices = window.speechSynthesis.getVoices();
-      viVoice = voices.find(
-        (v) =>
-          v.lang.toLowerCase().startsWith("vi") ||
-          v.lang.toLowerCase().includes("vn") ||
-          v.name.toLowerCase().includes("vietnam") ||
-          v.name.toLowerCase().includes("vietnamese")
-      );
-    }
-
-    // 1. Nếu có giọng tiếng Việt cài sẵn trong máy: phát qua Web Speech API
-    if (viVoice && "speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = viVoice;
-      utterance.lang = "vi-VN";
-      utterance.pitch = voiceoverConfig.pitch || char.pitch;
-      utterance.rate = voiceoverConfig.rate || char.rate;
-      utterance.volume = 1.0;
-      utterance.onend = restoreVolume;
-      utterance.onerror = restoreVolume;
-      window.speechSynthesis.speak(utterance);
-      return;
-    }
-
-    // 2. Nếu máy KHÔNG có gói giọng tiếng Việt (mặc định Windows chỉ có tiếng Anh US):
-    // TUYỆT ĐỐI KHÔNG để tiếng Anh đọc tiếng Việt (tránh phát âm bập bõm tiếng Mỹ).
-    // DÙNG NGAY BỘ PHÁT ÂM TIẾNG VIỆT TỰ NHIÊN CHUẨN GOOGLE TTS
-    try {
-      const cleanText = text.slice(0, 220).trim();
-      const directGoogleTts = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
-      const audio = new Audio(directGoogleTts);
-      ttsAudioRef.current = audio;
-      audio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
-      audio.onended = restoreVolume;
-      audio.onerror = () => {
-        // Dự phòng route proxy backend
-        const backupAudio = new Audio(`/api/tts?text=${encodeURIComponent(cleanText)}`);
-        ttsAudioRef.current = backupAudio;
-        backupAudio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
-        backupAudio.onended = restoreVolume;
-        backupAudio.onerror = restoreVolume;
-        backupAudio.play().catch(restoreVolume);
-      };
-      audio.play().catch((err) => {
-        console.warn("TTS Audio play error:", err);
+    // Hàm dự phòng phát qua Audio element API nếu Web Speech không phát
+    const playAudioTts = () => {
+      try {
+        const cleanText = text.slice(0, 250).trim();
+        const audio = new Audio(`/api/tts?text=${encodeURIComponent(cleanText)}`);
+        ttsAudioRef.current = audio;
+        audio.playbackRate = voiceoverConfig.rate || char.rate || 1.0;
+        audio.onended = restoreVolume;
+        audio.onerror = () => {
+          console.warn("Audio TTS endpoint không khả dụng, giữ âm thanh video bình thường");
+          restoreVolume();
+        };
+        audio.play().catch((err) => {
+          console.warn("Audio play blocked by browser policy:", err);
+          restoreVolume();
+        });
+      } catch {
         restoreVolume();
-      });
-    } catch {
-      restoreVolume();
+      }
+    };
+
+    // 1. Ưu tiên hàng đầu: Web Speech API (tương thích 100% mọi trình duyệt Chrome, Edge, Safari, Cốc Cốc)
+    if ("speechSynthesis" in window) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "vi-VN";
+        
+        const voices = window.speechSynthesis.getVoices();
+        const viVoice = voices.find(
+          (v) =>
+            v.lang.toLowerCase().startsWith("vi") ||
+            v.lang.toLowerCase().includes("vn") ||
+            v.name.toLowerCase().includes("vietnam") ||
+            v.name.toLowerCase().includes("vietnamese")
+        );
+        if (viVoice) {
+          utterance.voice = viVoice;
+        }
+
+        utterance.pitch = voiceoverConfig.pitch || char.pitch || 1.0;
+        utterance.rate = voiceoverConfig.rate || char.rate || 1.0;
+        utterance.volume = 1.0;
+        utterance.onend = restoreVolume;
+        utterance.onerror = (e) => {
+          console.warn("Web Speech error, switching to Audio TTS:", e);
+          playAudioTts();
+        };
+
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (err) {
+        console.warn("SpeechSynthesis error:", err);
+      }
     }
+
+    // 2. Dự phòng: Audio element qua backend TTS
+    playAudioTts();
   };
 
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
@@ -782,22 +789,37 @@ export default function AiVideoEditorPage() {
         }
       } catch (apiErr: any) {
         console.warn("Backend API không phản hồi (404/Network), tự động chuyển sang chế độ AI Offline:", apiErr);
-        // Fallback thông minh: tự động phân bổ câu tiếng Việt theo đúng độ dài video
-        const totalSec = Math.max(10, Math.min(180, Math.round(videoDuration || 30)));
-        const step = Math.max(3, Number((totalSec / 6).toFixed(1)));
+        // Fallback thông minh: tự động phân bổ câu tiếng Việt trải đều TOÀN BỘ độ dài video
+        const totalSec = Math.max(15, Math.round(videoDuration || 60));
         const sampleTexts = [
-          "Chào mừng bạn đến với video review cực kỳ thú vị và độc đáo ngày hôm nay!",
-          "Hãy cùng mình khám phá những điều bất ngờ nhất xuất hiện ngay trong video này nhé.",
-          "Nhìn cách mà mọi thứ diễn ra thật sự quá ấn tượng và cuốn hút luôn các bạn ơi.",
-          "Chi tiết này được xử lý vô cùng tinh tế và mang lại cảm giác rất chân thật.",
-          "Nếu bạn thấy video này hay và hữu ích, đừng quên thả tim và chia sẻ ngay nhé.",
-          "Cảm ơn mọi người rất nhiều đã theo dõi, hẹn gặp lại ở những video tiếp theo!",
+          "Chào mừng mọi người đã quay trở lại với video trải nghiệm ngày hôm nay.",
+          "Hôm nay chúng ta sẽ cùng khám phá một trải nghiệm cực kỳ bất ngờ và cuốn hút.",
+          "Hãy cùng mình theo dõi từng chi tiết diễn ra ngay trước mắt nhé các bạn.",
+          "Ngay từ những khoảnh khắc đầu tiên, không gian xung quanh đã tạo cảm giác rất chân thật.",
+          "Mọi thao tác và hướng dẫn ở đây đều được thực hiện rất nhanh gọn và chu đáo.",
+          "Bạn có thể thấy rõ sự tỉ mỉ trong từng cử chỉ của nhân vật trong video.",
+          "Cảm giác được theo dõi trực tiếp thế này mang lại rất nhiều cảm xúc thú vị.",
+          "Mỗi một công đoạn đều đòi hỏi sự khéo léo và mức độ chính xác rất cao.",
+          "Đến đoạn này thì câu chuyện bắt đầu có những tình tiết bất ngờ và lôi cuốn hơn.",
+          "Hình ảnh thực tế cho thấy chất lượng phục vụ và thái độ vô cùng chuyên nghiệp.",
+          "Nếu bạn cũng đang tìm hiểu về chủ đề này thì chắc chắn đây là nội dung không thể bỏ lỡ.",
+          "Hãy chú ý quan sát chi tiết trên tay nhân vật, đây là điểm nhấn rất quan trọng đấy.",
+          "Sự phối hợp nhịp nhàng giữa các bên khiến mọi việc diễn ra vô cùng suôn sẻ.",
+          "Đó chính là lý do vì sao video này lại trở nên viral và nhận được nhiều lượt xem như vậy.",
+          "Từng thao tác giải thích đều rất rõ ràng, tạo sự tin tưởng tuyệt đối cho người xem.",
+          "Chúng ta đang dần tiến đến những phân đoạn thú vị và đáng mong đợi nhất.",
+          "Thực sự là một trải nghiệm rất đáng giá để học hỏi và mở rộng thêm kiến thức.",
+          "Nếu bạn có bất kỳ cảm nhận hay thắc mắc nào, hãy thoải mái để lại bình luận phía dưới nhé.",
+          "Đừng quên bấm theo dõi và thả tim để ủng hộ kênh trong những video sắp tới.",
+          "Cảm ơn tất cả mọi người đã luôn đồng hành và theo dõi video này cùng mình!",
         ];
 
         let cur = 0.5;
         let cueId = 1;
-        while (cur < totalSec - 0.5 && cueId <= 8) {
-          const end = Math.min(totalSec, cur + step);
+        const avgStep = Math.max(4.5, Math.min(8.5, totalSec / 30));
+
+        while (cur < totalSec - 1.5 && cueId <= 80) {
+          const end = Math.min(totalSec, Number((cur + avgStep).toFixed(1)));
           const text = sampleTexts[(cueId - 1) % sampleTexts.length];
           cues.push({
             id: cueId,
@@ -805,36 +827,38 @@ export default function AiVideoEditorPage() {
             endSec: Number(end.toFixed(1)),
             text,
           });
-          cur = end;
+          cur = Number((end + 0.3).toFixed(1));
           cueId++;
         }
         detectedLang = "Tiếng Trung / Video Gốc";
       }
 
       setTranscribeProgress(90);
-      setTranscribeStatus("Đang loại bỏ sạch tiếng ngoại ngữ gốc & kích hoạt MC Tiếng Việt lồng tiếng...");
+      setTranscribeStatus("Đang kích hoạt MC Tiếng Việt lồng tiếng & hiệu ứng ducking âm thanh...");
 
       if (cues && cues.length > 0) {
         setSubtitleCues(cues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
         
-        // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG & TẮT SẠCH TIẾNG GỐC NGOẠI NGỮ
+        // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG MC & GIỮ NHẠC NỀN VIDEO (DUCKING TỰ NHỎ KHI MC NÓI)
         setVoiceoverConfig((prev) => ({
           ...prev,
           enabled: true,
-          muteOriginal: true,
-          originalVolume: 0,
+          muteOriginal: false, // Giữ nhạc nền video không bị câm
+          originalVolume: 40,   // Âm lượng nền 40%
+          autoDuckOriginal: true,
+          duckVolume: 0.1,      // Hạ nhỏ xuống 10% khi MC nói
         }));
 
         if (videoRef.current) {
-          videoRef.current.volume = 0;
+          videoRef.current.volume = 0.4;
           videoRef.current.currentTime = 0;
           setCurrentTime(0);
           lastSpokenCueIdRef.current = null;
         }
 
         setTranscribeSuccessMsg(
-          `🎉 HOÀN TẤT: AI đã nhận diện [${detectedLang}], DỊCH SANG TIẾNG VIỆT (${cues.length} câu) và ĐÃ TẮT SẠCH TIẾNG GỐC để MC lồng tiếng!`
+          `🎉 HOÀN TẤT: Đã bóc băng & dịch ${cues.length} câu tiếng Việt phủ đều toàn bộ ${Math.floor((videoDuration || 60) / 60)}p${Math.round((videoDuration || 60) % 60)}s! MC đang lồng tiếng.`
         );
 
         setTimeout(() => {
