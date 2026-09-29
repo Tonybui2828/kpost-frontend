@@ -925,20 +925,34 @@ export default function AiVideoEditorPage() {
       if (cues && cues.length > 0) {
         setSubtitleCues(cues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
+        
+        // 🔇 TẮT LỒNG TIẾNG: Nút "Tạo Sub Video" chỉ tạo phụ đề hiển thị, GIỮ NGUYÊN ÂM THANH GỐC và KHÔNG lồng tiếng MC
+        setVoiceoverConfig((prev) => ({
+          ...prev,
+          enabled: false,
+          muteOriginal: false,
+          originalVolume: 100,
+        }));
+
+        if (ttsAudioRef.current) {
+          try {
+            ttsAudioRef.current.pause();
+            ttsAudioRef.current.currentTime = 0;
+          } catch {}
+        }
+        if ("speechSynthesis" in window) {
+          try {
+            window.speechSynthesis.cancel();
+          } catch {}
+        }
+
+        if (videoRef.current) {
+          videoRef.current.volume = 1.0;
+        }
+
         setTranscribeSuccessMsg(
           `🎯 AI Whisper đã bóc băng chính xác 100% với ${cues.length} câu phụ đề cho video!`
         );
-
-        // Tự động tua về đầu và đọc câu đầu tiên
-        if (videoRef.current) {
-          videoRef.current.currentTime = 0;
-          setCurrentTime(0);
-          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
-        if (cues[0]?.text) {
-          lastSpokenCueIdRef.current = cues[0].id;
-          speakSentence(cues[0].text);
-        }
       } else {
         alert("Không nhận diện được lời thoại hoặc âm thanh quá nhỏ. Vui lòng thử lại!");
       }
