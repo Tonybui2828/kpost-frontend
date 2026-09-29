@@ -571,12 +571,44 @@ export default function AiVideoEditorPage() {
     // Danh sách các nguồn phát âm thanh Google tiếng Việt (tự động thử lần lượt)
     const audioSources = [
       `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
+      `${apiBase}/ai-content/tts?text=${encoded}`,
       `/api/tts?text=${encoded}`,
       `${apiBase}/api/tts?text=${encoded}`,
     ];
 
     let currentSrcIdx = 0;
     let isHandled = false;
+
+    const fallbackToSpeechSynthesis = () => {
+      if (isHandled) return;
+      isHandled = true;
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.resume();
+          const utt = new SpeechSynthesisUtterance(cleanSnippet);
+          utt.lang = "vi-VN";
+          const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+          const viVoice = voices.find((v) => {
+            const l = (v.lang || "").toLowerCase().replace("_", "-");
+            const n = (v.name || "").toLowerCase();
+            return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
+          });
+          if (viVoice) {
+            utt.voice = viVoice;
+          }
+          utt.rate = voiceoverConfig.rate || 1.0;
+          utt.pitch = voiceoverConfig.pitch || 1.0;
+          utt.onend = restoreVolume;
+          utt.onerror = restoreVolume;
+          window.speechSynthesis.speak(utt);
+          return;
+        } catch (e) {
+          console.warn("SpeechSynthesis error:", e);
+        }
+      }
+      restoreVolume();
+    };
 
     const tryNextAudioSource = () => {
       if (isHandled) return;
@@ -585,10 +617,15 @@ export default function AiVideoEditorPage() {
         currentSrcIdx++;
 
         try {
-          const audio = new Audio();
+          // Bắt buộc dùng document.createElement để gán referrerpolicy="no-referrer"
+          // Ngăn trình duyệt gửi Referer của website, tránh bị Google chặn HTTP 404!
+          const audio = document.createElement("audio");
+          audio.setAttribute("referrerpolicy", "no-referrer");
+          (audio as any).referrerPolicy = "no-referrer";
           audio.src = srcUrl;
           ttsAudioRef.current = audio;
           audio.playbackRate = voiceoverConfig.rate || 1.0;
+          
           audio.onended = () => {
             isHandled = true;
             restoreVolume();
@@ -610,35 +647,7 @@ export default function AiVideoEditorPage() {
           tryNextAudioSource();
         }
       } else {
-        // Fallback cuối cùng nếu toàn bộ API audio bị chặn: SpeechSynthesis
-        if ("speechSynthesis" in window) {
-          const allVoices = window.speechSynthesis.getVoices();
-          const realViVoice = allVoices.find((v) => {
-            const l = (v.lang || "").toLowerCase().replace("_", "-");
-            const n = (v.name || "").toLowerCase();
-            return (
-              (l === "vi-vn" || l.startsWith("vi")) &&
-              !n.includes("susan") &&
-              !n.includes("david") &&
-              !n.includes("zira") &&
-              !n.includes("mark") &&
-              !n.includes("english")
-            );
-          });
-
-          if (realViVoice) {
-            try {
-              const utt = new SpeechSynthesisUtterance(cleanSnippet);
-              utt.voice = realViVoice;
-              utt.lang = "vi-VN";
-              utt.onend = restoreVolume;
-              utt.onerror = restoreVolume;
-              window.speechSynthesis.speak(utt);
-              return;
-            } catch {}
-          }
-        }
-        restoreVolume();
+        fallbackToSpeechSynthesis();
       }
     };
 
@@ -2160,28 +2169,88 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* TÙY CHỌN */}
-              <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
-                <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={subtitleConfig.enabled}
-                    onChange={(e) => setSubtitleConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                    className="w-4 h-4 accent-purple-600 rounded"
-                  />
-                  Hiện phụ đề trên video
-                </label>
-                <div className="flex items-center gap-2 font-medium text-slate-600">
-                  <span>Cỡ chữ:</span>
-                  <select
-                    value={subtitleConfig.fontSize}
-                    onChange={(e) => setSubtitleConfig((p) => ({ ...p, fontSize: Number(e.target.value) }))}
-                    className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold"
-                  >
-                    <option value={18}>Nhỏ (18px)</option>
-                    <option value={22}>Vừa (22px)</option>
-                    <option value={26}>To (26px)</option>
-                    <option value={30}>Rất to (30px)</option>
-                  </select>
+              <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={subtitleConfig.enabled}
+                      onChange={(e) => setSubtitleConfig((p) => ({ ...p, enabled: e.target.checked }))}
+                      className="w-4 h-4 accent-purple-600 rounded"
+                    />
+                    Hiện phụ đề trên video
+                  </label>
+                  <div className="flex items-center gap-2 font-medium text-slate-600">
+                    <span>Cỡ chữ:</span>
+                    <select
+                      value={subtitleConfig.fontSize}
+                      onChange={(e) => setSubtitleConfig((p) => ({ ...p, fontSize: Number(e.target.value) }))}
+                      className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                    >
+                      <option value={18}>Nhỏ (18px)</option>
+                      <option value={20}>Vừa (20px)</option>
+                      <option value={24}>To (24px)</option>
+                      <option value={28}>Rất to (28px)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* BẬT / TẮT LỒNG TIẾNG MC TRỰC TIẾP */}
+                <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 font-black cursor-pointer text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-xl border border-violet-200 transition-all select-none">
+                    <input
+                      type="checkbox"
+                      checked={voiceoverConfig.enabled}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setVoiceoverConfig((p) => ({
+                          ...p,
+                          enabled: isChecked,
+                          autoDuckOriginal: true,
+                          originalVolume: isChecked ? 25 : 100,
+                        }));
+                        if (isChecked && subtitleCues.length > 0) {
+                          lastSpokenCueIdRef.current = subtitleCues[0].id;
+                          speakSentence(subtitleCues[0].text);
+                        } else {
+                          if (ttsAudioRef.current) {
+                            try { ttsAudioRef.current.pause(); } catch {}
+                          }
+                          if ("speechSynthesis" in window) {
+                            try { window.speechSynthesis.cancel(); } catch {}
+                          }
+                          if (videoRef.current) videoRef.current.volume = 1.0;
+                        }
+                      }}
+                      className="w-4 h-4 accent-violet-600 rounded"
+                    />
+                    <span>🎙️ Lồng Tiếng MC AI {voiceoverConfig.enabled ? "(ĐANG BẬT)" : "(ĐANG TẮT)"}</span>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (subtitleCues.length > 0) {
+                          speakSentence(subtitleCues[0].text);
+                        } else {
+                          speakSentence("Xin chào! Hệ thống lồng tiếng MC tiếng Việt đã sẵn sàng.");
+                        }
+                      }}
+                      className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[11px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Bấm để kiểm tra loa và giọng đọc AI"
+                    >
+                      <Volume2 size={13} /> Thử Loa / Giọng Đọc
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowVoiceoverModal(true)}
+                      className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded-lg cursor-pointer"
+                    >
+                      Cài đặt âm lượng
+                    </button>
+                  </div>
                 </div>
               </div>
 
