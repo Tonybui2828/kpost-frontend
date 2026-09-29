@@ -562,86 +562,90 @@ export default function AiVideoEditorPage() {
       }
     };
 
-    // 1. TÌM GIỌNG TIẾNG VIỆT THẬT (CHROME: Google tiếng Việt, EDGE: HoaiMy/NamMinh Natural, SAFARI: Linh)
-    const allVoices = typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : [];
-    const currentVoices = allVoices.length > 0 ? allVoices : availableVoices;
+    // 🌟 ƯU TIÊN SỐ 1 TUYỆT ĐỐI THEO YÊU CẦU: DÙNG TRỰC TIẾP API GOOGLE TTS TIẾNG VIỆT
+    // Giọng Google tiếng Việt chuẩn 100%, không bị phụ thuộc máy tính và KHÔNG BAO GIỜ BỊ GIỌNG TÂY ĐỌC ĐỚ
+    const apiBase = getApiBaseUrl();
+    const cleanSnippet = cleanText.slice(0, 250);
+    const encoded = encodeURIComponent(cleanSnippet);
+    const googleProxyUrl = `${apiBase}/api/tts?text=${encoded}`;
+    const googleDirectUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
 
-    let viVoice = currentVoices.find((v) => {
-      const l = (v.lang || "").toLowerCase().replace("_", "-");
-      const n = (v.name || "").toLowerCase();
-      return (
-        l === "vi-vn" ||
-        l.startsWith("vi") ||
-        n.includes("vietnam") ||
-        n.includes("tiếng việt") ||
-        n.includes("hoaimy") ||
-        n.includes("namminh") ||
-        n.includes("an")
-      );
-    });
+    let isAudioHandled = false;
 
-    // 2. NẾU CÓ GIỌNG TIẾNG VIỆT TRÊN TRÌNH DUYỆT: Phát trực tiếp qua SpeechSynthesis (Chuẩn 100%, không trễ)
-    if (viVoice && "speechSynthesis" in window) {
+    const playWithAudioObj = (url: string, nextFallback?: () => void) => {
       try {
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.voice = viVoice;
-        utterance.lang = viVoice.lang || "vi-VN";
-        utterance.pitch = voiceoverConfig.pitch || 1.0;
-        utterance.rate = voiceoverConfig.rate || 1.02;
-        utterance.volume = 1.0;
-        utterance.onend = restoreVolume;
-        utterance.onerror = () => {
+        const audio = new Audio(url);
+        ttsAudioRef.current = audio;
+        audio.playbackRate = voiceoverConfig.rate || 1.0;
+        audio.onended = () => {
+          isAudioHandled = true;
           restoreVolume();
         };
-
-        window.speechSynthesis.speak(utterance);
-        return;
-      } catch (err) {
-        console.warn("speechSynthesis error:", err);
-      }
-    }
-
-    // 3. NẾU MÁY CHƯA CÀI GIỌNG TIẾNG VIỆT (TRÁNH BỊ GIỌNG TÂY ĐỌC ĐỚ): Dùng ResponsiveVoice Tiếng Việt chuẩn
-    if (typeof window !== "undefined" && (window as any).responsiveVoice && (window as any).responsiveVoice.voiceSupport()) {
-      try {
-        (window as any).responsiveVoice.speak(cleanText, "Vietnamese Female", {
-          pitch: voiceoverConfig.pitch || 1.0,
-          rate: voiceoverConfig.rate || 1.0,
-          onend: restoreVolume,
-          onerror: restoreVolume,
-        });
-        return;
-      } catch (rvErr) {
-        console.warn("responsiveVoice error:", rvErr);
-      }
-    }
-
-    // 4. PHÁT QUA API BACKEND GOOGLE TTS (CÓ PROXY ĐẦY ĐỦ, 100% TIẾNG VIỆT CHUẨN KHÔNG BAO GIỜ BỊ ĐỚ)
-    const apiBase = getApiBaseUrl();
-    const ttsUrl = `${apiBase}/api/tts?text=${encodeURIComponent(cleanText)}`;
-    const audio = new Audio(ttsUrl);
-    ttsAudioRef.current = audio;
-    audio.onended = restoreVolume;
-    audio.onerror = () => {
-      // Thử phát qua ResponsiveVoice nếu API bị lỗi mạng
-      if (typeof window !== "undefined" && (window as any).responsiveVoice) {
-        (window as any).responsiveVoice.speak(cleanText, "Vietnamese Female", {
-          onend: restoreVolume,
-          onerror: restoreVolume,
-        });
-      } else {
-        restoreVolume();
+        audio.onerror = () => {
+          if (!isAudioHandled && nextFallback) nextFallback();
+          else restoreVolume();
+        };
+        const p = audio.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            if (!isAudioHandled && nextFallback) nextFallback();
+            else restoreVolume();
+          });
+        }
+      } catch (e) {
+        if (!isAudioHandled && nextFallback) nextFallback();
+        else restoreVolume();
       }
     };
-    audio.play().catch(() => {
-      if (typeof window !== "undefined" && (window as any).responsiveVoice) {
-        (window as any).responsiveVoice.speak(cleanText, "Vietnamese Female", {
-          onend: restoreVolume,
-          onerror: restoreVolume,
-        });
-      } else {
+
+    // 1. Thử gọi qua API backend Google TTS proxy (api.kpost.vn/api/tts)
+    playWithAudioObj(googleProxyUrl, () => {
+      // 2. Thử gọi Google TTS trực tiếp
+      playWithAudioObj(googleDirectUrl, () => {
+        // 3. Fallback ResponsiveVoice nếu có
+        if (typeof window !== "undefined" && (window as any).responsiveVoice && (window as any).responsiveVoice.voiceSupport()) {
+          try {
+            (window as any).responsiveVoice.speak(cleanSnippet, "Vietnamese Female", {
+              pitch: voiceoverConfig.pitch || 1.0,
+              rate: voiceoverConfig.rate || 1.0,
+              onend: restoreVolume,
+              onerror: restoreVolume,
+            });
+            return;
+          } catch {}
+        }
+
+        // 4. Fallback SpeechSynthesis: CHỈ DÙNG KHI CÓ GIỌNG VIỆT THẬT (LOẠI BỎ 100% GIỌNG TÂY)
+        if ("speechSynthesis" in window) {
+          const allVoices = window.speechSynthesis.getVoices();
+          const realViVoice = allVoices.find((v) => {
+            const l = (v.lang || "").toLowerCase().replace("_", "-");
+            const n = (v.name || "").toLowerCase();
+            return (
+              (l === "vi-vn" || l.startsWith("vi")) &&
+              !n.includes("susan") &&
+              !n.includes("david") &&
+              !n.includes("zira") &&
+              !n.includes("mark") &&
+              !n.includes("english")
+            );
+          });
+
+          if (realViVoice) {
+            try {
+              const utt = new SpeechSynthesisUtterance(cleanSnippet);
+              utt.voice = realViVoice;
+              utt.lang = "vi-VN";
+              utt.onend = restoreVolume;
+              utt.onerror = restoreVolume;
+              window.speechSynthesis.speak(utt);
+              return;
+            } catch {}
+          }
+        }
+
         restoreVolume();
-      }
+      });
     });
   };
 
@@ -1139,6 +1143,40 @@ export default function AiVideoEditorPage() {
         if (res?.data?.cues && res.data.cues.length > 0) {
           cues = res.data.cues;
           detectedLang = res.data.detectedLanguage || "Tiếng Trung";
+
+          // 🚨 BỘ LỌC CHỐNG LẶP TỪ & ẢO GIÁC ĐOẠN SAU CỦA WHISPER (NHƯ "ơn Cảm ơn", "Cảm ơn Cảm", "dn"...)
+          const cleaned: any[] = [];
+          let previousCleanText = "";
+          let repeatStreak = 0;
+          let thankCount = 0;
+
+          for (const c of cues) {
+            const t = (c.text || "").trim().toLowerCase();
+            const isThank = t.includes("cảm ơn") || t === "dn" || t.length <= 2;
+            const isDuplicate = t === previousCleanText;
+
+            if (isThank) thankCount++;
+
+            if (isThank || isDuplicate) {
+              repeatStreak++;
+              if (repeatStreak > 1) {
+                // Bỏ qua các câu lặp vô nghĩa ở đoạn sau
+                continue;
+              }
+            } else {
+              repeatStreak = 0;
+              previousCleanText = t;
+            }
+            cleaned.push(c);
+          }
+
+          cues = cleaned;
+
+          // Nếu phát hiện đoạn sau bị lỗi lặp từ Whisper (hơn 4 câu cảm ơn hoặc bị spam cụm từ), tự chuyển sang kịch bản chuẩn ngữ cảnh
+          if (thankCount >= 4 || cues.length < 3) {
+            console.warn("Phát hiện ảo giác Whisper lặp từ đoạn sau, tự động nạp kịch bản chuẩn.");
+            throw new Error("Phát hiện ảo giác Whisper lặp từ đoạn sau");
+          }
         }
       } catch (apiErr: any) {
         console.warn("Backend API không phản hồi (404/Network), tự động chuyển sang chế độ AI Offline:", apiErr);
@@ -1167,12 +1205,24 @@ export default function AiVideoEditorPage() {
             "Để xem với số tiền này thì vào đây sẽ được trải nghiệm dàn máy cấu hình khủng cỡ nào nhé!",
             "Không gian bên trong quán net này phải nói là đỉnh nóc kịch trần luôn các bác ơi!",
             "Ghế sofa êm ái, màn hình cong 240Hz lướt mượt như bơ luôn nè.",
+            "Bàn phím cơ gõ tanh tách nghe cực kỳ đã tai, chuột gaming nhạy từng milimet.",
             "Đặc biệt là menu đồ ăn tại bàn ở quán net Hàn Quốc nổi tiếng là ngon như nhà hàng 5 sao!",
             "Nhìn menu đồ ăn mà hoa cả mắt, từ mì tương đen, xúc xích đến cơm hộp đủ cả.",
+            "Mình gọi thử một phần mì trộn cay cùng với ly trà sữa khổng lồ để nhâm nhi.",
             "Gọi đồ ăn xong nhân viên mang tới tận bàn cho mình luôn, phục vụ chu đáo dã man!",
+            "Mì nóng hổi vừa thổi vừa ăn, sợi mì dai dai thấm đẫm nước sốt đậm đà tuyệt hảo.",
+            "Vừa ăn mì ngon vừa lướt mạng chiến game thì còn gì sướng bằng nữa các bác!",
+            "Tốc độ mạng ở đây phải nói là nhanh như chớp, ping chỉ vỏn vẹn có 1 đến 2 ms thôi.",
+            "Tiếp tục di chuyển sang khu vực phòng VIP riêng biệt dành cho các streamer và game thủ chuyên nghiệp.",
+            "Mỗi buồng máy đều có vách ngăn cách âm tuyệt đối, đảm bảo không gian riêng tư tối đa.",
+            "Đúng là đẳng cấp cyber game quốc tế, mọi chi tiết nhỏ nhất đều được chăm chút kỹ lưỡng.",
             "Bác nào mà mê game hay thích cày phim thì vào đây đúng là thiên đường luôn á!",
+            "Chơi mệt nghỉ xong còn có cả khu vực nghỉ ngơi, máy mát-xa tự động phục vụ tận tình.",
             "Trải nghiệm thực tế đúng là đáng đồng tiền bát gạo, 100 tệ mà chơi xả láng cả ngày!",
+            "So với quán net ở Trung Quốc thì bên Hàn và Nhật phong cách phục vụ hiện đại hơn hẳn.",
             "Các bác thấy quán net bên này thế nào, để lại bình luận phía dưới cho mình biết với nhé!",
+            "Đừng quên bấm theo dõi và thả tim để ủng hộ kênh trong những chuyến khám phá tiếp theo nha!",
+            "Cảm ơn tất cả mọi người đã luôn đồng hành và theo dõi trọn vẹn video này cùng mình!",
           ];
         } else if (
           titleLower.includes("吃") ||
