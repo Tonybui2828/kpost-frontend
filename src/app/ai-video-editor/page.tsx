@@ -475,13 +475,26 @@ export default function AiVideoEditorPage() {
   const [showVoiceoverModal, setShowVoiceoverModal] = useState<boolean>(false);
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
-    selectedVoiceId: "child_boy",
-    autoDuckOriginal: true,
-    duckVolume: 0.25,
-    pitch: 1.65,
-    rate: 1.08,
+    selectedVoiceId: "adult_female_sweet", // Mai Anh (Nữ Review Dịu Dàng - Chuẩn Tiếng Việt)
+    muteOriginal: true, // 🌟 LOẠI BỎ 100% TIẾNG NGOẠI NGỮ GỐC (Tiếng Trung, Anh, Pháp...)
+    originalVolume: 0, // 0 = câm sạch tiếng gốc, chỉ phát lồng tiếng Việt
+    autoDuckOriginal: false,
+    duckVolume: 0.15,
+    pitch: 1.05,
+    rate: 1.02,
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
+
+  // 🔥 ĐỒNG BỘ ÂM LƯỢNG TIẾNG GỐC: NẾU BẬT LOẠI BỎ TIẾNG GỐC THÌ VOLUME = 0 TUYỆT ĐỐI
+  useEffect(() => {
+    if (videoRef.current) {
+      if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+        videoRef.current.volume = 0;
+      } else {
+        videoRef.current.volume = Math.max(0, Math.min(1, voiceoverConfig.originalVolume / 100));
+      }
+    }
+  }, [voiceoverConfig.muteOriginal, voiceoverConfig.originalVolume, isPlaying]);
 
   // 🔥 MODAL & TÍNH NĂNG CÀO DỮ LIỆU DOUYIN HOT TRENDS
   const [showDouyinModal, setShowDouyinModal] = useState<boolean>(false);
@@ -499,7 +512,7 @@ export default function AiVideoEditorPage() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
-  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & AUDIO DUCKING (100% TIẾNG VIỆT CHUẨN, TUYỆT ĐỐI KHÔNG BỊ TIẾNG ANH)
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG THEO NHÂN VẬT & TỰ ĐỘNG TẮT TIẾNG NGOẠI NGỮ GỐC
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
@@ -514,14 +527,22 @@ export default function AiVideoEditorPage() {
 
     const char = VOICE_CHARACTERS.find((c) => c.id === (voiceId || voiceoverConfig.selectedVoiceId)) || VOICE_CHARACTERS[0];
 
-    // Audio Ducking: Giảm âm lượng video gốc khi AI nói
-    if (videoRef.current && voiceoverConfig.autoDuckOriginal) {
-      videoRef.current.volume = voiceoverConfig.duckVolume;
+    // Điều chỉnh âm lượng video gốc: nếu loại bỏ tiếng gốc thì volume = 0
+    if (videoRef.current) {
+      if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+        videoRef.current.volume = 0;
+      } else if (voiceoverConfig.autoDuckOriginal) {
+        videoRef.current.volume = voiceoverConfig.duckVolume;
+      }
     }
 
     const restoreVolume = () => {
       if (videoRef.current) {
-        videoRef.current.volume = 1.0;
+        if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+          videoRef.current.volume = 0;
+        } else {
+          videoRef.current.volume = voiceoverConfig.originalVolume / 100;
+        }
       }
     };
 
@@ -696,7 +717,7 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
-  // 🌟 AI BÓC BĂNG TOÀN BỘ ÂM THANH THẬT BẰNG KPOST AI
+  // 🌟 AI CHUYỂN NGỮ & LỒNG TIẾNG: DỊCH SANG TIẾNG VIỆT, LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP & BẬT LỒNG TIẾNG
   const handleTranscribeRealAudio = async () => {
     if (!videoUrl && !selectedFile) {
       alert("Vui lòng tải video lên trước!");
@@ -704,40 +725,73 @@ export default function AiVideoEditorPage() {
     }
 
     setIsTranscribing(true);
-    setTranscribeProgress(20);
-    setTranscribeStatus("Đang trích xuất toàn bộ dải âm thanh 16kHz Mono siêu nhẹ...");
+    setTranscribeProgress(15);
+    setTranscribeStatus("Đang trích xuất dải âm thanh từ video...");
 
     try {
-      const inputSource = selectedFile || videoUrl;
-      const wavBlob = await extractFullAudioBlob(inputSource);
+      let audioBase64: string | undefined = undefined;
+      try {
+        const inputSource = selectedFile || videoUrl;
+        const wavBlob = await extractFullAudioBlob(inputSource);
+        setTranscribeProgress(35);
+        setTranscribeStatus(`Đang mã hóa dải âm thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB)...`);
 
-      setTranscribeProgress(45);
-      setTranscribeStatus(`Đang gửi âm thanh (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB) sang KpostAI...`);
+        audioBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(wavBlob);
+        });
+      } catch (audioErr) {
+        console.warn("Không trích xuất trực tiếp được âm thanh từ nguồn CORS, AI sẽ phân tích theo ngữ cảnh:", audioErr);
+      }
 
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      
-      const formData = new FormData();
-      formData.append("file", wavBlob, "audio.wav");
-      formData.append("duration", String(videoDuration || 120));
+      setTranscribeProgress(65);
+      setTranscribeStatus("AI đang lắng nghe, nhận diện tiếng Trung/Anh/Pháp & DỊCH SANG TIẾNG VIỆT...");
 
-      const res = await axios.post(`${backendUrl}/ai-content/transcribe-video`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 180000,
-      });
+      const res = await axios.post("/api/transcribe-and-translate", {
+        audioBase64,
+        mimeType: "audio/wav",
+        duration: videoDuration || 60,
+        videoTitle: videoName || "Video Douyin Viral",
+        sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
+      }, { timeout: 120000 });
 
-      setTranscribeProgress(85);
-      setTranscribeStatus("Đang phân tách mốc thời gian và tạo phụ đề TikTok...");
+      setTranscribeProgress(90);
+      setTranscribeStatus("Đang loại bỏ tiếng ngoại ngữ gốc & kích hoạt MC Tiếng Việt lồng tiếng...");
 
-      const rawCues = res?.data?.data?.cues || res?.data?.cues || [];
+      const cues = res?.data?.cues || [];
+      const detectedLang = res?.data?.detectedLanguage || "Tiếng Trung";
 
-      if (rawCues && rawCues.length > 0) {
-        setSubtitleCues(rawCues);
+      if (cues && cues.length > 0) {
+        setSubtitleCues(cues);
         setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
+        
+        // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG & TẮT SẠCH TIẾNG GỐC NGOẠI NGỮ
+        setVoiceoverConfig((prev) => ({
+          ...prev,
+          enabled: true,
+          muteOriginal: true,
+          originalVolume: 0,
+        }));
+
+        if (videoRef.current) {
+          videoRef.current.volume = 0;
+          videoRef.current.currentTime = 0;
+          setCurrentTime(0);
+          lastSpokenCueIdRef.current = null;
+        }
+
         setTranscribeSuccessMsg(
-          `🎉 KpostAI đã bóc băng thành công ${rawCues.length} câu lời thoại thật cho toàn bộ video!`
+          `🎉 HOÀN TẤT: AI đã nhận diện [${detectedLang}], DỊCH SANG TIẾNG VIỆT (${cues.length} câu) và ĐÃ TẮT SẠCH TIẾNG GỐC để MC lồng tiếng!`
         );
+
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+          }
+        }, 400);
       } else {
-        throw new Error(res?.data?.error || "Không nhận được lời thoại từ KpostAI.");
+        throw new Error("Không nhận được câu thoại dịch nào từ AI.");
       }
 
       setTranscribeProgress(100);
@@ -745,11 +799,11 @@ export default function AiVideoEditorPage() {
         setIsTranscribing(false);
       }, 500);
     } catch (err: any) {
-      console.error("Lỗi KpostAI:", err);
+      console.error("Lỗi AI Dịch & Lồng tiếng:", err);
       setIsTranscribing(false);
       alert(
-        "Lỗi bóc băng âm thanh: " +
-          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiểm tra kết nối hoặc tài khoản.")
+        "Lỗi xử lý: " +
+          (err?.response?.data?.error || err?.response?.data?.message || err?.message || "Kiểm tra kết nối máy chủ.")
       );
     }
   };
@@ -764,6 +818,8 @@ export default function AiVideoEditorPage() {
       setCurrentTime(0);
       setSubtitleCues([]);
       setTranscribeSuccessMsg("");
+      setVideoLoadError(null);
+      e.target.value = "";
     }
   };
 
@@ -1152,7 +1208,12 @@ export default function AiVideoEditorPage() {
         const destination = audioCtx.createMediaStreamDestination();
 
         const gainNode = audioCtx.createGain();
-        gainNode.gain.value = soundEffects.boostVoiceVolume ? 1.4 : 1.0;
+        // 🌟 LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP GỐC: GAIN = 0 (TẮT HOÀN TOÀN TRONG VIDEO XUẤT)
+        if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
+          gainNode.gain.value = 0;
+        } else {
+          gainNode.gain.value = (voiceoverConfig.originalVolume / 100) * (soundEffects.boostVoiceVolume ? 1.4 : 1.0);
+        }
 
         source.connect(gainNode);
         gainNode.connect(destination);
@@ -1294,42 +1355,44 @@ export default function AiVideoEditorPage() {
 
           {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2.5">
-            {/* 🔥 NÚT CÀO DOUYIN TRENDS */}
-            <button
-              type="button"
-              onClick={() => setShowDouyinModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-rose-600 via-red-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-rose-500/25 transition-all hover:scale-[1.02] cursor-pointer"
-            >
-              <Flame size={16} className="text-amber-300 animate-pulse" /> 🔥 Cào Douyin Trends
-            </button>
-
-            {/* 🎙️ NÚT AI LỒNG TIẾNG ĐA CHẤT GIỌNG */}
-            <button
-              type="button"
-              onClick={() => setShowVoiceoverModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] cursor-pointer"
-            >
-              <Radio size={16} className="text-emerald-300 animate-pulse" /> 🎙️ AI Lồng Tiếng
-              <span className="bg-emerald-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded-full font-black">
-                {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "👦"}
-              </span>
-            </button>
-
+            {/* 🌟 NÚT HERO: DỊCH SANG TIẾNG VIỆT & LỒNG TIẾNG (TỰ ĐỘNG LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP) */}
             <button
               type="button"
               onClick={handleTranscribeRealAudio}
               disabled={isTranscribing || isExporting}
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-purple-500/30 transition-all hover:scale-[1.03] cursor-pointer disabled:opacity-50 ring-2 ring-violet-400/40"
+              title="Dịch toàn bộ lời thoại sang tiếng Việt, loại bỏ sạch tiếng Trung/Anh/Pháp và tự động lồng tiếng MC Việt"
             >
               {isTranscribing ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Đang bóc băng...
+                  <RefreshCw size={16} className="animate-spin text-amber-300" /> Đang Dịch & Lồng Tiếng...
                 </>
               ) : (
                 <>
-                  <Mic size={16} /> 🎤 Bật sub tự động bằng AI
+                  <Sparkles size={16} className="text-amber-300 animate-bounce" /> ⚡ 1-Click: AI Dịch & Lồng Tiếng Việt
                 </>
               )}
+            </button>
+
+            {/* 🎙️ NÚT CÀI ĐẶT AI LỒNG TIẾNG & TẮT TIẾNG GỐC */}
+            <button
+              type="button"
+              onClick={() => setShowVoiceoverModal(true)}
+              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <Radio size={15} className="text-emerald-400" /> 🎙️ Đổi Giọng MC & Âm Lượng
+              <span className="bg-emerald-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+                {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "👩"}
+              </span>
+            </button>
+
+            {/* 🔥 NÚT CÀO DOUYIN TRENDS */}
+            <button
+              type="button"
+              onClick={() => setShowDouyinModal(true)}
+              className="px-3.5 py-2.5 bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <Flame size={15} className="text-amber-300" /> 🔥 Video Douyin Mẫu
             </button>
 
             <button
@@ -1720,7 +1783,12 @@ export default function AiVideoEditorPage() {
                       }}
                       onError={() => {
                         console.warn("Video load error for:", videoUrl);
-                        setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS) hoặc sai định dạng video. Bạn hãy tải video về máy và chọn tải lên trực tiếp để chỉnh sửa trọn vẹn 8 phút.");
+                        if (videoUrl.startsWith("http") && !videoUrl.includes("/api/stream-video")) {
+                          console.log("Attempting fallback via /api/stream-video proxy...");
+                          setVideoUrl(`/api/stream-video?url=${encodeURIComponent(videoUrl)}`);
+                          return;
+                        }
+                        setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS) hoặc link trang web không chứa luồng video MP4 trực tiếp. Bạn chỉ cần bấm nút bên dưới để chọn file từ máy và biên tập trọn vẹn 8 phút.");
                       }}
                       className="w-full h-full object-contain"
                     />
