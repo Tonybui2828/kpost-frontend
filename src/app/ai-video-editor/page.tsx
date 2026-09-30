@@ -60,26 +60,14 @@ export interface SubtitleConfig {
   offsetSeconds: number;
 }
 
-// 🌟 Cấu hình che mờ / xóa sub tiếng Trung gốc (Blur Inpaint Mask - Chuẩn VidOCR)
+// Cấu hình che mờ phụ đề gốc
 export interface SubtitleMaskConfig {
   enabled: boolean;
   positionYPercent: number; // Vị trí từ đáy màn hình lên (mặc định 14%)
   heightPx: number; // Chiều cao thanh che mờ (mặc định 54px)
   blurAmount: number; // Độ mờ (mặc định 16px)
   opacity: number; // Độ đậm (mặc định 0.82)
-  bgColor: string; // Màu che (mặc định #0e0406)
-}
-
-// 🌟 Cấu hình quy trình xử lý thông minh chuẩn VidOCR
-export interface VidOcrWorkflowConfig {
-  sourceLang: "auto" | "zh" | "en" | "ko" | "ja";
-  targetLang: "vi";
-  aiModel: "gemini-3.8-flash" | "deepseek-v3" | "gpt-4o-mini";
-  processMode: "hardsub_ocr" | "audio_stt" | "audio_stt_v2" | "srt_dubbing" | "text_translate";
-  autoMergeLines: boolean; // Gộp dòng thông minh
-  blurOriginalSub: boolean; // Gộp làm mờ / Xóa văn bản gốc
-  autoDuckAudio: boolean; // Tách & giữ nhạc nền
-  autoSpeedFit: boolean; // Tự động co dãn tốc độ MC khớp nhân vật
+  bgColor: string; // Màu che
 }
 
 export interface LogoConfig {
@@ -556,22 +544,8 @@ export default function AiVideoEditorPage() {
   const [isScrapingDouyin, setIsScrapingDouyin] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
-  // 🌟 MODAL & CẤU HÌNH VIDOCR STUDIO CAO CẤP
-  const [showVidOcrModal, setShowVidOcrModal] = useState<boolean>(false);
-  const [activeStudioTool, setActiveStudioTool] = useState<"subtitles" | "voiceover" | "audio" | "mask" | "branding" | "effects">("subtitles");
-  const [vidOcrWorkflow, setVidOcrWorkflow] = useState<VidOcrWorkflowConfig>({
-    sourceLang: "zh",
-    targetLang: "vi",
-    aiModel: "gemini-3.8-flash",
-    processMode: "audio_stt_v2",
-    autoMergeLines: true,
-    blurOriginalSub: true,
-    autoDuckAudio: true,
-    autoSpeedFit: true,
-  });
-
   const [maskConfig, setMaskConfig] = useState<SubtitleMaskConfig>({
-    enabled: true,
+    enabled: false,
     positionYPercent: 14,
     heightPx: 56,
     blurAmount: 16,
@@ -865,7 +839,7 @@ export default function AiVideoEditorPage() {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  // 🌟 THUẬT TOÁN GỘP DÒNG THÔNG MINH (CHẾ ĐỘ GỘP DÒNG VIDOCR):
+  // THUẬT TOÁN GỘP CÂU TỰ ĐỘNG:
   // Nối các phân đoạn phụ đề ngắn < 0.65s thành câu hoàn chỉnh cho MC đọc liền mạch, không giật cục
   const smartMergeCues = (cues: SubtitleCue[]): SubtitleCue[] => {
     if (!cues || cues.length <= 1) return cues;
@@ -1599,20 +1573,11 @@ export default function AiVideoEditorPage() {
       }
 
       setTranscribeProgress(90);
-      setTranscribeStatus("Đang kích hoạt MC Tiếng Việt lồng tiếng & hiệu ứng ducking âm thanh...");
+      setTranscribeStatus("Đang kích hoạt MC Tiếng Việt lồng tiếng & hiệu ứng âm thanh...");
 
-      // 🌟 QUY TRÌNH GỘP DÒNG THÔNG MINH VIDOCR: Gộp các câu ngắn lại trước khi bóc tách 3-5 từ
-      if (vidOcrWorkflow.autoMergeLines && cues && cues.length > 0) {
-        cues = smartMergeCues(cues);
-      }
-
-      // 🌟 TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI NHÂN VẬT
+      // TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI
       if (cues && cues.length > 0) {
         cues = chunkCuesInto3To5Words(cues);
-      }
-
-      if (vidOcrWorkflow.blurOriginalSub) {
-        setMaskConfig((p) => ({ ...p, enabled: true }));
       }
 
       if (cues && cues.length > 0) {
@@ -1835,31 +1800,6 @@ export default function AiVideoEditorPage() {
     } catch (e: any) {
       setIsScrapingDouyin(false);
       alert("Lỗi nạp video: " + (e.message || "Vui lòng kiểm tra lại đường link"));
-    }
-  };
-
-  // 🌟 COPY TOÀN BỘ CODE PAGE.TSX & TẢI FILE
-  const handleDownloadSourceCode = async () => {
-    try {
-      const res = await axios.get("/api/editor-page-code");
-      if (res.data) {
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(res.data);
-          setCopiedCode(true);
-          setTimeout(() => setCopiedCode(false), 3000);
-        }
-        const blob = new Blob([res.data], { type: "text/typescript;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "page.tsx";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } catch (e) {
-      window.open("/api/editor-page-code?download=true", "_blank");
     }
   };
 
@@ -2209,7 +2149,7 @@ export default function AiVideoEditorPage() {
   return (
     <div className="flex-1 bg-[#0A101D] min-h-screen p-3 md:p-6 font-sans text-slate-100 overflow-y-auto selection:bg-[#1877F2] selection:text-white">
       <div className="max-w-[1540px] mx-auto pb-24">
-        {/* HEADER PHONG CÁCH STUDIO XANH FACEBOOK PRO */}
+        {/* HEADER AI VIDEO EDITOR PRO */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 bg-[#0F1C33]/90 backdrop-blur-md p-5 rounded-3xl border border-[#1E3867] shadow-2xl">
           <div>
             <div className="flex items-center gap-3 mb-1.5">
@@ -2217,28 +2157,19 @@ export default function AiVideoEditorPage() {
                 <Wand2 size={24} />
               </span>
               <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                KPOST STUDIO PRO
-                <span className="bg-gradient-to-r from-[#1877F2] to-[#2563EB] text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-400/30 animate-pulse">
-                  VIDOCR FB BLUE EDITION
+                KPOST AI VIDEO EDITOR
+                <span className="bg-gradient-to-r from-[#1877F2] to-[#2563EB] text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-400/30">
+                  PRO STUDIO
                 </span>
               </h1>
             </div>
             <p className="text-xs text-slate-200/70 font-medium">
-              Phòng thu AI cao cấp: Bóc băng OCR, Gộp dòng tự động, Che mờ sub gốc và Lồng tiếng MC tiếng Việt khớp nhịp 100%.
+              Trình chỉnh sửa Video AI thông minh: Bóc băng tạo phụ đề tự động (Whisper AI), lồng tiếng MC đa giọng và xuất bản chất lượng cao.
             </p>
           </div>
 
           {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2">
-            {/* 🌟 NÚT CHÍNH: DỊCH & LỒNG TIẾNG THÔNG MINH VIDOCR */}
-            <button
-              type="button"
-              onClick={() => setShowVidOcrModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-blue-950/60 transition-all hover:scale-[1.03] cursor-pointer ring-2 ring-[#1877F2]/40"
-              title="Mở bảng điều khiển dịch & lồng tiếng thông minh chuẩn VidOCR"
-            >
-              <Sparkles size={16} className="text-amber-300 animate-spin" /> ⚡ Dịch & Lồng Tiếng (VidOCR)
-            </button>
 
             {/* 🎯 NÚT 1 (GỐC): TẠO PHỤ ĐỀ / BÓC BĂNG VIDEO BẰNG WHISPER */}
             <button
@@ -2339,7 +2270,7 @@ export default function AiVideoEditorPage() {
               )}
             </button>
 
-            {/* 📦 NÚT TẢI FULL SOURCE CODE (ZIP / TSX) */}
+            {/* 📦 NÚT TẢI FULL SOURCE CODE (ZIP) */}
             <a
               href="/fullcode-ai-video-editor.zip"
               download="fullcode-ai-video-editor.zip"
@@ -2347,15 +2278,6 @@ export default function AiVideoEditorPage() {
               title="Bấm để tải toàn bộ mã nguồn dự án file ZIP"
             >
               <Download size={16} className="text-slate-950" /> 📦 Tải Full Code (ZIP)
-            </a>
-
-            <a
-              href="/page.tsx"
-              download="page.tsx"
-              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#25447C] rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Bấm để tải riêng file page.tsx"
-            >
-              <Code size={15} className="text-blue-300" /> Tải page.tsx
             </a>
 
             <button
@@ -2771,8 +2693,8 @@ export default function AiVideoEditorPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 + THANH DOCK STUDIO VIDOCR */}
-          <div className="lg:col-span-7 flex items-start gap-4">
+          {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 */}
+          <div className="lg:col-span-7">
             <div className="bg-[#0F1C33]/90 backdrop-blur-md rounded-3xl border border-[#1E3867] p-4 md:p-5 shadow-xl flex-1">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -3064,50 +2986,9 @@ export default function AiVideoEditorPage() {
                 </div>
               </div>
             </div>
-
-            {/* 🌟 THANH DOCK STUDIO DỌC PHẢI - PHONG CÁCH VIDOCR */}
-            <div className="hidden xl:flex flex-col items-center gap-2.5 bg-[#0F1C33]/90 backdrop-blur-md border border-[#1E3867] p-2.5 rounded-3xl shrink-0 shadow-2xl sticky top-6">
-              {/* NÚT XUẤT BẢN NỔI BẬT */}
-              <button
-                type="button"
-                onClick={handleExportFullVideo}
-                disabled={!videoUrl || isExporting}
-                className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white flex flex-col items-center justify-center gap-1 shadow-lg shadow-blue-950/80 hover:scale-105 active:scale-95 transition-all cursor-pointer font-black border border-blue-400/40"
-              >
-                <Download size={20} className="animate-bounce" />
-                <span className="text-[8px] uppercase tracking-wider">XUẤT BẢN</span>
-              </button>
-
-              <div className="w-8 h-px bg-[#1E3867] my-0.5" />
-
-              {/* CÁC NÚT CÔNG CỤ DỌC */}
-              {[
-                { id: "create", label: "TẠO MỚI", icon: <Upload size={17} />, action: () => setShowVidOcrModal(true) },
-                { id: "dubbing", label: "LỒNG TIẾNG", icon: <Radio size={17} />, action: () => setShowVoiceoverModal(true) },
-                { id: "audio", label: "ÂM THANH", icon: <Volume2 size={17} />, action: () => setShowVoiceoverModal(true) },
-                { id: "mask", label: "CHE SUB", icon: <Eye size={17} />, action: () => setMaskConfig((p) => ({ ...p, enabled: !p.enabled })) },
-                { id: "banner", label: "LOGO/BANNER", icon: <ImageIcon size={17} />, action: () => setShowModal(true) },
-                { id: "effects", label: "BỘ LỌC", icon: <Sparkles size={17} />, action: () => setShowEffectsModal(true) },
-                { id: "douyin", label: "DOUYIN", icon: <Flame size={17} />, action: () => setShowDouyinModal(true) },
-              ].map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  onClick={tool.action}
-                  className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-black transition-all cursor-pointer border ${
-                    tool.id === "mask" && maskConfig.enabled
-                      ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950 scale-105"
-                      : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border-[#1E3867]"
-                  }`}
-                >
-                  {tool.icon}
-                  <span className="truncate">{tool.label}</span>
-                </button>
-              ))}
-            </div>
-            </div>
           </div>
         </div>
+      </div>
 
       {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) - XANH FACEBOOK */}
       {showVoiceoverModal && (
@@ -3434,243 +3315,6 @@ export default function AiVideoEditorPage() {
               >
                 Đóng
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 🌟 MODAL TẢI LÊN & DỊCH TỰ ĐỘNG THÔNG MINH CHUẨN VIDOCR (MÀU XANH FACEBOOK) */}
-      {showVidOcrModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-[#1E3867] mb-5">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] rounded-xl text-white shadow-md shadow-blue-950">
-                  <Sparkles size={18} />
-                </span>
-                <div>
-                  <h3 className="text-base font-black text-white uppercase tracking-wide">
-                    Tải Lên & Dịch Tự Động (AI OCR & STT V2)
-                  </h3>
-                  <p className="text-xs text-blue-200/70">
-                    Bóc tách phụ đề cứng, gộp dòng tự động, che sub gốc và lồng tiếng MC khớp 100%
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowVidOcrModal(false)}
-                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#152649] transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* THẢ TẬP TIN VÀO ĐÂY */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[#541a25] hover:border-[#1877F2] bg-[#120407]/70 hover:bg-[#1a060a] rounded-2xl p-6 text-center cursor-pointer transition-all mb-4 group"
-            >
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#152649] group-hover:bg-[#1877F2]/20 flex items-center justify-center text-blue-300 group-hover:text-slate-200 transition-colors mb-2.5">
-                <UploadCloud size={24} />
-              </div>
-              <h4 className="text-sm font-black text-white mb-1">
-                {videoName ? `Đã chọn: ${videoName}` : "Thả tập tin video vào đây hoặc bấm để chọn"}
-              </h4>
-              <p className="text-[11px] text-blue-200/60 mb-2">
-                Hỗ trợ MP4, MOV, WebM thời lượng dài (8 phút, 15 phút, 30 phút)
-              </p>
-              <div className="flex items-center justify-center gap-3 text-xs text-blue-300/80 font-mono">
-                <span className="flex items-center gap-1">📁 File máy</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">🎵 TikTok</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">🔥 Douyin</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">▶️ YouTube</span>
-              </div>
-            </div>
-
-            {/* HOẶC DÁN LINK VIDEO */}
-            <div className="mb-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={douyinUrlInput}
-                  onChange={(e) => setDouyinUrlInput(e.target.value)}
-                  placeholder="Hoặc dán đường link video (Douyin, TikTok, Drive, MP4 trực tiếp)..."
-                  className="flex-1 text-xs px-3.5 py-2.5 bg-[#0B1527] border border-[#1E3867] rounded-xl text-white placeholder-rose-400/40 focus:outline-none focus:border-[#1877F2] font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={handleScrapeDouyinLink}
-                  disabled={isScrapingDouyin || !douyinUrlInput.trim()}
-                  className="px-4 py-2 bg-[#1877F2] hover:bg-[#2563EB] text-white text-xs font-black rounded-xl transition-all disabled:opacity-40 cursor-pointer shrink-0"
-                >
-                  {isScrapingDouyin ? "Đang tải..." : "Nạp Link"}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              {/* HÀNG 1: CẶP NGÔN NGỮ */}
-              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-300/70 font-bold">Nguồn:</span>
-                  <select
-                    value={vidOcrWorkflow.sourceLang}
-                    onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, sourceLang: e.target.value as any }))}
-                    className="bg-[#13223F] border border-[#25447C] rounded-lg px-2.5 py-1 text-white font-bold"
-                  >
-                    <option value="zh">🇨🇳 Tiếng Trung (Douyin/Kuaishou)</option>
-                    <option value="auto">🌐 Phát hiện tự động</option>
-                    <option value="en">🇺🇸 Tiếng Anh (TikTok/YouTube)</option>
-                    <option value="ko">🇰🇷 Tiếng Hàn</option>
-                    <option value="ja">🇯🇵 Tiếng Nhật</option>
-                  </select>
-                </div>
-
-                <span className="text-[#1877F2] font-black text-base">➔</span>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-300/70 font-bold">Đích:</span>
-                  <span className="px-3 py-1 bg-[#1877F2]/20 border border-[#1877F2] text-slate-200 font-black rounded-lg">
-                    🇻🇳 Tiếng Việt
-                  </span>
-                </div>
-              </div>
-
-              {/* HÀNG 2: MÔ HÌNH DỊCH AI */}
-              <div className="flex items-center gap-2">
-                <span className="text-blue-200 font-bold shrink-0">Model AI:</span>
-                <div className="grid grid-cols-3 gap-2 flex-1">
-                  {[
-                    { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash ⚡", badge: "Siêu Tốc (Gợi ý)" },
-                    { id: "deepseek-v3", label: "DeepSeek V3", badge: "Chuẩn Văn Phong" },
-                    { id: "gpt-4o-mini", label: "GPT-4o mini 🔑", badge: "Đa Dụng" },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setVidOcrWorkflow((p) => ({ ...p, aiModel: m.id as any }))}
-                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
-                        vidOcrWorkflow.aiModel === m.id
-                          ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950"
-                          : "bg-[#0B1527] hover:bg-[#13223F] text-slate-200 border-[#1E3867]"
-                      }`}
-                    >
-                      <div className="font-black text-[11px] truncate">{m.label}</div>
-                      <div className="text-[9px] text-blue-200/60 mt-0.5">{m.badge}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* HÀNG 3: PHƯƠNG THỨC BÓC TÁCH */}
-              <div className="flex items-center gap-2">
-                <span className="text-blue-200 font-bold shrink-0">Chế độ:</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 flex-1">
-                  {[
-                    { id: "audio_stt_v2", label: "Dịch âm thanh V2", desc: "Whisper + Gemini" },
-                    { id: "hardsub_ocr", label: "Dịch sub cứng", desc: "OCR khung hình" },
-                    { id: "srt_dubbing", label: "Lồng tiếng từ .SRT", desc: "Phụ đề có sẵn" },
-                    { id: "text_translate", label: "Dịch văn bản", desc: "Theo kịch bản" },
-                  ].map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => setVidOcrWorkflow((p) => ({ ...p, processMode: mode.id as any }))}
-                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
-                        vidOcrWorkflow.processMode === mode.id
-                          ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
-                          : "bg-[#0B1527] hover:bg-[#13223F] text-slate-200 border-[#1E3867]"
-                      }`}
-                    >
-                      <div className="font-black text-[11px]">{mode.label}</div>
-                      <div className="text-[9px] text-blue-200/60">{mode.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* HÀNG 4: 4 TÙY CHỌN ĐỘC QUYỀN CHUẨN VIDOCR */}
-              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                <span className="text-[11px] font-black uppercase text-amber-300 block mb-2">
-                  ✨ Tùy Chọn Độc Quyền (Giúp Video & Giọng Nói Chạy Mượt Mà):
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={vidOcrWorkflow.autoMergeLines}
-                      onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoMergeLines: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
-                    />
-                    <span>⚡ Gộp dòng thông minh (Không ngắt vụn)</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={vidOcrWorkflow.blurOriginalSub}
-                      onChange={(e) => {
-                        const val = e.target.checked;
-                        setVidOcrWorkflow((p) => ({ ...p, blurOriginalSub: val }));
-                        setMaskConfig((p) => ({ ...p, enabled: val }));
-                      }}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
-                    />
-                    <span>🎭 Gộp làm mờ (Che sub tiếng Trung gốc)</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={vidOcrWorkflow.autoDuckAudio}
-                      onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoDuckAudio: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
-                    />
-                    <span>🎵 Tách & Giữ nhạc nền (Audio Ducking 10%)</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={vidOcrWorkflow.autoSpeedFit}
-                      onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoSpeedFit: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
-                    />
-                    <span>⚡ Khớp tốc độ nhân vật tự động</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* NÚT BẮT ĐẦU */}
-            <div className="mt-5 pt-4 border-t border-[#1E3867] flex items-center justify-between">
-              <span className="text-[11px] text-blue-200/60 font-mono">
-                {videoDuration ? `Độ dài: ${Math.round(videoDuration)}s` : "Sẵn sàng xử lý"} | Chuẩn Studio 1080P
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowVidOcrModal(false)}
-                  className="px-4 py-2 bg-[#13223F] hover:bg-[#1A3059] text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowVidOcrModal(false);
-                    handleTranscribeRealAudio();
-                  }}
-                  disabled={isTranscribing}
-                  className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-950 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  🚀 Bắt Đầu Xử Lý Ngay
-                </button>
-              </div>
             </div>
           </div>
         </div>
