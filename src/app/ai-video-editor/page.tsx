@@ -2207,23 +2207,23 @@ export default function AiVideoEditorPage() {
   }, [douyinCategory]);
 
   return (
-    <div className="flex-1 bg-[#120507] min-h-screen p-3 md:p-6 font-sans text-rose-100 overflow-y-auto selection:bg-[#be123c] selection:text-white">
+    <div className="flex-1 bg-[#0A101D] min-h-screen p-3 md:p-6 font-sans text-slate-100 overflow-y-auto selection:bg-[#1877F2] selection:text-white">
       <div className="max-w-[1540px] mx-auto pb-24">
-        {/* HEADER PHONG CÁCH STUDIO NÂU ĐỎ VANG */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 bg-[#1c080d]/90 backdrop-blur-md p-5 rounded-3xl border border-[#481620] shadow-2xl">
+        {/* HEADER PHONG CÁCH STUDIO XANH FACEBOOK PRO */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 bg-[#0F1C33]/90 backdrop-blur-md p-5 rounded-3xl border border-[#1E3867] shadow-2xl">
           <div>
             <div className="flex items-center gap-3 mb-1.5">
-              <span className="p-2.5 bg-gradient-to-tr from-[#9f1239] via-[#be123c] to-[#e11d48] rounded-2xl text-white shadow-lg shadow-rose-950/60 border border-rose-400/30">
+              <span className="p-2.5 bg-gradient-to-tr from-[#1565C0] via-[#1877F2] to-[#2563EB] rounded-2xl text-white shadow-lg shadow-blue-950/60 border border-blue-400/30">
                 <Wand2 size={24} />
               </span>
               <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
                 KPOST STUDIO PRO
-                <span className="bg-gradient-to-r from-[#be123c] to-[#e11d48] text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm border border-rose-400/30 animate-pulse">
-                  VIDOCR WINE EDITION
+                <span className="bg-gradient-to-r from-[#1877F2] to-[#2563EB] text-white text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-400/30 animate-pulse">
+                  VIDOCR FB BLUE EDITION
                 </span>
               </h1>
             </div>
-            <p className="text-xs text-rose-200/70 font-medium">
+            <p className="text-xs text-slate-200/70 font-medium">
               Phòng thu AI cao cấp: Bóc băng OCR, Gộp dòng tự động, Che mờ sub gốc và Lồng tiếng MC tiếng Việt khớp nhịp 100%.
             </p>
           </div>
@@ -2234,7 +2234,7 @@ export default function AiVideoEditorPage() {
             <button
               type="button"
               onClick={() => setShowVidOcrModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-rose-950/60 transition-all hover:scale-[1.03] cursor-pointer ring-2 ring-rose-500/40"
+              className="px-4 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-blue-950/60 transition-all hover:scale-[1.03] cursor-pointer ring-2 ring-[#1877F2]/40"
               title="Mở bảng điều khiển dịch & lồng tiếng thông minh chuẩn VidOCR"
             >
               <Sparkles size={16} className="text-amber-300 animate-spin" /> ⚡ Dịch & Lồng Tiếng (VidOCR)
@@ -2245,7 +2245,7 @@ export default function AiVideoEditorPage() {
               type="button"
               onClick={handleTranscribeWhisper}
               disabled={isTranscribing || isExporting}
-              className="px-3.5 py-2.5 bg-[#250b10] hover:bg-[#340f17] text-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#4d1622] transition-all cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#1E3867] transition-all cursor-pointer disabled:opacity-50"
               title="Bóc băng chính xác 100% từng lời thoại người nói trong video (Whisper AI) và tự động tạo phụ đề chạy mượt mà"
             >
               {isTranscribing ? (
@@ -2264,7 +2264,7 @@ export default function AiVideoEditorPage() {
               type="button"
               onClick={handleTranscribeRealAudio}
               disabled={isTranscribing || isExporting}
-              className="px-3.5 py-2.5 bg-[#250b10] hover:bg-[#340f17] text-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#4d1622] transition-all cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#1E3867] transition-all cursor-pointer disabled:opacity-50"
               title="Dịch toàn bộ lời thoại video Douyin/ngoại ngữ sang tiếng Việt và lồng tiếng MC"
             >
               <Sparkles size={16} className="text-amber-300" /> 🌐 Dịch & Lồng Tiếng
@@ -2274,10 +2274,10 @@ export default function AiVideoEditorPage() {
             <button
               type="button"
               onClick={() => setShowVoiceoverModal(true)}
-              className="px-3.5 py-2.5 bg-[#250b10] hover:bg-[#340f17] text-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#4d1622] transition-all cursor-pointer"
+              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#1E3867] transition-all cursor-pointer"
             >
               <Radio size={15} className="text-emerald-400" /> 🎙️ Đổi Giọng MC & Âm Lượng
-              <span className="bg-[#be123c] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">
+              <span className="bg-[#1877F2] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">
                 {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "👩"}
               </span>
             </button>
@@ -2288,12 +2288,12 @@ export default function AiVideoEditorPage() {
               onClick={() => setMaskConfig((p) => ({ ...p, enabled: !p.enabled }))}
               className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer ${
                 maskConfig.enabled
-                  ? "bg-[#be123c] text-white border-rose-400 shadow-md shadow-rose-950/40"
-                  : "bg-[#250b10] hover:bg-[#340f17] text-rose-200 border-[#4d1622]"
+                  ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950/40"
+                  : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border-[#1E3867]"
               }`}
               title="Bật/Tắt dải che mờ đè lên phụ đề tiếng Trung gốc"
             >
-              <Eye size={15} className={maskConfig.enabled ? "text-amber-300" : "text-rose-400"} />
+              <Eye size={15} className={maskConfig.enabled ? "text-amber-300" : "text-blue-300"} />
               Che Sub Gốc: {maskConfig.enabled ? "BẬT" : "TẮT"}
             </button>
 
@@ -2301,7 +2301,7 @@ export default function AiVideoEditorPage() {
             <button
               type="button"
               onClick={() => setShowDouyinModal(true)}
-              className="px-3 py-2.5 bg-[#250b10] hover:bg-[#340f17] text-rose-100 rounded-2xl text-xs font-bold flex items-center gap-1.5 border border-[#4d1622] transition-all cursor-pointer"
+              className="px-3 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-1.5 border border-[#1E3867] transition-all cursor-pointer"
             >
               <Flame size={15} className="text-amber-400" /> Douyin Trends
             </button>
@@ -2352,10 +2352,10 @@ export default function AiVideoEditorPage() {
             <a
               href="/page.tsx"
               download="page.tsx"
-              className="px-3.5 py-2.5 bg-[#250b10] hover:bg-[#340f17] text-rose-200 border border-[#521924] rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#25447C] rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
               title="Bấm để tải riêng file page.tsx"
             >
-              <Code size={15} className="text-rose-400" /> Tải page.tsx
+              <Code size={15} className="text-blue-300" /> Tải page.tsx
             </a>
 
             <button
@@ -2448,10 +2448,10 @@ export default function AiVideoEditorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI: DANH SÁCH LỜI THOẠI TOÀN BỘ VIDEO */}
           <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="bg-[#1c080d]/90 backdrop-blur-md rounded-3xl border border-[#481620] p-4 md:p-5 shadow-xl">
+            <div className="bg-[#0F1C33]/90 backdrop-blur-md rounded-3xl border border-[#1E3867] p-4 md:p-5 shadow-xl">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Type size={18} className="text-[#be123c]" />
+                  <Type size={18} className="text-[#1877F2]" />
                   <h3 className="text-xs font-black uppercase tracking-wider text-white">
                     Lời Thoại Video ({subtitleCues.length} Câu)
                   </h3>
@@ -2460,7 +2460,7 @@ export default function AiVideoEditorPage() {
                   <button
                     type="button"
                     onClick={handleDownloadSRT}
-                    className="px-2.5 py-1 rounded-xl bg-[#280c12] hover:bg-[#381119] border border-[#521924] text-rose-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-2.5 py-1 rounded-xl bg-[#152649] hover:bg-[#1A3059] border border-[#25447C] text-slate-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <FileDown size={13} /> Tải file .SRT
                   </button>
@@ -2468,24 +2468,24 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* TÙY CHỌN & CHỌN GIỌNG MC TRỰC TIẾP */}
-              <div className="mb-3 p-3 bg-[#140508] border border-[#3e131b] rounded-2xl flex flex-col gap-2.5 text-xs shadow-xs">
+              <div className="mb-3 p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl flex flex-col gap-2.5 text-xs shadow-xs">
                 {/* DÒNG 1: HIỆN PHỤ ĐỀ & CỠ CHỮ */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 font-black text-rose-100 cursor-pointer">
+                  <label className="flex items-center gap-2 font-black text-slate-100 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={subtitleConfig.enabled}
                       onChange={(e) => setSubtitleConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     Hiện phụ đề trên video
                   </label>
-                  <div className="flex items-center gap-2 font-medium text-rose-300">
+                  <div className="flex items-center gap-2 font-medium text-blue-200">
                     <span>Cỡ chữ:</span>
                     <select
                       value={subtitleConfig.fontSize}
                       onChange={(e) => setSubtitleConfig((p) => ({ ...p, fontSize: Number(e.target.value) }))}
-                      className="px-2 py-1 bg-[#200a0e] border border-[#481620] rounded-lg text-xs font-bold text-white"
+                      className="px-2 py-1 bg-[#200a0e] border border-[#1E3867] rounded-lg text-xs font-bold text-white"
                     >
                       <option value={18}>Nhỏ (18px)</option>
                       <option value={20}>Vừa (20px)</option>
@@ -2496,8 +2496,8 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 {/* DÒNG 2: BẬT / TẮT LỒNG TIẾNG MC VÀ THỬ LOA */}
-                <div className="pt-2 border-t border-[#2e0e15] flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 font-black cursor-pointer text-rose-200 bg-[#250b10] hover:bg-[#340f17] px-3 py-1.5 rounded-xl border border-[#4d1622] transition-all select-none">
+                <div className="pt-2 border-t border-[#1A3059] flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 font-black cursor-pointer text-slate-200 bg-[#13223F] hover:bg-[#1A3059] px-3 py-1.5 rounded-xl border border-[#1E3867] transition-all select-none">
                     <input
                       type="checkbox"
                       checked={voiceoverConfig.enabled}
@@ -2524,7 +2524,7 @@ export default function AiVideoEditorPage() {
                           if (videoRef.current) videoRef.current.volume = 1.0;
                         }
                       }}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     <span>🎙️ Lồng Tiếng MC AI {voiceoverConfig.enabled ? "(ĐANG BẬT)" : "(ĐANG TẮT)"}</span>
                   </label>
@@ -2549,7 +2549,7 @@ export default function AiVideoEditorPage() {
                     <button
                       type="button"
                       onClick={() => setShowVoiceoverModal(true)}
-                      className="px-2 py-1 bg-[#250b10] hover:bg-[#340f17] text-rose-300 border border-[#481620] text-[11px] font-bold rounded-lg cursor-pointer"
+                      className="px-2 py-1 bg-[#13223F] hover:bg-[#1A3059] text-blue-200 border border-[#1E3867] text-[11px] font-bold rounded-lg cursor-pointer"
                     >
                       Âm Lượng
                     </button>
@@ -2557,10 +2557,10 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 {/* DÒNG 3: BỘ CHỌN GIỌNG MC TRỰC TIẾP & LOAD LẠI KHÔNG CẦN DỊCH TỪ ĐẦU */}
-                <div className="p-2.5 bg-[#1a060a] border border-[#3e131b] rounded-2xl flex flex-col gap-2">
+                <div className="p-2.5 bg-[#1a060a] border border-[#1E3867] rounded-2xl flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase text-rose-300 flex items-center gap-1.5">
-                      <Radio size={13} className="text-[#be123c] animate-pulse" /> Chọn Giọng MC (Đổi Là Ăn Ngay):
+                    <span className="text-[11px] font-black uppercase text-blue-200 flex items-center gap-1.5">
+                      <Radio size={13} className="text-[#1877F2] animate-pulse" /> Chọn Giọng MC (Đổi Là Ăn Ngay):
                     </span>
                     <span className="text-[10px] font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-500/30">
                       ⚡ Không cần dịch lại
@@ -2578,15 +2578,15 @@ export default function AiVideoEditorPage() {
                           onClick={() => handleQuickChangeVoice(v.id, v.rate, v.pitch)}
                           className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
                             isSelected
-                              ? "bg-[#be123c] text-white border-rose-400 shadow-md shadow-rose-950 scale-[1.02]"
-                              : "bg-[#140508] hover:bg-[#250b10] text-rose-200 border-[#381118]"
+                              ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950 scale-[1.02]"
+                              : "bg-[#0B1527] hover:bg-[#13223F] text-slate-200 border-[#381118]"
                           }`}
                         >
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm">{v.avatar}</span>
                             <span className="text-[11px] font-black truncate">{v.shortName}</span>
                           </div>
-                          <div className={`text-[9px] mt-0.5 ${isSelected ? "text-rose-100" : "text-rose-400/60"}`}>
+                          <div className={`text-[9px] mt-0.5 ${isSelected ? "text-slate-100" : "text-blue-300/60"}`}>
                             Tốc độ: {v.rate}x
                           </div>
                         </button>
@@ -2595,8 +2595,8 @@ export default function AiVideoEditorPage() {
                   </div>
 
                   {/* ĐIỀU CHỈNH TỐC ĐỘ ĐỌC (KHỚP NHỊP DOUYIN NHANH) */}
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-[#2e0e15] text-[11px]">
-                    <span className="font-bold text-rose-300">Khớp nhịp nhân vật:</span>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-[#1A3059] text-[11px]">
+                    <span className="font-bold text-blue-200">Khớp nhịp nhân vật:</span>
                     <div className="flex items-center gap-1">
                       {[
                         { label: "1.0x Chuẩn", val: 1.0 },
@@ -2611,7 +2611,7 @@ export default function AiVideoEditorPage() {
                           className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                             voiceoverConfig.rate === spd.val
                               ? "bg-amber-400 text-slate-900 shadow-xs"
-                              : "bg-[#250b10] hover:bg-[#340f17] text-rose-200 border border-[#481620]"
+                              : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867]"
                           }`}
                         >
                           {spd.label}
@@ -2643,8 +2643,8 @@ export default function AiVideoEditorPage() {
                       key={cue.id}
                       className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isActive
-                          ? "bg-[#9f1239] text-white border-rose-400 shadow-md shadow-rose-950/50"
-                          : "bg-[#140508] hover:bg-[#250b10] border-[#381118] text-rose-100"
+                          ? "bg-[#1565C0] text-white border-blue-400 shadow-md shadow-blue-950/50"
+                          : "bg-[#0B1527] hover:bg-[#13223F] border-[#381118] text-slate-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -2652,7 +2652,7 @@ export default function AiVideoEditorPage() {
                           type="button"
                           onClick={() => seekToTimestamp(cue.startSec)}
                           className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md shrink-0 cursor-pointer transition-all hover:scale-105 ${
-                            isActive ? "bg-white/20 text-white" : "bg-[#250b10] text-rose-300 hover:bg-[#381119] border border-[#481620]"
+                            isActive ? "bg-white/20 text-white" : "bg-[#13223F] text-blue-200 hover:bg-[#1A3059] border border-[#1E3867]"
                           }`}
                           title="Bấm để tua video tới mốc này"
                         >
@@ -2756,7 +2756,7 @@ export default function AiVideoEditorPage() {
                     <Mic size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="text-xs font-bold text-slate-500">Chưa có phụ đề lời thoại.</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Bấm nút <span className="font-bold text-rose-600">"🔥 Cào Douyin Trends"</span> hoặc <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để nạp video và kịch bản!
+                      Bấm nút <span className="font-bold text-[#1877F2]">"🔥 Cào Douyin Trends"</span> hoặc <span className="font-bold text-indigo-600">"🎤 Bật sub tự động bằng AI"</span> để nạp video và kịch bản!
                     </p>
                   </div>
                 )}
@@ -2773,10 +2773,10 @@ export default function AiVideoEditorPage() {
 
           {/* CỘT PHẢI: VIDEO PLAYER VỚI PHỤ ĐỀ DỌC 9:16 + THANH DOCK STUDIO VIDOCR */}
           <div className="lg:col-span-7 flex items-start gap-4">
-            <div className="bg-[#1c080d]/90 backdrop-blur-md rounded-3xl border border-[#481620] p-4 md:p-5 shadow-xl flex-1">
+            <div className="bg-[#0F1C33]/90 backdrop-blur-md rounded-3xl border border-[#1E3867] p-4 md:p-5 shadow-xl flex-1">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-7 h-7 rounded-lg bg-[#280c12] text-rose-300 flex items-center justify-center shrink-0 border border-[#521924]">
+                  <span className="w-7 h-7 rounded-lg bg-[#152649] text-blue-200 flex items-center justify-center shrink-0 border border-[#25447C]">
                     <Play size={13} />
                   </span>
                   <span className="text-xs font-bold text-white truncate" title={videoName}>
@@ -2788,7 +2788,7 @@ export default function AiVideoEditorPage() {
                   <button
                     type="button"
                     onClick={() => setShowEffectsModal(true)}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#250b10] hover:bg-[#340f17] text-rose-200 border border-[#481620] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-xl bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Palette size={13} />
                     {visualEffects.filterType !== "none" ? "Đã bật hiệu ứng" : "Bộ lọc"}
@@ -2810,7 +2810,7 @@ export default function AiVideoEditorPage() {
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       compareOriginal
                         ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
-                        : "bg-[#250b10] hover:bg-[#340f17] text-rose-200 border border-[#481620]"
+                        : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867]"
                     }`}
                   >
                     <Eye size={13} />
@@ -2820,7 +2820,7 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* KHUNG VIDEO 9:16 */}
-              <div className="w-full bg-[#0a0204] rounded-2xl overflow-hidden relative border border-[#3e131b] flex items-center justify-center aspect-[9/16] max-h-[560px] mx-auto shadow-2xl">
+              <div className="w-full bg-[#0a0204] rounded-2xl overflow-hidden relative border border-[#1E3867] flex items-center justify-center aspect-[9/16] max-h-[560px] mx-auto shadow-2xl">
                 {videoUrl && (
                   <>
                     <video
@@ -2872,13 +2872,13 @@ export default function AiVideoEditorPage() {
                         <h4 className="font-black text-sm text-amber-300 mb-1.5 uppercase tracking-wide">
                           Máy Chủ Nguồn Chặn Phát Trực Tiếp
                         </h4>
-                        <p className="text-xs text-rose-200/80 max-w-sm mb-4 leading-relaxed">
+                        <p className="text-xs text-slate-200/80 max-w-sm mb-4 leading-relaxed">
                           Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Để biên tập trọn vẹn video mà không bị ngắt, bạn bấm nút dưới đây để chọn file từ máy:
                         </p>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-5 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                          className="px-5 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
                         >
                           <Upload size={15} /> 📁 Chọn File Từ Máy Tính
                         </button>
@@ -2907,7 +2907,7 @@ export default function AiVideoEditorPage() {
                             className="w-auto object-contain drop-shadow-md rounded-lg"
                           />
                         ) : (
-                          <div className="px-3 py-1 bg-[#be123c]/90 text-white font-black text-xs rounded-xl shadow-lg border border-white/20 backdrop-blur-xs flex items-center gap-1.5 tracking-wider uppercase">
+                          <div className="px-3 py-1 bg-[#1877F2]/90 text-white font-black text-xs rounded-xl shadow-lg border border-white/20 backdrop-blur-xs flex items-center gap-1.5 tracking-wider uppercase">
                             <Sparkles size={11} className="text-amber-300" />
                             {logoConfig.name}
                           </div>
@@ -2972,7 +2972,7 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* TIMELINE CONTROLS */}
-              <div className="mt-4 pt-3 border-t border-[#340f17] flex flex-col gap-2">
+              <div className="mt-4 pt-3 border-t border-[#1A3059] flex flex-col gap-2">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -2982,12 +2982,12 @@ export default function AiVideoEditorPage() {
                         else videoRef.current.play();
                       }
                     }}
-                    className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#9f1239] to-[#be123c] hover:from-[#be123c] hover:to-[#e11d48] text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-950/60 transition-all cursor-pointer"
+                    className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1565C0] to-[#1877F2] hover:from-[#1877F2] hover:to-[#2563EB] text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-950/60 transition-all cursor-pointer"
                   >
                     {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
                   </button>
 
-                  <div className="flex-1 flex items-center gap-2 text-xs font-mono text-rose-300">
+                  <div className="flex-1 flex items-center gap-2 text-xs font-mono text-blue-200">
                     <span className="font-bold text-white">
                       {Math.floor(currentTime / 60).toString().padStart(2, "0")}:
                       {Math.floor(currentTime % 60).toString().padStart(2, "0")}
@@ -3012,9 +3012,9 @@ export default function AiVideoEditorPage() {
                         if (videoRef.current) videoRef.current.currentTime = val;
                         preloadUpcomingSentences(val);
                       }}
-                      className="flex-1 accent-[#be123c] h-2 bg-[#2d0e14] rounded-lg cursor-pointer"
+                      className="flex-1 accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer"
                     />
-                    <span className="font-bold text-rose-300">
+                    <span className="font-bold text-blue-200">
                       {Math.floor(videoDuration / 60).toString().padStart(2, "0")}:
                       {Math.floor(videoDuration % 60).toString().padStart(2, "0")}
                     </span>
@@ -3028,7 +3028,7 @@ export default function AiVideoEditorPage() {
                         setIsMuted(!isMuted);
                       }
                     }}
-                    className="p-2 rounded-xl bg-[#250b10] hover:bg-[#340f17] text-rose-300 border border-[#481620] transition-colors cursor-pointer"
+                    className="p-2 rounded-xl bg-[#13223F] hover:bg-[#1A3059] text-blue-200 border border-[#1E3867] transition-colors cursor-pointer"
                   >
                     {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                   </button>
@@ -3045,9 +3045,9 @@ export default function AiVideoEditorPage() {
                     <button
                       type="button"
                       onClick={() => setShowVoiceoverModal(true)}
-                      className="text-[11px] font-bold text-rose-200 bg-[#be123c]/20 hover:bg-[#be123c]/30 px-2.5 py-1 rounded-xl border border-[#be123c] flex items-center gap-1 cursor-pointer transition-colors"
+                      className="text-[11px] font-bold text-slate-200 bg-[#1877F2]/20 hover:bg-[#1877F2]/30 px-2.5 py-1 rounded-xl border border-[#1877F2] flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <Radio size={13} className="text-[#f43f5e] animate-pulse" />
+                      <Radio size={13} className="text-[#38BDF8] animate-pulse" />
                       Đang lồng tiếng: {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
                     </button>
                   )}
@@ -3066,19 +3066,19 @@ export default function AiVideoEditorPage() {
             </div>
 
             {/* 🌟 THANH DOCK STUDIO DỌC PHẢI - PHONG CÁCH VIDOCR */}
-            <div className="hidden xl:flex flex-col items-center gap-2.5 bg-[#1c080d]/90 backdrop-blur-md border border-[#481620] p-2.5 rounded-3xl shrink-0 shadow-2xl sticky top-6">
+            <div className="hidden xl:flex flex-col items-center gap-2.5 bg-[#0F1C33]/90 backdrop-blur-md border border-[#1E3867] p-2.5 rounded-3xl shrink-0 shadow-2xl sticky top-6">
               {/* NÚT XUẤT BẢN NỔI BẬT */}
               <button
                 type="button"
                 onClick={handleExportFullVideo}
                 disabled={!videoUrl || isExporting}
-                className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white flex flex-col items-center justify-center gap-1 shadow-lg shadow-rose-950/80 hover:scale-105 active:scale-95 transition-all cursor-pointer font-black border border-rose-400/40"
+                className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white flex flex-col items-center justify-center gap-1 shadow-lg shadow-blue-950/80 hover:scale-105 active:scale-95 transition-all cursor-pointer font-black border border-blue-400/40"
               >
                 <Download size={20} className="animate-bounce" />
                 <span className="text-[8px] uppercase tracking-wider">XUẤT BẢN</span>
               </button>
 
-              <div className="w-8 h-px bg-[#3e131b] my-0.5" />
+              <div className="w-8 h-px bg-[#1E3867] my-0.5" />
 
               {/* CÁC NÚT CÔNG CỤ DỌC */}
               {[
@@ -3096,8 +3096,8 @@ export default function AiVideoEditorPage() {
                   onClick={tool.action}
                   className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-black transition-all cursor-pointer border ${
                     tool.id === "mask" && maskConfig.enabled
-                      ? "bg-[#be123c] text-white border-rose-400 shadow-md shadow-rose-950 scale-105"
-                      : "bg-[#250b10] hover:bg-[#381119] text-rose-200 border-[#481620]"
+                      ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950 scale-105"
+                      : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border-[#1E3867]"
                   }`}
                 >
                   {tool.icon}
@@ -3109,26 +3109,26 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
 
-      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) - NÂU ĐỎ VANG */}
+      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) - XANH FACEBOOK */}
       {showVoiceoverModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1b070b] border border-[#521924] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-rose-100 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#3e131b] shrink-0">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867] shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#9f1239] to-[#e11d48] text-white rounded-xl shadow-md shadow-rose-950">
+                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
                   <Radio size={18} />
                 </span>
                 <div>
                   <h3 className="text-base font-black text-white">
                     AI Lồng Tiếng Cho Video (Từ Trẻ Em Đến Người Lớn)
                   </h3>
-                  <p className="text-xs text-rose-300/70">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
+                  <p className="text-xs text-blue-200/70">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowVoiceoverModal(false)}
-                className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-[#2e0e15] transition-colors"
+                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
               >
                 <X size={18} />
               </button>
@@ -3136,22 +3136,22 @@ export default function AiVideoEditorPage() {
 
             <div className="space-y-4 overflow-y-auto pr-1 flex-1">
               {/* BẬT / TẮT & AUDIO DUCKING */}
-              <div className="p-3 bg-[#140508] border border-[#3e131b] rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <label className="flex items-center gap-2 font-bold text-rose-100 cursor-pointer">
+              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <label className="flex items-center gap-2 font-bold text-slate-100 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={voiceoverConfig.enabled}
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                    className="w-4 h-4 accent-[#be123c] rounded"
+                    className="w-4 h-4 accent-[#1877F2] rounded"
                   />
                   Bật AI tự động lồng tiếng khi phát video
                 </label>
-                <label className="flex items-center gap-2 font-bold text-rose-300 cursor-pointer">
+                <label className="flex items-center gap-2 font-bold text-blue-200 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={voiceoverConfig.autoDuckOriginal}
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, autoDuckOriginal: e.target.checked }))}
-                    className="w-4 h-4 accent-[#be123c] rounded"
+                    className="w-4 h-4 accent-[#1877F2] rounded"
                   />
                   Tự động giảm âm lượng video gốc khi AI nói (Audio Ducking)
                 </label>
@@ -3174,8 +3174,8 @@ export default function AiVideoEditorPage() {
                       }
                       className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? "border-[#be123c] bg-[#9f1239]/30 shadow-md shadow-rose-950/60"
-                          : "border-[#3e131b] hover:border-[#be123c]/50 bg-[#140508]"
+                          ? "border-[#1877F2] bg-[#1565C0]/30 shadow-md shadow-blue-950/60"
+                          : "border-[#1E3867] hover:border-[#1877F2]/50 bg-[#0B1527]"
                       }`}
                     >
                       <div>
@@ -3185,26 +3185,26 @@ export default function AiVideoEditorPage() {
                             char.group === "kids"
                               ? "bg-amber-950/60 text-amber-300 border border-amber-500/30"
                               : char.group === "adults"
-                              ? "bg-rose-950/60 text-rose-300 border border-rose-500/30"
+                              ? "bg-blue-950/60 text-blue-200 border border-[#1877F2]/30"
                               : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
                           }`}>
                             {char.badge} • {char.ageRange}
                           </span>
                         </div>
                         <h4 className="text-xs font-black text-white">{char.name}</h4>
-                        <p className="text-[11px] text-rose-300/70 mt-1 line-clamp-2 leading-relaxed">
+                        <p className="text-[11px] text-blue-200/70 mt-1 line-clamp-2 leading-relaxed">
                           {char.description}
                         </p>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-[#340f17] flex items-center justify-between">
+                      <div className="mt-3 pt-2 border-t border-[#1A3059] flex items-center justify-between">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             speakSentence(char.sampleText, char.id);
                           }}
-                          className="px-2.5 py-1 bg-[#280c12] hover:bg-[#381119] text-rose-200 border border-[#481620] text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                          className="px-2.5 py-1 bg-[#152649] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <Volume2 size={12} /> Nghe thử mẫu
                         </button>
@@ -3220,8 +3220,8 @@ export default function AiVideoEditorPage() {
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#3e131b] flex items-center justify-between shrink-0">
-              <span className="text-xs font-bold text-rose-300">
+            <div className="mt-5 pt-3 border-t border-[#1E3867] flex items-center justify-between shrink-0">
+              <span className="text-xs font-bold text-blue-200">
                 Nhân vật đang chọn:{" "}
                 <strong className="text-amber-300">
                   {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
@@ -3230,7 +3230,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowVoiceoverModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-rose-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
               >
                 Lưu & Áp Dụng
               </button>
@@ -3239,23 +3239,23 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT - NÂU ĐỎ VANG */}
+      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT - XANH FACEBOOK */}
       {showDouyinModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1b070b] border border-[#521924] rounded-3xl max-w-3xl w-full p-6 shadow-2xl text-rose-100 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#3e131b] shrink-0">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-3xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867] shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#9f1239] to-[#e11d48] text-white rounded-xl shadow-md shadow-rose-950">
+                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
                   <Flame size={20} className="animate-pulse" />
                 </span>
                 <div>
                   <h3 className="text-base font-black text-white flex items-center gap-2">
                     Douyin Hot Trends & Cào Video Bán Hàng Triệu View
-                    <span className="bg-[#be123c]/20 border border-[#be123c] text-rose-200 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    <span className="bg-[#1877F2]/20 border border-[#1877F2] text-slate-200 text-[10px] px-2 py-0.5 rounded-full font-bold">
                       DOUYIN.COM
                     </span>
                   </h3>
-                  <p className="text-xs text-rose-300/70">
+                  <p className="text-xs text-blue-200/70">
                     Đề xuất video hot mới nhất, tự động trích xuất kịch bản tiếng Việt và gán giọng lồng tiếng tối ưu
                   </p>
                 </div>
@@ -3263,21 +3263,21 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowDouyinModal(false)}
-                className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-[#2e0e15] transition-colors"
+                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* TAB CHUYỂN ĐỔI */}
-            <div className="flex items-center gap-2 mb-4 p-1 bg-[#140508] border border-[#3e131b] rounded-2xl shrink-0">
+            <div className="flex items-center gap-2 mb-4 p-1 bg-[#0B1527] border border-[#1E3867] rounded-2xl shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveDouyinTab("trends")}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeDouyinTab === "trends"
-                    ? "bg-[#be123c] text-white shadow-md shadow-rose-950"
-                    : "text-rose-300 hover:text-white"
+                    ? "bg-[#1877F2] text-white shadow-md shadow-blue-950"
+                    : "text-blue-200 hover:text-white"
                 }`}
               >
                 <Flame size={14} /> 🏆 Đề Xuất Video Hot Douyin Mới Nhất
@@ -3287,8 +3287,8 @@ export default function AiVideoEditorPage() {
                 onClick={() => setActiveDouyinTab("scraper")}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeDouyinTab === "scraper"
-                    ? "bg-[#be123c] text-white shadow-md shadow-rose-950"
-                    : "text-rose-300 hover:text-white"
+                    ? "bg-[#1877F2] text-white shadow-md shadow-blue-950"
+                    : "text-blue-200 hover:text-white"
                 }`}
               >
                 <Link2 size={14} /> 🔗 Cào Video Từ Link Douyin Bất Kỳ
@@ -3314,8 +3314,8 @@ export default function AiVideoEditorPage() {
                       onClick={() => setDouyinCategory(cat.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                         douyinCategory === cat.id
-                          ? "bg-[#be123c] text-white border-rose-400 shadow-sm"
-                          : "bg-[#140508] text-rose-200 border-[#3e131b] hover:bg-[#250b10]"
+                          ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                          : "bg-[#0B1527] text-slate-200 border-[#1E3867] hover:bg-[#13223F]"
                       }`}
                     >
                       {cat.label}
@@ -3328,26 +3328,26 @@ export default function AiVideoEditorPage() {
                   {filteredDouyinTrends.map((trend) => (
                     <div
                       key={trend.id}
-                      className="bg-[#140508] border border-[#3e131b] rounded-2xl p-4 flex flex-col justify-between gap-3 hover:border-[#be123c] transition-all hover:shadow-lg hover:shadow-rose-950/40"
+                      className="bg-[#0B1527] border border-[#1E3867] rounded-2xl p-4 flex flex-col justify-between gap-3 hover:border-[#1877F2] transition-all hover:shadow-lg hover:shadow-blue-950/40"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-black text-rose-300 bg-[#be123c]/20 border border-[#be123c]/40 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-black text-blue-200 bg-[#1877F2]/20 border border-[#1877F2]/40 px-2 py-0.5 rounded-full">
                             {trend.categoryLabel}
                           </span>
-                          <span className="text-[10px] font-bold text-rose-400/80">❤️ {trend.likes} • ↗️ {trend.shares}</span>
+                          <span className="text-[10px] font-bold text-blue-300/80">❤️ {trend.likes} • ↗️ {trend.shares}</span>
                         </div>
                         <h4 className="text-xs font-black text-white leading-snug">{trend.title}</h4>
-                        <p className="text-[10px] text-rose-400/60 font-mono italic mt-0.5">🇨🇳 {trend.originalTitle}</p>
+                        <p className="text-[10px] text-blue-300/60 font-mono italic mt-0.5">🇨🇳 {trend.originalTitle}</p>
 
-                        <div className="mt-2.5 p-2 bg-[#250b10] border border-[#481620] rounded-xl">
+                        <div className="mt-2.5 p-2 bg-[#13223F] border border-[#1E3867] rounded-xl">
                           <p className="text-[10px] text-amber-200 font-bold leading-relaxed">
                             💡 <strong>AI Viral:</strong> {trend.viralInsight}
                           </p>
                         </div>
 
-                        <div className="mt-2 text-[11px] font-bold text-rose-200 bg-[#be123c]/20 p-2 rounded-xl border border-[#be123c]/40 flex items-center gap-1.5">
-                          <Radio size={12} className="text-[#f43f5e] shrink-0" />
+                        <div className="mt-2 text-[11px] font-bold text-slate-200 bg-[#1877F2]/20 p-2 rounded-xl border border-[#1877F2]/40 flex items-center gap-1.5">
+                          <Radio size={12} className="text-[#38BDF8] shrink-0" />
                           <span>Gợi ý giọng: {trend.voiceRecommendationName}</span>
                         </div>
                       </div>
@@ -3355,7 +3355,7 @@ export default function AiVideoEditorPage() {
                       <button
                         type="button"
                         onClick={() => handleImportDouyinVideo(trend)}
-                        className="w-full py-2 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+                        className="w-full py-2 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
                       >
                         🚀 Nhập Video & Bật Lồng Tiếng
                       </button>
@@ -3368,11 +3368,11 @@ export default function AiVideoEditorPage() {
             {/* TAB 2: CÀO TỪ LINK BẤT KỲ HOẶC TẢI TRỰC TIẾP TỪ MÁY */}
             {activeDouyinTab === "scraper" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                <div className="p-4 bg-[#140508] border border-[#3e131b] rounded-2xl">
+                <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
                   <label className="text-xs font-black uppercase tracking-wider text-white block mb-1">
                     Dán đường link Video (Hỗ trợ MP4, WebM, Google Drive, Dropbox, TikTok/Douyin...):
                   </label>
-                  <p className="text-[11px] text-rose-300/70 mb-2.5">
+                  <p className="text-[11px] text-blue-200/70 mb-2.5">
                     Hỗ trợ video thời lượng bất kỳ (8 phút, 15 phút, 30 phút). Hệ thống sẽ giữ nguyên 100% video của bạn, không cắt ngắn.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -3381,13 +3381,13 @@ export default function AiVideoEditorPage() {
                       value={douyinUrlInput}
                       onChange={(e) => setDouyinUrlInput(e.target.value)}
                       placeholder="VD: https://... hoặc link Google Drive, CDN..."
-                      className="flex-1 text-xs font-bold px-3 py-2.5 bg-[#0e0305] border border-[#481620] rounded-xl text-white placeholder-rose-400/40 focus:border-[#be123c] focus:outline-none font-mono"
+                      className="flex-1 text-xs font-bold px-3 py-2.5 bg-[#0e0305] border border-[#1E3867] rounded-xl text-white placeholder-rose-400/40 focus:border-[#1877F2] focus:outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={handleScrapeDouyinLink}
                       disabled={isScrapingDouyin}
-                      className="px-5 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
                     >
                       {isScrapingDouyin ? (
                         <>
@@ -3403,12 +3403,12 @@ export default function AiVideoEditorPage() {
                 </div>
 
                 {/* TUỲ CHỌN TẢI THẲNG FILE 8 PHÚT TỪ MÁY */}
-                <div className="p-4 bg-[#250b10] border border-[#481620] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-4 bg-[#13223F] border border-[#1E3867] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-xs font-black text-rose-200 flex items-center gap-1.5">
-                      <Upload size={14} className="text-[#f43f5e]" /> Hoặc Chọn File Video Trực Tiếp Từ Máy Tính
+                    <h4 className="text-xs font-black text-slate-200 flex items-center gap-1.5">
+                      <Upload size={14} className="text-[#38BDF8]" /> Hoặc Chọn File Video Trực Tiếp Từ Máy Tính
                     </h4>
-                    <p className="text-[11px] text-rose-300/70 mt-0.5">
+                    <p className="text-[11px] text-blue-200/70 mt-0.5">
                       Khuyên dùng: Tải file từ máy tính phát siêu mượt, trọn vẹn 100% thời lượng (8 phút, 15 phút) và không lo bị lỗi mạng.
                     </p>
                   </div>
@@ -3418,7 +3418,7 @@ export default function AiVideoEditorPage() {
                       setShowDouyinModal(false);
                       fileInputRef.current?.click();
                     }}
-                    className="px-4 py-2.5 bg-[#be123c] hover:bg-[#e11d48] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                    className="px-4 py-2.5 bg-[#1877F2] hover:bg-[#2563EB] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
                   >
                     <FolderOpen size={14} /> 📁 Chọn File Từ Máy
                   </button>
@@ -3426,11 +3426,11 @@ export default function AiVideoEditorPage() {
               </div>
             )}
 
-            <div className="mt-5 pt-3 border-t border-[#3e131b] flex justify-end shrink-0">
+            <div className="mt-5 pt-3 border-t border-[#1E3867] flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDouyinModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-rose-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
               >
                 Đóng
               </button>
@@ -3439,20 +3439,20 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* 🌟 MODAL TẢI LÊN & DỊCH TỰ ĐỘNG THÔNG MINH CHUẨN VIDOCR (MÀU NÂU ĐỎ VANG) */}
+      {/* 🌟 MODAL TẢI LÊN & DỊCH TỰ ĐỘNG THÔNG MINH CHUẨN VIDOCR (MÀU XANH FACEBOOK) */}
       {showVidOcrModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1b070b] border border-[#521924] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-rose-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-[#3d131b] mb-5">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-4 border-b border-[#1E3867] mb-5">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#9f1239] to-[#e11d48] rounded-xl text-white shadow-md shadow-rose-950">
+                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] rounded-xl text-white shadow-md shadow-blue-950">
                   <Sparkles size={18} />
                 </span>
                 <div>
                   <h3 className="text-base font-black text-white uppercase tracking-wide">
                     Tải Lên & Dịch Tự Động (AI OCR & STT V2)
                   </h3>
-                  <p className="text-xs text-rose-300/70">
+                  <p className="text-xs text-blue-200/70">
                     Bóc tách phụ đề cứng, gộp dòng tự động, che sub gốc và lồng tiếng MC khớp 100%
                   </p>
                 </div>
@@ -3460,7 +3460,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowVidOcrModal(false)}
-                className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-[#2d0e14] transition-colors"
+                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#152649] transition-colors"
               >
                 <X size={20} />
               </button>
@@ -3469,18 +3469,18 @@ export default function AiVideoEditorPage() {
             {/* THẢ TẬP TIN VÀO ĐÂY */}
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[#541a25] hover:border-[#be123c] bg-[#120407]/70 hover:bg-[#1a060a] rounded-2xl p-6 text-center cursor-pointer transition-all mb-4 group"
+              className="border-2 border-dashed border-[#541a25] hover:border-[#1877F2] bg-[#120407]/70 hover:bg-[#1a060a] rounded-2xl p-6 text-center cursor-pointer transition-all mb-4 group"
             >
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#280c12] group-hover:bg-[#be123c]/20 flex items-center justify-center text-rose-400 group-hover:text-rose-200 transition-colors mb-2.5">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#152649] group-hover:bg-[#1877F2]/20 flex items-center justify-center text-blue-300 group-hover:text-slate-200 transition-colors mb-2.5">
                 <UploadCloud size={24} />
               </div>
               <h4 className="text-sm font-black text-white mb-1">
                 {videoName ? `Đã chọn: ${videoName}` : "Thả tập tin video vào đây hoặc bấm để chọn"}
               </h4>
-              <p className="text-[11px] text-rose-300/60 mb-2">
+              <p className="text-[11px] text-blue-200/60 mb-2">
                 Hỗ trợ MP4, MOV, WebM thời lượng dài (8 phút, 15 phút, 30 phút)
               </p>
-              <div className="flex items-center justify-center gap-3 text-xs text-rose-400/80 font-mono">
+              <div className="flex items-center justify-center gap-3 text-xs text-blue-300/80 font-mono">
                 <span className="flex items-center gap-1">📁 File máy</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">🎵 TikTok</span>
@@ -3499,13 +3499,13 @@ export default function AiVideoEditorPage() {
                   value={douyinUrlInput}
                   onChange={(e) => setDouyinUrlInput(e.target.value)}
                   placeholder="Hoặc dán đường link video (Douyin, TikTok, Drive, MP4 trực tiếp)..."
-                  className="flex-1 text-xs px-3.5 py-2.5 bg-[#140508] border border-[#481620] rounded-xl text-white placeholder-rose-400/40 focus:outline-none focus:border-[#be123c] font-mono"
+                  className="flex-1 text-xs px-3.5 py-2.5 bg-[#0B1527] border border-[#1E3867] rounded-xl text-white placeholder-rose-400/40 focus:outline-none focus:border-[#1877F2] font-mono"
                 />
                 <button
                   type="button"
                   onClick={handleScrapeDouyinLink}
                   disabled={isScrapingDouyin || !douyinUrlInput.trim()}
-                  className="px-4 py-2 bg-[#be123c] hover:bg-[#e11d48] text-white text-xs font-black rounded-xl transition-all disabled:opacity-40 cursor-pointer shrink-0"
+                  className="px-4 py-2 bg-[#1877F2] hover:bg-[#2563EB] text-white text-xs font-black rounded-xl transition-all disabled:opacity-40 cursor-pointer shrink-0"
                 >
                   {isScrapingDouyin ? "Đang tải..." : "Nạp Link"}
                 </button>
@@ -3514,13 +3514,13 @@ export default function AiVideoEditorPage() {
 
             <div className="space-y-3.5 text-xs">
               {/* HÀNG 1: CẶP NGÔN NGỮ */}
-              <div className="p-3 bg-[#140508] border border-[#3e131b] rounded-2xl flex items-center justify-between gap-3">
+              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-rose-400/70 font-bold">Nguồn:</span>
+                  <span className="text-blue-300/70 font-bold">Nguồn:</span>
                   <select
                     value={vidOcrWorkflow.sourceLang}
                     onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, sourceLang: e.target.value as any }))}
-                    className="bg-[#240a10] border border-[#521924] rounded-lg px-2.5 py-1 text-white font-bold"
+                    className="bg-[#13223F] border border-[#25447C] rounded-lg px-2.5 py-1 text-white font-bold"
                   >
                     <option value="zh">🇨🇳 Tiếng Trung (Douyin/Kuaishou)</option>
                     <option value="auto">🌐 Phát hiện tự động</option>
@@ -3530,11 +3530,11 @@ export default function AiVideoEditorPage() {
                   </select>
                 </div>
 
-                <span className="text-[#be123c] font-black text-base">➔</span>
+                <span className="text-[#1877F2] font-black text-base">➔</span>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-rose-400/70 font-bold">Đích:</span>
-                  <span className="px-3 py-1 bg-[#be123c]/20 border border-[#be123c] text-rose-200 font-black rounded-lg">
+                  <span className="text-blue-300/70 font-bold">Đích:</span>
+                  <span className="px-3 py-1 bg-[#1877F2]/20 border border-[#1877F2] text-slate-200 font-black rounded-lg">
                     🇻🇳 Tiếng Việt
                   </span>
                 </div>
@@ -3542,7 +3542,7 @@ export default function AiVideoEditorPage() {
 
               {/* HÀNG 2: MÔ HÌNH DỊCH AI */}
               <div className="flex items-center gap-2">
-                <span className="text-rose-300 font-bold shrink-0">Model AI:</span>
+                <span className="text-blue-200 font-bold shrink-0">Model AI:</span>
                 <div className="grid grid-cols-3 gap-2 flex-1">
                   {[
                     { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash ⚡", badge: "Siêu Tốc (Gợi ý)" },
@@ -3555,12 +3555,12 @@ export default function AiVideoEditorPage() {
                       onClick={() => setVidOcrWorkflow((p) => ({ ...p, aiModel: m.id as any }))}
                       className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
                         vidOcrWorkflow.aiModel === m.id
-                          ? "bg-[#be123c] text-white border-rose-400 shadow-md shadow-rose-950"
-                          : "bg-[#140508] hover:bg-[#240a10] text-rose-200 border-[#3e131b]"
+                          ? "bg-[#1877F2] text-white border-blue-400 shadow-md shadow-blue-950"
+                          : "bg-[#0B1527] hover:bg-[#13223F] text-slate-200 border-[#1E3867]"
                       }`}
                     >
                       <div className="font-black text-[11px] truncate">{m.label}</div>
-                      <div className="text-[9px] text-rose-300/60 mt-0.5">{m.badge}</div>
+                      <div className="text-[9px] text-blue-200/60 mt-0.5">{m.badge}</div>
                     </button>
                   ))}
                 </div>
@@ -3568,7 +3568,7 @@ export default function AiVideoEditorPage() {
 
               {/* HÀNG 3: PHƯƠNG THỨC BÓC TÁCH */}
               <div className="flex items-center gap-2">
-                <span className="text-rose-300 font-bold shrink-0">Chế độ:</span>
+                <span className="text-blue-200 font-bold shrink-0">Chế độ:</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 flex-1">
                   {[
                     { id: "audio_stt_v2", label: "Dịch âm thanh V2", desc: "Whisper + Gemini" },
@@ -3582,34 +3582,34 @@ export default function AiVideoEditorPage() {
                       onClick={() => setVidOcrWorkflow((p) => ({ ...p, processMode: mode.id as any }))}
                       className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
                         vidOcrWorkflow.processMode === mode.id
-                          ? "bg-[#be123c] text-white border-rose-400 shadow-sm"
-                          : "bg-[#140508] hover:bg-[#240a10] text-rose-200 border-[#3e131b]"
+                          ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                          : "bg-[#0B1527] hover:bg-[#13223F] text-slate-200 border-[#1E3867]"
                       }`}
                     >
                       <div className="font-black text-[11px]">{mode.label}</div>
-                      <div className="text-[9px] text-rose-300/60">{mode.desc}</div>
+                      <div className="text-[9px] text-blue-200/60">{mode.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* HÀNG 4: 4 TÙY CHỌN ĐỘC QUYỀN CHUẨN VIDOCR */}
-              <div className="p-3 bg-[#140508] border border-[#3e131b] rounded-2xl">
+              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
                 <span className="text-[11px] font-black uppercase text-amber-300 block mb-2">
                   ✨ Tùy Chọn Độc Quyền (Giúp Video & Giọng Nói Chạy Mượt Mà):
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-rose-100 hover:text-white">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
                     <input
                       type="checkbox"
                       checked={vidOcrWorkflow.autoMergeLines}
                       onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoMergeLines: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     <span>⚡ Gộp dòng thông minh (Không ngắt vụn)</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-rose-100 hover:text-white">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
                     <input
                       type="checkbox"
                       checked={vidOcrWorkflow.blurOriginalSub}
@@ -3618,27 +3618,27 @@ export default function AiVideoEditorPage() {
                         setVidOcrWorkflow((p) => ({ ...p, blurOriginalSub: val }));
                         setMaskConfig((p) => ({ ...p, enabled: val }));
                       }}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     <span>🎭 Gộp làm mờ (Che sub tiếng Trung gốc)</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-rose-100 hover:text-white">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
                     <input
                       type="checkbox"
                       checked={vidOcrWorkflow.autoDuckAudio}
                       onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoDuckAudio: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     <span>🎵 Tách & Giữ nhạc nền (Audio Ducking 10%)</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-rose-100 hover:text-white">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-100 hover:text-white">
                     <input
                       type="checkbox"
                       checked={vidOcrWorkflow.autoSpeedFit}
                       onChange={(e) => setVidOcrWorkflow((p) => ({ ...p, autoSpeedFit: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     <span>⚡ Khớp tốc độ nhân vật tự động</span>
                   </label>
@@ -3647,15 +3647,15 @@ export default function AiVideoEditorPage() {
             </div>
 
             {/* NÚT BẮT ĐẦU */}
-            <div className="mt-5 pt-4 border-t border-[#3d131b] flex items-center justify-between">
-              <span className="text-[11px] text-rose-300/60 font-mono">
+            <div className="mt-5 pt-4 border-t border-[#1E3867] flex items-center justify-between">
+              <span className="text-[11px] text-blue-200/60 font-mono">
                 {videoDuration ? `Độ dài: ${Math.round(videoDuration)}s` : "Sẵn sàng xử lý"} | Chuẩn Studio 1080P
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowVidOcrModal(false)}
-                  className="px-4 py-2 bg-[#250b10] hover:bg-[#340f17] text-rose-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[#13223F] hover:bg-[#1A3059] text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -3666,7 +3666,7 @@ export default function AiVideoEditorPage() {
                     handleTranscribeRealAudio();
                   }}
                   disabled={isTranscribing}
-                  className="px-6 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-rose-950 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-blue-950 transition-all cursor-pointer disabled:opacity-50"
                 >
                   🚀 Bắt Đầu Xử Lý Ngay
                 </button>
@@ -3676,13 +3676,13 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI - NÂU ĐỎ VANG */}
+      {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI - XANH FACEBOOK */}
       {showEffectsModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1b070b] border border-[#521924] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-rose-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#3e131b]">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867]">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#9f1239] to-[#e11d48] text-white rounded-xl shadow-md shadow-rose-950">
+                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
                   <Sparkles size={18} />
                 </span>
                 <h3 className="text-base font-black text-white">Hiệu Ứng Hình Ảnh & Âm Thanh</h3>
@@ -3690,7 +3690,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowEffectsModal(false)}
-                className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-[#2e0e15] transition-colors"
+                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
               >
                 <X size={18} />
               </button>
@@ -3698,14 +3698,14 @@ export default function AiVideoEditorPage() {
 
             <div className="space-y-4">
               {/* PHẦN 1: HIỆU ỨNG HÌNH ẢNH */}
-              <div className="p-4 bg-[#140508] border border-[#3e131b] rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-wider text-rose-200 flex items-center gap-1.5 mb-3">
-                  <Palette size={14} className="text-[#be123c]" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
+              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5 mb-3">
+                  <Palette size={14} className="text-[#1877F2]" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
                 </span>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-rose-300 block mb-1.5">Tông màu điện ảnh:</label>
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Tông màu điện ảnh:</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: "none", label: "Mặc định" },
@@ -3721,8 +3721,8 @@ export default function AiVideoEditorPage() {
                           onClick={() => setVisualEffects((p) => ({ ...p, filterType: item.id as any }))}
                           className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                             visualEffects.filterType === item.id
-                              ? "bg-[#be123c] text-white border-rose-400 shadow-sm"
-                              : "bg-[#250b10] text-rose-200 border-[#481620] hover:bg-[#340f17]"
+                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                              : "bg-[#13223F] text-slate-200 border-[#1E3867] hover:bg-[#1A3059]"
                           }`}
                         >
                           {item.label}
@@ -3733,7 +3733,7 @@ export default function AiVideoEditorPage() {
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
                         Độ sáng: {visualEffects.brightness}%
                       </label>
                       <input
@@ -3742,11 +3742,11 @@ export default function AiVideoEditorPage() {
                         max={140}
                         value={visualEffects.brightness}
                         onChange={(e) => setVisualEffects((p) => ({ ...p, brightness: Number(e.target.value) }))}
-                        className="w-full accent-[#be123c] h-2 bg-[#2d0e14] rounded-lg cursor-pointer"
+                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
                         Độ bão hòa màu: {visualEffects.saturation}%
                       </label>
                       <input
@@ -3755,13 +3755,13 @@ export default function AiVideoEditorPage() {
                         max={180}
                         value={visualEffects.saturation}
                         onChange={(e) => setVisualEffects((p) => ({ ...p, saturation: Number(e.target.value) }))}
-                        className="w-full accent-[#be123c] h-2 bg-[#2d0e14] rounded-lg cursor-pointer"
+                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer"
                       />
                     </div>
                   </div>
 
                   <div className="pt-1">
-                    <label className="text-[11px] font-bold text-rose-300 block mb-1">
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1">
                       Tốc độ phát: {visualEffects.speed}x (Tăng tốc để video TikTok cuốn hút hơn)
                     </label>
                     <div className="flex gap-2">
@@ -3772,8 +3772,8 @@ export default function AiVideoEditorPage() {
                           onClick={() => setVisualEffects((p) => ({ ...p, speed: spd }))}
                           className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                             visualEffects.speed === spd
-                              ? "bg-[#be123c] text-white border-rose-400 shadow-sm"
-                              : "bg-[#250b10] text-rose-200 border-[#481620] hover:bg-[#340f17]"
+                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                              : "bg-[#13223F] text-slate-200 border-[#1E3867] hover:bg-[#1A3059]"
                           }`}
                         >
                           {spd}x
@@ -3785,48 +3785,48 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* PHẦN 2: HIỆU ỨNG ÂM THANH */}
-              <div className="p-4 bg-[#140508] border border-[#3e131b] rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-wider text-rose-200 flex items-center gap-1.5 mb-3">
+              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5 mb-3">
                   <Music size={14} className="text-emerald-400" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
                 </span>
 
                 <div className="space-y-2.5">
-                  <label className="flex items-center justify-between p-2.5 bg-[#250b10] border border-[#481620] rounded-xl cursor-pointer hover:border-[#be123c] transition-all">
+                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
                     <div>
                       <p className="text-xs font-bold text-white">🎙️ Khuếch đại giọng nói (Voice Boost +40%)</p>
-                      <p className="text-[11px] text-rose-300/70">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
+                      <p className="text-[11px] text-blue-200/70">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.boostVoiceVolume}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, boostVoiceVolume: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                   </label>
 
-                  <label className="flex items-center justify-between p-2.5 bg-[#250b10] border border-[#481620] rounded-xl cursor-pointer hover:border-[#be123c] transition-all">
+                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
                     <div>
                       <p className="text-xs font-bold text-white">🔔 Hiệu ứng Ding khi hiện Banner</p>
-                      <p className="text-[11px] text-rose-300/70">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
+                      <p className="text-[11px] text-blue-200/70">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.dingEffectEnabled}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, dingEffectEnabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                   </label>
 
-                  <label className="flex items-center justify-between p-2.5 bg-[#250b10] border border-[#481620] rounded-xl cursor-pointer hover:border-[#be123c] transition-all">
+                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
                     <div>
                       <p className="text-xs font-bold text-white">⚡ Hiệu ứng Whoosh lướt cảnh mở đầu</p>
-                      <p className="text-[11px] text-rose-300/70">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
+                      <p className="text-[11px] text-blue-200/70">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.whooshEffectEnabled}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, whooshEffectEnabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                   </label>
                 </div>
@@ -3837,7 +3837,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowEffectsModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-rose-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
               >
                 Lưu & Áp Dụng
               </button>
@@ -3846,13 +3846,13 @@ export default function AiVideoEditorPage() {
         </div>
       )}
 
-      {/* MODAL THIẾT LẬP LOGO & BANNER - NÂU ĐỎ VANG */}
+      {/* MODAL THIẾT LẬP LOGO & BANNER - XANH FACEBOOK */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1b070b] border border-[#521924] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-rose-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#3e131b]">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867]">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#9f1239] to-[#e11d48] text-white rounded-xl shadow-md shadow-rose-950">
+                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
                   <ImageIcon size={18} />
                 </span>
                 <h3 className="text-base font-black text-white">Thiết Lập Logo & Banner Video</h3>
@@ -3860,7 +3860,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-[#2e0e15] transition-colors"
+                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
               >
                 <X size={18} />
               </button>
@@ -3868,17 +3868,17 @@ export default function AiVideoEditorPage() {
 
             <div className="space-y-4">
               {/* PHẦN 1: LOGO */}
-              <div className="p-4 bg-[#140508] border border-[#3e131b] rounded-2xl">
+              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-rose-200 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#be123c]" /> 1. Logo Thương Hiệu
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-[#1877F2]" /> 1. Logo Thương Hiệu
                   </span>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-rose-200 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={logoConfig.enabled}
                       onChange={(e) => setLogoConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     Bật Logo
                   </label>
@@ -3886,12 +3886,12 @@ export default function AiVideoEditorPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-rose-300 block mb-1.5">
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">
                       Ảnh Logo (PNG trong suốt / JPG):
                     </label>
                     <div className="flex items-center gap-3">
                       {logoConfig.imageSrc ? (
-                        <div className="relative group w-14 h-14 bg-[#250b10] border border-[#481620] rounded-xl p-1 flex items-center justify-center shrink-0">
+                        <div className="relative group w-14 h-14 bg-[#13223F] border border-[#1E3867] rounded-xl p-1 flex items-center justify-center shrink-0">
                           <img
                             src={logoConfig.imageSrc}
                             alt="Logo preview"
@@ -3900,7 +3900,7 @@ export default function AiVideoEditorPage() {
                           <button
                             type="button"
                             onClick={() => setLogoConfig((p) => ({ ...p, imageSrc: "" }))}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
                             title="Xóa logo"
                           >
                             <X size={11} />
@@ -3912,9 +3912,9 @@ export default function AiVideoEditorPage() {
                         <button
                           type="button"
                           onClick={() => logoImageInputRef.current?.click()}
-                          className="w-full py-2.5 px-3 bg-[#250b10] hover:bg-[#381119] border border-dashed border-[#521924] rounded-xl text-xs font-bold text-rose-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
+                          className="w-full py-2.5 px-3 bg-[#13223F] hover:bg-[#1A3059] border border-dashed border-[#25447C] rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
                         >
-                          <UploadCloud size={16} className="text-rose-400" />
+                          <UploadCloud size={16} className="text-blue-300" />
                           {logoConfig.imageSrc ? "Đổi ảnh Logo khác" : "Chọn ảnh Logo từ máy tính..."}
                         </button>
                         <input
@@ -3930,7 +3930,7 @@ export default function AiVideoEditorPage() {
 
                   {!logoConfig.imageSrc && (
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
                         Hoặc nhập Chữ Logo đại diện:
                       </label>
                       <input
@@ -3938,18 +3938,18 @@ export default function AiVideoEditorPage() {
                         value={logoConfig.name}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, name: e.target.value }))}
                         placeholder="VD: KPOST AI"
-                        className="w-full text-xs font-bold px-3 py-2 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:border-[#be123c] focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
                       />
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">Vị trí góc:</label>
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Vị trí góc:</label>
                       <select
                         value={logoConfig.position}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, position: e.target.value as any }))}
-                        className="w-full text-xs font-bold px-2.5 py-1.5 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-2.5 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
                       >
                         <option value="top-right">Góc trên - Phải</option>
                         <option value="top-left">Góc trên - Trái</option>
@@ -3959,7 +3959,7 @@ export default function AiVideoEditorPage() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
                         Kích thước: {logoConfig.size || 40}px
                       </label>
                       <input
@@ -3968,7 +3968,7 @@ export default function AiVideoEditorPage() {
                         max={70}
                         value={logoConfig.size || 40}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, size: Number(e.target.value) }))}
-                        className="w-full accent-[#be123c] h-2 bg-[#2d0e14] rounded-lg cursor-pointer mt-1"
+                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer mt-1"
                       />
                     </div>
                   </div>
@@ -3976,17 +3976,17 @@ export default function AiVideoEditorPage() {
               </div>
 
               {/* PHẦN 2: BANNER QUẢNG CÁO */}
-              <div className="p-4 bg-[#140508] border border-[#3e131b] rounded-2xl">
+              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-rose-200 flex items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
                     🏷️ 2. Banner Quảng Cáo / Giảm Giá
                   </span>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-rose-200 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={bannerConfig.enabled}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#be123c] rounded"
+                      className="w-4 h-4 accent-[#1877F2] rounded"
                     />
                     Bật Banner
                   </label>
@@ -3994,48 +3994,48 @@ export default function AiVideoEditorPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-rose-300 block mb-1">Tiêu đề chính:</label>
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1">Tiêu đề chính:</label>
                     <input
                       type="text"
                       value={bannerConfig.title}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
                       placeholder="VD: ⚡ FLASH SALE 50% - DUY NHẤT HÔM NAY"
-                      className="w-full text-xs font-bold px-3 py-2 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:border-[#be123c] focus:outline-none"
+                      className="w-full text-xs font-bold px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-rose-300 block mb-1">Mô tả phụ (subtitle):</label>
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1">Mô tả phụ (subtitle):</label>
                     <input
                       type="text"
                       value={bannerConfig.subtitle || ""}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, subtitle: e.target.value }))}
                       placeholder="VD: Miễn phí giao hàng toàn quốc • Bảo hành chính hãng"
-                      className="w-full text-xs font-medium px-3 py-2 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:border-[#be123c] focus:outline-none"
+                      className="w-full text-xs font-medium px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">Bắt đầu (giây):</label>
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Bắt đầu (giây):</label>
                       <input
                         type="number"
                         min={0}
                         max={videoDuration || 120}
                         value={bannerConfig.startSec}
                         onChange={(e) => setBannerConfig((p) => ({ ...p, startSec: Number(e.target.value) }))}
-                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-rose-300 block mb-1">Kết thúc (giây):</label>
+                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Kết thúc (giây):</label>
                       <input
                         type="number"
                         min={0}
                         max={videoDuration || 120}
                         value={bannerConfig.endSec}
                         onChange={(e) => setBannerConfig((p) => ({ ...p, endSec: Number(e.target.value) }))}
-                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#250b10] border border-[#481620] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -4047,7 +4047,7 @@ export default function AiVideoEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#9f1239] via-[#be123c] to-[#e11d48] hover:from-[#be123c] hover:to-[#f43f5e] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-rose-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
               >
                 Lưu & Áp Dụng
               </button>
