@@ -46,6 +46,10 @@ export interface SubtitleCue {
   timeLabel: string;
   text: string;
   words?: SubtitleWord[];
+  parentSentenceId?: string;
+  parentSentenceText?: string;
+  parentSentenceStart?: number;
+  parentSentenceEnd?: number;
 }
 
 export interface SubtitleConfig {
@@ -214,7 +218,29 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     rate: 0.90,
     description: "Trầm lắng, từ tốn, ấm áp, tạo niềm tin tuyệt đối, chuyên sức khỏe, trà, thảo dược.",
     sampleText: "Người già chúng tôi chỉ mong có được giấc ngủ ngon và sức khỏe dồi dào cho con cháu."
+  },
+  {
+    id: "speed_mc",
+    name: "MC Siêu Tốc (Khớp Douyin Nhanh)",
+    group: "adults",
+    ageRange: "20–25 tuổi",
+    avatar: "⚡",
+    badge: "Siêu Tốc Douyin",
+    gender: "female",
+    pitch: 1.05,
+    rate: 1.35,
+    description: "Tốc độ nói nhanh, dứt khoát, bắt trọn 100% nhịp độ nói liên thanh của video Douyin.",
+    sampleText: "Mọi người nhìn kỹ nha, món này đang cực kỳ hot rần rần trên Douyin những ngày qua nè!",
   }
+];
+
+// 🌟 DANH SÁCH 5 GIỌNG MC PHỔ BIẾN ĐỂ CHỌN NHANH TRỰC TIẾP
+export const POPULAR_VOICES = [
+  { id: "adult_female_sweet", name: "Mai Anh (Nữ Review)", shortName: "Nữ Dịu Dàng", avatar: "👩", rate: 1.22, pitch: 1.15 },
+  { id: "adult_male_mc", name: "Minh Quân (Nam MC)", shortName: "Nam Trầm Ấm", avatar: "🎙️", rate: 1.15, pitch: 0.85 },
+  { id: "adult_male_reviewer", name: "Đức Anh (Reviewer)", shortName: "Nam Bắt Trend", avatar: "👱‍♂️", rate: 1.26, pitch: 0.98 },
+  { id: "adult_female_news", name: "Thu Thảo (Thuyết Minh)", shortName: "Nữ Chuẩn Đài", avatar: "💼", rate: 1.20, pitch: 1.05 },
+  { id: "speed_mc", name: "MC Siêu Tốc (Douyin)", shortName: "MC Siêu Tốc (1.35x)", avatar: "⚡", rate: 1.35, pitch: 1.05 },
 ];
 
 // 🔥 DANH SÁCH VIDEO DOUYIN HOT TRENDS ĐỀ XUẤT MỚI NHẤT
@@ -484,6 +510,9 @@ export default function AiVideoEditorPage() {
     rate: 1.02,
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
+  const currentSentenceSpokenRef = useRef<string | null>(null);
+  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const [voiceChangeNotice, setVoiceChangeNotice] = useState<string | null>(null);
 
   // 🔥 ĐỒNG BỘ ÂM LƯỢNG TIẾNG GỐC: NẾU BẬT LOẠI BỎ TIẾNG GỐC THÌ VOLUME = 0 TUYỆT ĐỐI
   useEffect(() => {
@@ -528,6 +557,89 @@ export default function AiVideoEditorPage() {
     }
   }, []);
 
+  // 🎙️ PRELOAD TỰ ĐỘNG CÁC CÂU SẮP TỚI: LOẠI BỎ 100% ĐỘ TRỄ MẠNG (0MS LATENCY)
+  const preloadUpcomingSentences = (fromSec: number = 0) => {
+    if (!subtitleCues || subtitleCues.length === 0) return;
+    const apiBase = getApiBaseUrl();
+    const activeVoice = voiceoverConfig.selectedVoiceId;
+
+    // Lấy tối đa 10 câu phụ đề trong vòng 30 giây tới
+    const upcoming = subtitleCues.filter(
+      (c) => c.startSec >= fromSec && c.startSec <= fromSec + 30
+    );
+
+    upcoming.slice(0, 10).forEach((cue) => {
+      const textToSpeak = (cue.parentSentenceText || cue.text).trim().slice(0, 250);
+      const cacheKey = `${activeVoice}_${textToSpeak}`;
+      if (audioCacheRef.current.has(cacheKey)) return;
+
+      try {
+        const audio = document.createElement("audio");
+        audio.setAttribute("referrerpolicy", "no-referrer");
+        (audio as any).referrerPolicy = "no-referrer";
+        const encoded = encodeURIComponent(textToSpeak);
+        audio.src = `${apiBase}/ai-content/tts?text=${encoded}`;
+        audio.playbackRate = voiceoverConfig.rate || 1.25;
+        audio.preload = "auto";
+        audioCacheRef.current.set(cacheKey, audio);
+      } catch {}
+    });
+  };
+
+  // ⚡ HÀM ĐỔI GIỌNG MC & LOAD LẠI TRỰC TIẾP (KHÔNG CẦN DỊCH LẠI TỪ ĐẦU)
+  const handleQuickChangeVoice = (voiceId: string, customRate?: number, customPitch?: number) => {
+    const selectedChar = VOICE_CHARACTERS.find((c) => c.id === voiceId);
+    const newRate = customRate || selectedChar?.rate || 1.25;
+    const newPitch = customPitch || selectedChar?.pitch || 1.0;
+
+    // 1. Cập nhật state giọng đọc
+    setVoiceoverConfig((prev) => ({
+      ...prev,
+      selectedVoiceId: voiceId,
+      rate: newRate,
+      pitch: newPitch,
+      enabled: true,
+    }));
+
+    // 2. Xóa audio cache cũ & reset con trỏ câu đang nói
+    audioCacheRef.current.clear();
+    currentSentenceSpokenRef.current = null;
+    lastSpokenCueIdRef.current = null;
+
+    if (ttsAudioRef.current) {
+      try {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+      } catch {}
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+
+    // 3. Preload các câu sắp tới theo giọng mới
+    preloadUpcomingSentences(currentTime);
+
+    // 4. Phát thử ngay câu mẫu của giọng MC mới để người dùng nghe
+    const sample = selectedChar?.sampleText || (subtitleCues[0]?.text) || "Xin chào! Tôi là MC lồng tiếng mới của bạn.";
+    speakSentence(sample, voiceId);
+
+    // 5. Hiển thị thông báo thành công
+    setVoiceChangeNotice(`✅ Đã chuyển sang: ${selectedChar?.name || voiceId} (Tốc độ ${newRate}x) - Sẵn sàng lồng tiếng!`);
+    setTimeout(() => setVoiceChangeNotice(null), 4000);
+  };
+
+  // ⚡ HÀM ĐỔI TỐC ĐỘ ĐỌC MC
+  const handleQuickChangeSpeed = (newSpeed: number) => {
+    setVoiceoverConfig((prev) => ({ ...prev, rate: newSpeed }));
+    audioCacheRef.current.clear();
+    currentSentenceSpokenRef.current = null;
+    preloadUpcomingSentences(currentTime);
+    setVoiceChangeNotice(`⚡ Đã điều chỉnh tốc độ MC: ${newSpeed}x (Khớp nhịp nhân vật)`);
+    setTimeout(() => setVoiceChangeNotice(null), 3000);
+  };
+
   // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (NGỮ ĐIỆU TỰ NHIÊN, CỰC KỲ RÕ RÀNG)
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
@@ -562,16 +674,38 @@ export default function AiVideoEditorPage() {
       }
     };
 
+    const activeVoiceId = voiceId || voiceoverConfig.selectedVoiceId;
+    const cleanSnippet = cleanText.slice(0, 250);
+
+    // 1. Kiểm tra cache âm thanh đã preload trước (0ms latency, không chờ tải qua mạng)
+    const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
+    if (audioCacheRef.current.has(cacheKey)) {
+      const cached = audioCacheRef.current.get(cacheKey)!;
+      try {
+        cached.currentTime = 0;
+        cached.playbackRate = voiceoverConfig.rate || 1.25;
+        ttsAudioRef.current = cached;
+        cached.onended = () => { restoreVolume(); };
+        cached.onerror = () => { /* fallback */ };
+        const p = cached.play();
+        if (p !== undefined) {
+          p.then(() => {
+            preloadUpcomingSentences(currentTime);
+          }).catch(() => {});
+        }
+        return;
+      } catch {}
+    }
+
     // 🌟 ƯU TIÊN SỐ 1 TUYỆT ĐỐI THEO YÊU CẦU: DÙNG TRỰC TIẾP API GOOGLE TTS TIẾNG VIỆT
     // Giọng Google tiếng Việt chuẩn 100%, không bị phụ thuộc máy tính và KHÔNG BAO GIỜ BỊ GIỌNG TÂY ĐỌC ĐỚ
     const apiBase = getApiBaseUrl();
-    const cleanSnippet = cleanText.slice(0, 250);
     const encoded = encodeURIComponent(cleanSnippet);
 
     // Danh sách các nguồn phát âm thanh Google tiếng Việt (tự động thử lần lượt)
     const audioSources = [
-      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
       `${apiBase}/ai-content/tts?text=${encoded}`,
+      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
       `/api/tts?text=${encoded}`,
       `${apiBase}/api/tts?text=${encoded}`,
     ];
@@ -597,7 +731,7 @@ export default function AiVideoEditorPage() {
           if (viVoice) {
             utt.voice = viVoice;
           }
-          utt.rate = voiceoverConfig.rate || 1.0;
+          utt.rate = voiceoverConfig.rate || 1.25;
           utt.pitch = voiceoverConfig.pitch || 1.0;
           utt.onend = restoreVolume;
           utt.onerror = restoreVolume;
@@ -624,7 +758,8 @@ export default function AiVideoEditorPage() {
           (audio as any).referrerPolicy = "no-referrer";
           audio.src = srcUrl;
           ttsAudioRef.current = audio;
-          audio.playbackRate = voiceoverConfig.rate || 1.0;
+          audio.playbackRate = voiceoverConfig.rate || 1.25;
+          audioCacheRef.current.set(cacheKey, audio);
           
           audio.onended = () => {
             isHandled = true;
@@ -638,6 +773,7 @@ export default function AiVideoEditorPage() {
             playPromise
               .then(() => {
                 isHandled = true;
+                preloadUpcomingSentences(currentTime);
               })
               .catch(() => {
                 tryNextAudioSource();
@@ -688,9 +824,12 @@ export default function AiVideoEditorPage() {
     const chunked: SubtitleCue[] = [];
     let cueIndex = 1;
 
-    for (const cue of originalCues) {
+    for (let cIdx = 0; cIdx < originalCues.length; cIdx++) {
+      const cue = originalCues[cIdx];
       const text = (cue.text || "").trim();
       if (!text) continue;
+
+      const sentenceId = `sent_${cIdx + 1}`;
 
       // Tách thành mảng các từ
       const words = text.split(/\s+/).filter(Boolean);
@@ -700,6 +839,10 @@ export default function AiVideoEditorPage() {
           id: `sub_cue_${cueIndex++}`,
           text,
           timeLabel: `${formatSecToTime(cue.startSec)} - ${formatSecToTime(cue.endSec)}`,
+          parentSentenceId: sentenceId,
+          parentSentenceText: text,
+          parentSentenceStart: cue.startSec,
+          parentSentenceEnd: cue.endSec,
         });
         continue;
       }
@@ -733,6 +876,10 @@ export default function AiVideoEditorPage() {
           endSec,
           timeLabel: `${formatSecToTime(startSec)} - ${formatSecToTime(endSec)}`,
           text: chunkText,
+          parentSentenceId: sentenceId,
+          parentSentenceText: text,
+          parentSentenceStart: cue.startSec,
+          parentSentenceEnd: cue.endSec,
         });
 
         wordIdx += size;
@@ -1102,12 +1249,18 @@ export default function AiVideoEditorPage() {
     return recent || null;
   }, [subtitleConfig.enabled, subtitleCues, adjustedCurrentTime]);
 
-  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực
+  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực (LỒNG TIẾNG TRỌN CÂU, KHÔNG GIẬT CỤC)
   useEffect(() => {
     if (!voiceoverConfig.enabled || isExporting || !isPlaying) return;
-    if (currentSubtitleCue && currentSubtitleCue.id !== lastSpokenCueIdRef.current) {
-      lastSpokenCueIdRef.current = currentSubtitleCue.id;
-      speakSentence(currentSubtitleCue.text);
+    if (currentSubtitleCue) {
+      const sentenceKey = currentSubtitleCue.parentSentenceId || currentSubtitleCue.id;
+      const textToSpeak = currentSubtitleCue.parentSentenceText || currentSubtitleCue.text;
+
+      if (sentenceKey !== currentSentenceSpokenRef.current) {
+        currentSentenceSpokenRef.current = sentenceKey;
+        lastSpokenCueIdRef.current = currentSubtitleCue.id;
+        speakSentence(textToSpeak);
+      }
     }
   }, [currentSubtitleCue, voiceoverConfig.enabled, isPlaying]);
 
@@ -1465,6 +1618,15 @@ export default function AiVideoEditorPage() {
     if (videoRef.current) {
       videoRef.current.currentTime = sec;
       setCurrentTime(sec);
+      currentSentenceSpokenRef.current = null;
+      lastSpokenCueIdRef.current = null;
+      if (ttsAudioRef.current) {
+        try { ttsAudioRef.current.pause(); } catch {}
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch {}
+      }
+      preloadUpcomingSentences(sec);
     }
   };
 
@@ -2168,10 +2330,11 @@ export default function AiVideoEditorPage() {
                 )}
               </div>
 
-              {/* TÙY CHỌN */}
-              <div className="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5 text-xs">
+              {/* TÙY CHỌN & CHỌN GIỌNG MC TRỰC TIẾP */}
+              <div className="mb-3 p-3.5 bg-slate-50 border border-slate-200 rounded-3xl flex flex-col gap-3 text-xs shadow-xs">
+                {/* DÒNG 1: HIỆN PHỤ ĐỀ & CỠ CHỮ */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2 font-black text-slate-800 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={subtitleConfig.enabled}
@@ -2195,9 +2358,9 @@ export default function AiVideoEditorPage() {
                   </div>
                 </div>
 
-                {/* BẬT / TẮT LỒNG TIẾNG MC TRỰC TIẾP */}
+                {/* DÒNG 2: BẬT / TẮT LỒNG TIẾNG MC VÀ THỬ LOA */}
                 <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 font-black cursor-pointer text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-xl border border-violet-200 transition-all select-none">
+                  <label className="flex items-center gap-2 font-black cursor-pointer text-violet-700 bg-violet-100/70 hover:bg-violet-100 px-3 py-1.5 rounded-xl border border-violet-200 transition-all select-none">
                     <input
                       type="checkbox"
                       checked={voiceoverConfig.enabled}
@@ -2210,8 +2373,10 @@ export default function AiVideoEditorPage() {
                           originalVolume: isChecked ? 25 : 100,
                         }));
                         if (isChecked && subtitleCues.length > 0) {
-                          lastSpokenCueIdRef.current = subtitleCues[0].id;
-                          speakSentence(subtitleCues[0].text);
+                          const cueToSpeak = subtitleCues[0];
+                          currentSentenceSpokenRef.current = cueToSpeak.parentSentenceId || cueToSpeak.id;
+                          lastSpokenCueIdRef.current = cueToSpeak.id;
+                          speakSentence(cueToSpeak.parentSentenceText || cueToSpeak.text);
                         } else {
                           if (ttsAudioRef.current) {
                             try { ttsAudioRef.current.pause(); } catch {}
@@ -2232,7 +2397,8 @@ export default function AiVideoEditorPage() {
                       type="button"
                       onClick={() => {
                         if (subtitleCues.length > 0) {
-                          speakSentence(subtitleCues[0].text);
+                          const cue = currentSubtitleCue || subtitleCues[0];
+                          speakSentence(cue.parentSentenceText || cue.text);
                         } else {
                           speakSentence("Xin chào! Hệ thống lồng tiếng MC tiếng Việt đã sẵn sàng.");
                         }
@@ -2248,9 +2414,82 @@ export default function AiVideoEditorPage() {
                       onClick={() => setShowVoiceoverModal(true)}
                       className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded-lg cursor-pointer"
                     >
-                      Cài đặt âm lượng
+                      Âm Lượng
                     </button>
                   </div>
+                </div>
+
+                {/* DÒNG 3: BỘ CHỌN GIỌNG MC TRỰC TIẾP & LOAD LẠI KHÔNG CẦN DỊCH TỪ ĐẦU */}
+                <div className="p-3 bg-gradient-to-r from-violet-900/5 via-purple-900/5 to-pink-900/5 border border-violet-200/80 rounded-2xl flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-violet-800 flex items-center gap-1.5">
+                      <Radio size={13} className="text-violet-600 animate-pulse" /> Chọn Giọng MC (Đổi Là Ăn Ngay):
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      ⚡ Không cần dịch lại từ đầu
+                    </span>
+                  </div>
+
+                  {/* 5 NÚT CHỌN MC PHỔ BIẾN */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {POPULAR_VOICES.map((v) => {
+                      const isSelected = voiceoverConfig.selectedVoiceId === v.id;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => handleQuickChangeVoice(v.id, v.rate, v.pitch)}
+                          className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                            isSelected
+                              ? "bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/25 scale-[1.02]"
+                              : "bg-white hover:bg-violet-50 text-slate-700 border-slate-200/90"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{v.avatar}</span>
+                            <span className="text-[11px] font-black truncate">{v.shortName}</span>
+                          </div>
+                          <div className={`text-[9px] mt-0.5 ${isSelected ? "text-violet-200" : "text-slate-400"}`}>
+                            Tốc độ: {v.rate}x
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* ĐIỀU CHỈNH TỐC ĐỘ ĐỌC (KHỚP NHỊP DOUYIN NHANH) */}
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-violet-200/60 text-[11px]">
+                    <span className="font-bold text-slate-600">Khớp nhịp nhân vật:</span>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { label: "1.0x Chuẩn", val: 1.0 },
+                        { label: "1.15x Tự nhiên", val: 1.15 },
+                        { label: "⚡ 1.25x Khớp Douyin", val: 1.25 },
+                        { label: "🚀 1.35x Nhanh", val: 1.35 },
+                      ].map((spd) => (
+                        <button
+                          key={spd.val}
+                          type="button"
+                          onClick={() => handleQuickChangeSpeed(spd.val)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            voiceoverConfig.rate === spd.val
+                              ? "bg-amber-400 text-slate-900 shadow-xs"
+                              : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          {spd.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* THÔNG BÁO KHI ĐỔI GIỌNG */}
+                  {voiceChangeNotice && (
+                    <div className="p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-[11px] font-bold animate-in fade-in flex items-center gap-1.5">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>{voiceChangeNotice}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2606,6 +2845,7 @@ export default function AiVideoEditorPage() {
                         const val = Number(e.target.value);
                         setCurrentTime(val);
                         lastSpokenCueIdRef.current = null;
+                        currentSentenceSpokenRef.current = null;
                         if (ttsAudioRef.current) {
                           ttsAudioRef.current.pause();
                         }
@@ -2613,6 +2853,7 @@ export default function AiVideoEditorPage() {
                           window.speechSynthesis.cancel();
                         }
                         if (videoRef.current) videoRef.current.currentTime = val;
+                        preloadUpcomingSentences(val);
                       }}
                       className="flex-1 accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
                     />
