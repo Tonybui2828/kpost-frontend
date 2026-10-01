@@ -599,7 +599,7 @@ export default function AiVideoEditorPage() {
         audio.setAttribute("referrerpolicy", "no-referrer");
         (audio as any).referrerPolicy = "no-referrer";
         const encoded = encodeURIComponent(textToSpeak);
-        audio.src = `${apiBase}/api/tts?text=${encoded}`;
+        audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
         audio.playbackRate = voiceoverConfig.rate || 1.15;
         audio.preload = "auto";
         audioCacheRef.current.set(cacheKey, audio);
@@ -747,27 +747,93 @@ export default function AiVideoEditorPage() {
       }
     }
 
-    // 🌟 2. GIỌNG ĐỌC TIẾNG VIỆT NATIVE 100% (GOOGLE VIETNAMESE TTS PROXY)
-    // Đảm bảo 100% là giọng chuẩn tiếng Việt Bắc/Nam tròn vành rõ chữ, tuyệt đối không bao giờ bị giọng Tây!
+    // 🌟 2. HỆ THỐNG PHÁT ÂM THANH TIẾNG VIỆT ĐA TẦNG (CHỐNG LỖI 404 VÀ CHỐNG IM LẶNG TUYỆT ĐỐI)
+    // Tự động thử lần lượt các nguồn âm thanh tiếng Việt, bảo đảm 100% phát được tiếng dù ở bất kỳ domain hay thiết bị nào
     const apiBase = getApiBaseUrl();
     const encoded = encodeURIComponent(cleanSnippet);
-    const audioUrl = `${apiBase}/api/tts?text=${encoded}`;
-    try {
-      const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
-      let audio = audioCacheRef.current.get(cacheKey);
-      if (!audio) {
-        audio = new Audio(audioUrl);
-        audioCacheRef.current.set(cacheKey, audio);
+    const candidateUrls = [
+      // 1. Google Translate TTS Client TW-OB (Chạy trực tiếp trên trình duyệt, không phụ thuộc backend)
+      `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`,
+      // 2. Google Translate TTS Client GTX (Dự phòng Google 2)
+      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
+      // 3. Backend nội bộ domain hiện tại (/api/tts)
+      `${apiBase}/api/tts?text=${encoded}`,
+      // 4. Cloud Run proxy 24/7
+      `https://ais-dev-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app/api/tts?text=${encoded}`,
+    ];
+
+    let urlIdx = 0;
+
+    const playNextAudioSource = () => {
+      if (urlIdx >= candidateUrls.length) {
+        // Nếu tất cả các URL âm thanh đều không tải được (ví dụ offline hoàn toàn) -> Dùng SpeechSynthesis
+        fallbackSpeechSynthesis();
+        return;
       }
-      audio.playbackRate = rate;
-      audio.currentTime = 0;
-      ttsAudioRef.current = audio;
-      audio.onended = () => { restoreVolume(); };
-      audio.onerror = () => { restoreVolume(); };
-      audio.play().catch(() => restoreVolume());
-    } catch {
+
+      const targetUrl = candidateUrls[urlIdx++];
+      try {
+        const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
+        let audio = audioCacheRef.current.get(cacheKey);
+        if (!audio || audio.src !== targetUrl) {
+          audio = new Audio(targetUrl);
+          audio.setAttribute("referrerpolicy", "no-referrer");
+          (audio as any).referrerPolicy = "no-referrer";
+          audioCacheRef.current.set(cacheKey, audio);
+        }
+
+        audio.playbackRate = rate;
+        audio.currentTime = 0;
+        ttsAudioRef.current = audio;
+
+        audio.onended = () => { restoreVolume(); };
+        audio.onerror = () => {
+          console.warn(`[MC Audio] Nguồn ${targetUrl} không phản hồi, tự động chuyển sang nguồn tiếp theo...`);
+          playNextAudioSource();
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn(`[MC Audio] Lỗi phát nguồn ${targetUrl}:`, err);
+            playNextAudioSource();
+          });
+        }
+      } catch (err) {
+        console.warn(`[MC Audio] Ngoại lệ khởi tạo audio:`, err);
+        playNextAudioSource();
+      }
+    };
+
+    const fallbackSpeechSynthesis = () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.resume();
+          const utt = new SpeechSynthesisUtterance(cleanSnippet);
+          utt.lang = "vi-VN";
+          utt.pitch = pitch;
+          utt.rate = rate;
+
+          const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+          const viVoice = voices.find((v) => {
+            const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
+            const n = (v.name || "").toLowerCase();
+            return l.startsWith("vi") || n.includes("việt") || n.includes("viet") || n.includes("vietnamese");
+          });
+          if (viVoice) utt.voice = viVoice;
+
+          utt.onend = () => { restoreVolume(); };
+          utt.onerror = () => { restoreVolume(); };
+          window.speechSynthesis.speak(utt);
+          return;
+        } catch {}
+      }
       restoreVolume();
-    }
+    };
+
+    // Bắt đầu phát âm thanh ngay lập tức
+    playNextAudioSource();
   };
 
   // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC (LUÔN DÙNG ORIGIN HIỆN TẠI ĐỂ GỌI ĐÚNG PORT VÀ DOMAIN, TRÁNH LỖI 404)
