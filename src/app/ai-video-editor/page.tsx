@@ -596,10 +596,8 @@ export default function AiVideoEditorPage() {
 
       try {
         const audio = new Audio();
-        audio.setAttribute("referrerpolicy", "no-referrer");
-        (audio as any).referrerPolicy = "no-referrer";
         const encoded = encodeURIComponent(textToSpeak);
-        audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
+        audio.src = `https://api.kpost.vn/ai-content/tts?text=${encoded}`;
         audio.playbackRate = voiceoverConfig.rate || 1.15;
         audio.preload = "auto";
         audioCacheRef.current.set(cacheKey, audio);
@@ -702,72 +700,27 @@ export default function AiVideoEditorPage() {
 
     const activeVoiceId = voiceId || voiceoverConfig.selectedVoiceId;
     const char = VOICE_CHARACTERS.find((c) => c.id === activeVoiceId) || VOICE_CHARACTERS[0];
-    const pitch = char.pitch || voiceoverConfig.pitch || 1.0;
     const rate = voiceoverConfig.rate || char.rate || 1.15;
     const cleanSnippet = cleanText.slice(0, 250);
-
-    // 🌟 1. KIỂM TRA XEM HỆ THỐNG CÓ THẬT SỰ CÓ GIỌNG TIẾNG VIỆT HAY KHÔNG
-    // TUYỆT ĐỐI KHÔNG DÙNG SpeechSynthesis NẾU KHÔNG CÓ GIỌNG TIẾNG VIỆT
-    // (Bởi vì nếu không có giọng tiếng Việt, Windows/Mac sẽ dùng giọng tiếng Anh (Microsoft David) đọc tiếng Việt lơ lớ như người Tây)
-    const voices = availableVoices.length > 0 ? availableVoices : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
-    const viVoices = voices.filter((v) => {
-      const l = (v.lang || "").toLowerCase().replace("_", "-");
-      const n = (v.name || "").toLowerCase();
-      return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
-    });
-
-    if (viVoices.length > 0 && typeof window !== "undefined" && "speechSynthesis" in window) {
-      try {
-        window.speechSynthesis.resume();
-        const utt = new SpeechSynthesisUtterance(cleanSnippet);
-        utt.lang = "vi-VN";
-        utt.pitch = pitch;
-        utt.rate = rate;
-
-        if (char.gender === "male") {
-          const maleVoice = viVoices.find((v) => {
-            const n = v.name.toLowerCase();
-            return n.includes("nam") || n.includes("male") || n.includes("minh") || n.includes("khoi");
-          });
-          utt.voice = maleVoice || viVoices[0];
-        } else {
-          const femaleVoice = viVoices.find((v) => {
-            const n = v.name.toLowerCase();
-            return n.includes("nu") || n.includes("female") || n.includes("my") || n.includes("hoa");
-          });
-          utt.voice = femaleVoice || viVoices[0];
-        }
-
-        utt.onend = () => { restoreVolume(); };
-        utt.onerror = () => { restoreVolume(); };
-        window.speechSynthesis.speak(utt);
-        return;
-      } catch (e) {
-        console.warn("SpeechSynthesis error, chuyển sang Native Vietnamese Cloud TTS:", e);
-      }
-    }
-
-    // 🌟 2. HỆ THỐNG PHÁT ÂM THANH TIẾNG VIỆT ĐA TẦNG (CHỐNG LỖI 404 VÀ CHỐNG IM LẶNG TUYỆT ĐỐI)
-    // Tự động thử lần lượt các nguồn âm thanh tiếng Việt, bảo đảm 100% phát được tiếng dù ở bất kỳ domain hay thiết bị nào
-    const apiBase = getApiBaseUrl();
     const encoded = encodeURIComponent(cleanSnippet);
+    const apiBase = getApiBaseUrl();
+
+    // 🌟 MÁY CHỦ PHÁT ÂM TIẾNG VIỆT CHUẨN 100% (KHÔNG BAO GIỜ DÙNG GIỌNG MÁY TÍNH TIẾNG ANH)
+    // api.kpost.vn/ai-content/tts đang chạy online và trả về MP3 tiếng Việt chuẩn tuyệt đối
     const candidateUrls = [
-      // 1. Google Translate TTS Client TW-OB (Chạy trực tiếp trên trình duyệt, không phụ thuộc backend)
-      `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`,
-      // 2. Google Translate TTS Client GTX (Dự phòng Google 2)
-      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
-      // 3. Backend nội bộ domain hiện tại (/api/tts)
+      `https://api.kpost.vn/ai-content/tts?text=${encoded}`,
+      `https://api.kpost.vn/api/tts?text=${encoded}`,
+      `${apiBase}/ai-content/tts?text=${encoded}`,
       `${apiBase}/api/tts?text=${encoded}`,
-      // 4. Cloud Run proxy 24/7
-      `https://ais-dev-ezegvwpdckaqre5hufqckp-887696596542.asia-east1.run.app/api/tts?text=${encoded}`,
+      `/ai-content/tts?text=${encoded}`,
+      `/api/tts?text=${encoded}`,
     ];
 
     let urlIdx = 0;
 
     const playNextAudioSource = () => {
       if (urlIdx >= candidateUrls.length) {
-        // Nếu tất cả các URL âm thanh đều không tải được (ví dụ offline hoàn toàn) -> Dùng SpeechSynthesis
-        fallbackSpeechSynthesis();
+        restoreVolume();
         return;
       }
 
@@ -777,8 +730,6 @@ export default function AiVideoEditorPage() {
         let audio = audioCacheRef.current.get(cacheKey);
         if (!audio || audio.src !== targetUrl) {
           audio = new Audio(targetUrl);
-          audio.setAttribute("referrerpolicy", "no-referrer");
-          (audio as any).referrerPolicy = "no-referrer";
           audioCacheRef.current.set(cacheKey, audio);
         }
 
@@ -805,43 +756,19 @@ export default function AiVideoEditorPage() {
       }
     };
 
-    const fallbackSpeechSynthesis = () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.resume();
-          const utt = new SpeechSynthesisUtterance(cleanSnippet);
-          utt.lang = "vi-VN";
-          utt.pitch = pitch;
-          utt.rate = rate;
-
-          const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
-          const viVoice = voices.find((v) => {
-            const l = (v.lang || "").toLowerCase().replace(/_/g, "-");
-            const n = (v.name || "").toLowerCase();
-            return l.startsWith("vi") || n.includes("việt") || n.includes("viet") || n.includes("vietnamese");
-          });
-          if (viVoice) utt.voice = viVoice;
-
-          utt.onend = () => { restoreVolume(); };
-          utt.onerror = () => { restoreVolume(); };
-          window.speechSynthesis.speak(utt);
-          return;
-        } catch {}
-      }
-      restoreVolume();
-    };
-
-    // Bắt đầu phát âm thanh ngay lập tức
+    // Bắt đầu phát âm thanh tiếng Việt chuẩn 100%
     playNextAudioSource();
   };
 
-  // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC (LUÔN DÙNG ORIGIN HIỆN TẠI ĐỂ GỌI ĐÚNG PORT VÀ DOMAIN, TRÁNH LỖI 404)
+  // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC (ƯU TIÊN API.KPOST.VN ĐỂ GỌI ĐÚNG BACKEND)
   const getApiBaseUrl = (): string => {
     if (typeof window !== "undefined") {
+      if (window.location.hostname === "kpost.vn" || window.location.hostname.endsWith(".kpost.vn")) {
+        return "https://api.kpost.vn";
+      }
       return window.location.origin;
     }
-    return "";
+    return "https://api.kpost.vn";
   };
 
   // 🌟 HÀM FORMAT GIÂY SANG ĐỊNH DẠNG MM:SS
