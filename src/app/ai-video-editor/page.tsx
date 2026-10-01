@@ -595,12 +595,12 @@ export default function AiVideoEditorPage() {
       if (audioCacheRef.current.has(cacheKey)) return;
 
       try {
-        const audio = document.createElement("audio");
+        const audio = new Audio();
         audio.setAttribute("referrerpolicy", "no-referrer");
         (audio as any).referrerPolicy = "no-referrer";
         const encoded = encodeURIComponent(textToSpeak);
-        audio.src = `${apiBase}/ai-content/tts?text=${encoded}`;
-        audio.playbackRate = voiceoverConfig.rate || 1.25;
+        audio.src = `${apiBase}/api/tts?text=${encoded}`;
+        audio.playbackRate = voiceoverConfig.rate || 1.15;
         audio.preload = "auto";
         audioCacheRef.current.set(cacheKey, audio);
       } catch {}
@@ -706,13 +706,17 @@ export default function AiVideoEditorPage() {
     const rate = voiceoverConfig.rate || char.rate || 1.15;
     const cleanSnippet = cleanText.slice(0, 250);
 
-    // 🌟 ƯU TIÊN SỐ 1: DÙNG SPEECH SYNTHESIS ĐỂ TẠO RA CÁC CHẤT GIỌNG KHÁC BIỆT HOÀN TOÀN
-    // Pikachu/Chibi: pitch 1.88 (giọng hoạt hình cao vút)
-    // Nam MC/Minh Quân: pitch 0.72 (giọng nam trầm ấm, quyền lực)
-    // Bác Năm: pitch 0.58, rate 0.85 (giọng người già đôn hậu)
-    // Mai Anh: pitch 1.25, rate 1.1 (giọng nữ dịu dàng)
-    // Đức Anh: pitch 0.88, rate 1.15 (giọng nam reviewer bắt trend)
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    // 🌟 1. KIỂM TRA XEM HỆ THỐNG CÓ THẬT SỰ CÓ GIỌNG TIẾNG VIỆT HAY KHÔNG
+    // TUYỆT ĐỐI KHÔNG DÙNG SpeechSynthesis NẾU KHÔNG CÓ GIỌNG TIẾNG VIỆT
+    // (Bởi vì nếu không có giọng tiếng Việt, Windows/Mac sẽ dùng giọng tiếng Anh (Microsoft David) đọc tiếng Việt lơ lớ như người Tây)
+    const voices = availableVoices.length > 0 ? availableVoices : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
+    const viVoices = voices.filter((v) => {
+      const l = (v.lang || "").toLowerCase().replace("_", "-");
+      const n = (v.name || "").toLowerCase();
+      return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
+    });
+
+    if (viVoices.length > 0 && typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.resume();
         const utt = new SpeechSynthesisUtterance(cleanSnippet);
@@ -720,27 +724,18 @@ export default function AiVideoEditorPage() {
         utt.pitch = pitch;
         utt.rate = rate;
 
-        const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
-        const viVoices = voices.filter((v) => {
-          const l = (v.lang || "").toLowerCase().replace("_", "-");
-          const n = (v.name || "").toLowerCase();
-          return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
-        });
-
-        if (viVoices.length > 0) {
-          if (char.gender === "male") {
-            const maleVoice = viVoices.find((v) => {
-              const n = v.name.toLowerCase();
-              return n.includes("nam") || n.includes("male") || n.includes("minh") || n.includes("khoi");
-            });
-            utt.voice = maleVoice || viVoices[0];
-          } else {
-            const femaleVoice = viVoices.find((v) => {
-              const n = v.name.toLowerCase();
-              return n.includes("nu") || n.includes("female") || n.includes("my") || n.includes("hoa");
-            });
-            utt.voice = femaleVoice || viVoices[0];
-          }
+        if (char.gender === "male") {
+          const maleVoice = viVoices.find((v) => {
+            const n = v.name.toLowerCase();
+            return n.includes("nam") || n.includes("male") || n.includes("minh") || n.includes("khoi");
+          });
+          utt.voice = maleVoice || viVoices[0];
+        } else {
+          const femaleVoice = viVoices.find((v) => {
+            const n = v.name.toLowerCase();
+            return n.includes("nu") || n.includes("female") || n.includes("my") || n.includes("hoa");
+          });
+          utt.voice = femaleVoice || viVoices[0];
         }
 
         utt.onend = () => { restoreVolume(); };
@@ -748,17 +743,24 @@ export default function AiVideoEditorPage() {
         window.speechSynthesis.speak(utt);
         return;
       } catch (e) {
-        console.warn("SpeechSynthesis error:", e);
+        console.warn("SpeechSynthesis error, chuyển sang Native Vietnamese Cloud TTS:", e);
       }
     }
 
-    // 🌟 Dự phòng: Nguồn âm thanh trực tuyến có điều chỉnh tốc độ
+    // 🌟 2. GIỌNG ĐỌC TIẾNG VIỆT NATIVE 100% (GOOGLE VIETNAMESE TTS PROXY)
+    // Đảm bảo 100% là giọng chuẩn tiếng Việt Bắc/Nam tròn vành rõ chữ, tuyệt đối không bao giờ bị giọng Tây!
     const apiBase = getApiBaseUrl();
     const encoded = encodeURIComponent(cleanSnippet);
     const audioUrl = `${apiBase}/api/tts?text=${encoded}`;
     try {
-      const audio = new Audio(audioUrl);
+      const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
+      let audio = audioCacheRef.current.get(cacheKey);
+      if (!audio) {
+        audio = new Audio(audioUrl);
+        audioCacheRef.current.set(cacheKey, audio);
+      }
       audio.playbackRate = rate;
+      audio.currentTime = 0;
       ttsAudioRef.current = audio;
       audio.onended = () => { restoreVolume(); };
       audio.onerror = () => { restoreVolume(); };
@@ -768,26 +770,12 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC CỦA BACKEND KPOST (CHỐNG LỖI 404 KHI GỌI TỪ FRONTEND KPOST.VN)
+  // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC (LUÔN DÙNG ORIGIN HIỆN TẠI ĐỂ GỌI ĐÚNG PORT VÀ DOMAIN, TRÁNH LỖI 404)
   const getApiBaseUrl = (): string => {
     if (typeof window !== "undefined") {
-      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-        return "http://localhost:3001";
-      }
+      return window.location.origin;
     }
-    try {
-      // @ts-ignore
-      if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
-        // @ts-ignore
-        return import.meta.env.VITE_API_URL;
-      }
-    } catch {}
-    try {
-      if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
-      }
-    } catch {}
-    return "https://api.kpost.vn";
+    return "";
   };
 
   // 🌟 HÀM FORMAT GIÂY SANG ĐỊNH DẠNG MM:SS
