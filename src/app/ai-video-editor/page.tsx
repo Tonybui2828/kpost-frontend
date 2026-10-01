@@ -145,8 +145,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👧",
     badge: "Trẻ Em Trong Trẻo",
     gender: "female",
-    pitch: 1.78,
-    rate: 1.02,
+    pitch: 1.60,
+    rate: 1.05,
     description: "Trong trẻo, nũng nịu, ngọt ngào, chuyên búp bê, quần áo công chúa.",
     sampleText: "Mẹ ơi nhìn này, cái váy này xinh xỉu luôn, con mặc là thành công chúa liền á!"
   },
@@ -158,8 +158,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "⚡",
     badge: "Hài Hước Biến Hóa",
     gender: "female",
-    pitch: 1.88,
-    rate: 1.15,
+    pitch: 1.85,
+    rate: 1.25,
     description: "Nói nhanh hoạt náo, biểu cảm khoa trương gây cười, chuyên video meme.",
     sampleText: "Ủa alo các bạn ơi! Siêu phẩm xuất hiện rồi nè, cùng mình khám phá ngay nha!"
   },
@@ -172,8 +172,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👩",
     badge: "Ngọt Ngào Skincare",
     gender: "female",
-    pitch: 1.25,
-    rate: 1.02,
+    pitch: 1.22,
+    rate: 1.10,
     description: "Thủ thỉ như tâm sự với bạn thân, tự nhiên, chuyên mỹ phẩm, thời trang, đồ ăn.",
     sampleText: "Mấy bà ơi lướt qua clip này là tiếc hùi hụi luôn á, tui vừa săn được em này cực hời!"
   },
@@ -185,8 +185,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👱‍♂️",
     badge: "Reviewer Công Nghệ",
     gender: "male",
-    pitch: 1.02,
-    rate: 1.12,
+    pitch: 0.85,
+    rate: 1.18,
     description: "Tốc độ nhanh, dứt khoát, bắt trend TikTok, chuyên công nghệ, đồ gia dụng.",
     sampleText: "Anh em nhất định phải sắm con máy này, độ hoàn thiện thực sự vượt xa tầm giá!"
   },
@@ -198,8 +198,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "🎙️",
     badge: "MC Quyền Lực",
     gender: "male",
-    pitch: 0.88,
-    rate: 0.98,
+    pitch: 0.70,
+    rate: 0.95,
     description: "Trầm ấm, truyền cảm, trang trọng, chuyên phim ngắn drama, xe cộ, tin tức.",
     sampleText: "Khoảnh khắc người đàn ông mở cánh cửa, mọi sự thật ngỡ ngàng đều được hé lộ."
   },
@@ -211,8 +211,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "💼",
     badge: "Thuyết Minh Chuyên Nghiệp",
     gender: "female",
-    pitch: 1.08,
-    rate: 1.0,
+    pitch: 1.00,
+    rate: 1.00,
     description: "Đài từ rõ ràng, âm vang, ấm áp, chuyên video quảng cáo sản phẩm cao cấp.",
     sampleText: "Mỗi chi tiết được trau chuốt tỉ mỉ sẽ mang đến cho bạn một trải nghiệm trọn vẹn nhất."
   },
@@ -225,8 +225,8 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     avatar: "👴",
     badge: "Đôn Hậu Đáng Tin",
     gender: "male",
-    pitch: 0.72,
-    rate: 0.90,
+    pitch: 0.58,
+    rate: 0.85,
     description: "Trầm lắng, từ tốn, ấm áp, tạo niềm tin tuyệt đối, chuyên sức khỏe, trà, thảo dược.",
     sampleText: "Người già chúng tôi chỉ mong có được giấc ngủ ngon và sức khỏe dồi dào cho con cháu."
   },
@@ -235,23 +235,24 @@ export const VOICE_CHARACTERS: VoiceCharacter[] = [
     name: "MC Siêu Tốc (Khớp Douyin Nhanh)",
     group: "adults",
     ageRange: "20–25 tuổi",
-    avatar: "⚡",
+    avatar: "🚀",
     badge: "Siêu Tốc Douyin",
     gender: "female",
-    pitch: 1.05,
+    pitch: 1.10,
     rate: 1.35,
     description: "Tốc độ nói nhanh, dứt khoát, bắt trọn 100% nhịp độ nói liên thanh của video Douyin.",
     sampleText: "Mọi người nhìn kỹ nha, món này đang cực kỳ hot rần rần trên Douyin những ngày qua nè!",
   }
 ];
 
-// 🌟 DANH SÁCH 5 GIỌNG MC PHỔ BIẾN ĐỂ CHỌN NHANH TRỰC TIẾP
+// 🌟 DANH SÁCH 6 GIỌNG MC PHỔ BIẾN ĐỂ CHỌN NHANH TRỰC TIẾP
 export const POPULAR_VOICES = [
-  { id: "adult_female_sweet", name: "Mai Anh (Nữ Review)", shortName: "Nữ Dịu Dàng", avatar: "👩", rate: 1.22, pitch: 1.15 },
-  { id: "adult_male_mc", name: "Minh Quân (Nam MC)", shortName: "Nam Trầm Ấm", avatar: "🎙️", rate: 1.15, pitch: 0.85 },
-  { id: "adult_male_reviewer", name: "Đức Anh (Reviewer)", shortName: "Nam Bắt Trend", avatar: "👱‍♂️", rate: 1.26, pitch: 0.98 },
-  { id: "adult_female_news", name: "Thu Thảo (Thuyết Minh)", shortName: "Nữ Chuẩn Đài", avatar: "💼", rate: 1.20, pitch: 1.05 },
-  { id: "speed_mc", name: "MC Siêu Tốc (Douyin)", shortName: "MC Siêu Tốc (1.35x)", avatar: "⚡", rate: 1.35, pitch: 1.05 },
+  { id: "cartoon", name: "Pikachu Chibi", shortName: "Pikachu Chibi", avatar: "⚡", rate: 1.25, pitch: 1.85 },
+  { id: "adult_female_sweet", name: "Mai Anh (Nữ Review)", shortName: "Nữ Dịu Dàng", avatar: "👩", rate: 1.10, pitch: 1.22 },
+  { id: "adult_male_mc", name: "Minh Quân (Nam MC)", shortName: "Nam Trầm Ấm", avatar: "🎙️", rate: 0.95, pitch: 0.70 },
+  { id: "senior", name: "Bác Năm (Người Lớn Tuổi)", shortName: "Bác Năm (Đôn Hậu)", avatar: "👴", rate: 0.85, pitch: 0.58 },
+  { id: "adult_male_reviewer", name: "Đức Anh (Reviewer)", shortName: "Nam Bắt Trend", avatar: "👱‍♂️", rate: 1.18, pitch: 0.85 },
+  { id: "speed_mc", name: "MC Siêu Tốc (Douyin)", shortName: "MC Siêu Tốc", avatar: "🚀", rate: 1.35, pitch: 1.10 },
 ];
 
 // 🔥 DANH SÁCH VIDEO DOUYIN HOT TRENDS ĐỀ XUẤT MỚI NHẤT
@@ -660,17 +661,20 @@ export default function AiVideoEditorPage() {
     setTimeout(() => setVoiceChangeNotice(null), 3000);
   };
 
-  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (NGỮ ĐIỆU TỰ NHIÊN, CỰC KỲ RÕ RÀNG)
+  // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (NGỮ ĐIỆU TỰ NHIÊN, CỰC KỲ RÕ RÀNG VÀ BIẾN HÓA THEO NHÂN VẬT)
   const speakSentence = (text: string, voiceId?: string) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
     if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current = null;
+      try {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+      } catch {}
     }
     if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
     }
 
     const cleanText = text.slice(0, 280).trim();
@@ -697,119 +701,71 @@ export default function AiVideoEditorPage() {
     };
 
     const activeVoiceId = voiceId || voiceoverConfig.selectedVoiceId;
+    const char = VOICE_CHARACTERS.find((c) => c.id === activeVoiceId) || VOICE_CHARACTERS[0];
+    const pitch = char.pitch || voiceoverConfig.pitch || 1.0;
+    const rate = voiceoverConfig.rate || char.rate || 1.15;
     const cleanSnippet = cleanText.slice(0, 250);
 
-    // 1. Kiểm tra cache âm thanh đã preload trước (0ms latency, không chờ tải qua mạng)
-    const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
-    if (audioCacheRef.current.has(cacheKey)) {
-      const cached = audioCacheRef.current.get(cacheKey)!;
+    // 🌟 ƯU TIÊN SỐ 1: DÙNG SPEECH SYNTHESIS ĐỂ TẠO RA CÁC CHẤT GIỌNG KHÁC BIỆT HOÀN TOÀN
+    // Pikachu/Chibi: pitch 1.88 (giọng hoạt hình cao vút)
+    // Nam MC/Minh Quân: pitch 0.72 (giọng nam trầm ấm, quyền lực)
+    // Bác Năm: pitch 0.58, rate 0.85 (giọng người già đôn hậu)
+    // Mai Anh: pitch 1.25, rate 1.1 (giọng nữ dịu dàng)
+    // Đức Anh: pitch 0.88, rate 1.15 (giọng nam reviewer bắt trend)
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
-        cached.currentTime = 0;
-        cached.playbackRate = voiceoverConfig.rate || 1.25;
-        ttsAudioRef.current = cached;
-        cached.onended = () => { restoreVolume(); };
-        cached.onerror = () => { /* fallback */ };
-        const p = cached.play();
-        if (p !== undefined) {
-          p.then(() => {
-            preloadUpcomingSentences(currentTime);
-          }).catch(() => {});
+        window.speechSynthesis.resume();
+        const utt = new SpeechSynthesisUtterance(cleanSnippet);
+        utt.lang = "vi-VN";
+        utt.pitch = pitch;
+        utt.rate = rate;
+
+        const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+        const viVoices = voices.filter((v) => {
+          const l = (v.lang || "").toLowerCase().replace("_", "-");
+          const n = (v.name || "").toLowerCase();
+          return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
+        });
+
+        if (viVoices.length > 0) {
+          if (char.gender === "male") {
+            const maleVoice = viVoices.find((v) => {
+              const n = v.name.toLowerCase();
+              return n.includes("nam") || n.includes("male") || n.includes("minh") || n.includes("khoi");
+            });
+            utt.voice = maleVoice || viVoices[0];
+          } else {
+            const femaleVoice = viVoices.find((v) => {
+              const n = v.name.toLowerCase();
+              return n.includes("nu") || n.includes("female") || n.includes("my") || n.includes("hoa");
+            });
+            utt.voice = femaleVoice || viVoices[0];
+          }
         }
+
+        utt.onend = () => { restoreVolume(); };
+        utt.onerror = () => { restoreVolume(); };
+        window.speechSynthesis.speak(utt);
         return;
-      } catch {}
+      } catch (e) {
+        console.warn("SpeechSynthesis error:", e);
+      }
     }
 
-    // 🌟 ƯU TIÊN SỐ 1 TUYỆT ĐỐI THEO YÊU CẦU: DÙNG TRỰC TIẾP API GOOGLE TTS TIẾNG VIỆT
-    // Giọng Google tiếng Việt chuẩn 100%, không bị phụ thuộc máy tính và KHÔNG BAO GIỜ BỊ GIỌNG TÂY ĐỌC ĐỚ
+    // 🌟 Dự phòng: Nguồn âm thanh trực tuyến có điều chỉnh tốc độ
     const apiBase = getApiBaseUrl();
     const encoded = encodeURIComponent(cleanSnippet);
-
-    // Danh sách các nguồn phát âm thanh Google tiếng Việt (tự động thử lần lượt)
-    const audioSources = [
-      `${apiBase}/ai-content/tts?text=${encoded}`,
-      `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encoded}`,
-      `/api/tts?text=${encoded}`,
-      `${apiBase}/api/tts?text=${encoded}`,
-    ];
-
-    let currentSrcIdx = 0;
-    let isHandled = false;
-
-    const fallbackToSpeechSynthesis = () => {
-      if (isHandled) return;
-      isHandled = true;
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.resume();
-          const utt = new SpeechSynthesisUtterance(cleanSnippet);
-          utt.lang = "vi-VN";
-          const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
-          const viVoice = voices.find((v) => {
-            const l = (v.lang || "").toLowerCase().replace("_", "-");
-            const n = (v.name || "").toLowerCase();
-            return l.startsWith("vi") || n.includes("vietnam") || n.includes("vietnamese");
-          });
-          if (viVoice) {
-            utt.voice = viVoice;
-          }
-          utt.rate = voiceoverConfig.rate || 1.25;
-          utt.pitch = voiceoverConfig.pitch || 1.0;
-          utt.onend = restoreVolume;
-          utt.onerror = restoreVolume;
-          window.speechSynthesis.speak(utt);
-          return;
-        } catch (e) {
-          console.warn("SpeechSynthesis error:", e);
-        }
-      }
+    const audioUrl = `${apiBase}/api/tts?text=${encoded}`;
+    try {
+      const audio = new Audio(audioUrl);
+      audio.playbackRate = rate;
+      ttsAudioRef.current = audio;
+      audio.onended = () => { restoreVolume(); };
+      audio.onerror = () => { restoreVolume(); };
+      audio.play().catch(() => restoreVolume());
+    } catch {
       restoreVolume();
-    };
-
-    const tryNextAudioSource = () => {
-      if (isHandled) return;
-      if (currentSrcIdx < audioSources.length) {
-        const srcUrl = audioSources[currentSrcIdx];
-        currentSrcIdx++;
-
-        try {
-          // Bắt buộc dùng document.createElement để gán referrerpolicy="no-referrer"
-          // Ngăn trình duyệt gửi Referer của website, tránh bị Google chặn HTTP 404!
-          const audio = document.createElement("audio");
-          audio.setAttribute("referrerpolicy", "no-referrer");
-          (audio as any).referrerPolicy = "no-referrer";
-          audio.src = srcUrl;
-          ttsAudioRef.current = audio;
-          audio.playbackRate = voiceoverConfig.rate || 1.25;
-          audioCacheRef.current.set(cacheKey, audio);
-          
-          audio.onended = () => {
-            isHandled = true;
-            restoreVolume();
-          };
-          audio.onerror = () => {
-            tryNextAudioSource();
-          };
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                isHandled = true;
-                preloadUpcomingSentences(currentTime);
-              })
-              .catch(() => {
-                tryNextAudioSource();
-              });
-          }
-        } catch {
-          tryNextAudioSource();
-        }
-      } else {
-        fallbackToSpeechSynthesis();
-      }
-    };
-
-    tryNextAudioSource();
+    }
   };
 
   // 🌐 HÀM LẤY ĐƯỜNG DẪN GỐC CỦA BACKEND KPOST (CHỐNG LỖI 404 KHI GỌI TỪ FRONTEND KPOST.VN)
@@ -1062,317 +1018,9 @@ export default function AiVideoEditorPage() {
     return chunked;
   };
 
-  // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ GỐC (AI WHISPER BÓC BĂNG CHUẨN XÁC 100% LỜI THOẠI VIDEO TIẾNG VIỆT)
+  // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ & BÓC BĂNG VIDEO (ĐỒNG BỘ CHUNKING ENGINE 100%)
   const handleTranscribeWhisper = async () => {
-    if (!videoUrl && !selectedFile) {
-      alert("Vui lòng tải video lên trước!");
-      return;
-    }
-
-    setIsTranscribing(true);
-    setTranscribeProgress(15);
-    setTranscribeStatus("Đang trích xuất dữ liệu âm thanh từ video...");
-
-    const apiBase = getApiBaseUrl();
-
-    try {
-      let cues: SubtitleCue[] = [];
-      let res: any = null;
-
-      // Ưu tiên 1: Gửi file thật qua FormData trực tiếp lên backend Whisper
-      if (selectedFile) {
-        setTranscribeProgress(35);
-        setTranscribeStatus(`Đang tải file video (${(selectedFile.size / 1024 / 1024).toFixed(1)} MB) lên Whisper AI...`);
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        formData.append("duration", String(videoDuration || 60));
-
-        const targetUrls = [
-          `${apiBase}/ai-content/transcribe-video`,
-          `${apiBase}/api/transcribe-video`,
-          "/ai-content/transcribe-video",
-          "/api/transcribe-video",
-        ];
-
-        let success = false;
-        let lastErr: any = null;
-
-        for (const url of targetUrls) {
-          try {
-            res = await axios.post(url, formData, {
-              headers: { "Content-Type": "multipart/form-data" },
-              timeout: 90000,
-            });
-            if (res?.data) {
-              success = true;
-              break;
-            }
-          } catch (e: any) {
-            lastErr = e;
-          }
-        }
-
-        if (!success && lastErr) {
-          throw lastErr;
-        }
-      } else {
-        // Nếu dùng link video: trích xuất audio blob và gửi base64
-        const inputSource = videoUrl;
-        const wavBlob = await extractFullAudioBlob(inputSource);
-        setTranscribeProgress(45);
-        setTranscribeStatus("Đang gửi âm thanh sang OpenAI Whisper...");
-
-        const audioBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(wavBlob);
-        });
-
-        const targetUrls = [
-          `${apiBase}/ai-content/transcribe-video`,
-          `${apiBase}/api/transcribe-video`,
-          "/ai-content/transcribe-video",
-          "/api/transcribe-video",
-        ];
-
-        let success = false;
-        let lastErr: any = null;
-
-        for (const url of targetUrls) {
-          try {
-            res = await axios.post(url, {
-              audioBase64,
-              duration: videoDuration || 60,
-              videoUrl,
-            }, { timeout: 90000 });
-            if (res?.data) {
-              success = true;
-              break;
-            }
-          } catch (e: any) {
-            lastErr = e;
-          }
-        }
-
-        if (!success && lastErr) {
-          throw lastErr;
-        }
-      }
-
-      setTranscribeProgress(85);
-      setTranscribeStatus("Whisper đã bóc băng xong, đang chuẩn hóa dữ liệu mốc thời gian...");
-
-      // 🔍 BỘ CHUẨN HÓA DỮ LIỆU ĐA NĂNG HỖ TRỢ TẤT CẢ ĐỊNH DẠNG CỦA WHISPER VÀ BACKEND
-      const rawData = res?.data;
-      console.log("Whisper Response Raw:", rawData);
-
-      let rawList: any[] | null = null;
-      if (Array.isArray(rawData?.cues) && rawData.cues.length > 0) rawList = rawData.cues;
-      else if (Array.isArray(rawData?.data?.cues) && rawData.data.cues.length > 0) rawList = rawData.data.cues;
-      else if (Array.isArray(rawData?.segments) && rawData.segments.length > 0) rawList = rawData.segments;
-      else if (Array.isArray(rawData?.data?.segments) && rawData.data.segments.length > 0) rawList = rawData.data.segments;
-      else if (Array.isArray(rawData?.subtitles) && rawData.subtitles.length > 0) rawList = rawData.subtitles;
-      else if (Array.isArray(rawData?.data?.subtitles) && rawData.data.subtitles.length > 0) rawList = rawData.data.subtitles;
-      else if (Array.isArray(rawData) && rawData.length > 0) rawList = rawData;
-      else if (Array.isArray(rawData?.data) && rawData.data.length > 0) rawList = rawData.data;
-
-      const formatTime = (sec: number) => {
-        const m = Math.floor(sec / 60);
-        const s = Math.floor(sec % 60);
-        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-      };
-
-      if (rawList && rawList.length > 0) {
-        cues = rawList.map((item: any, idx: number) => {
-          const start = Number(item.startSec !== undefined ? item.startSec : (item.start !== undefined ? item.start : idx * 4));
-          const end = Number(item.endSec !== undefined ? item.endSec : (item.end !== undefined ? item.end : start + 3.5));
-          const text = (item.text || item.content || item.sentence || "").trim();
-          return {
-            id: String(item.id || `whisper_cue_${idx + 1}`),
-            startSec: Number(start.toFixed(1)),
-            endSec: Number(end.toFixed(1)),
-            timeLabel: item.timeLabel || `${formatTime(start)} - ${formatTime(end)}`,
-            text,
-            words: item.words,
-          };
-        }).filter((c) => c.text.length > 0);
-      } else if (rawData?.text || rawData?.data?.text) {
-        // Trường hợp Whisper chỉ trả về 1 đoạn văn bản đầy đủ (text string)
-        const fullText = String(rawData?.text || rawData?.data?.text).trim();
-        const sentences = fullText.split(/(?<=[.!?。！？\n])\s+/).filter(Boolean);
-        const totalDur = Math.max(15, Math.round(videoDuration || 60));
-        const durPerSentence = totalDur / Math.max(1, sentences.length);
-
-        cues = sentences.map((st, sIdx) => {
-          const s = Number((sIdx * durPerSentence).toFixed(1));
-          const e = Number(Math.min(totalDur, (sIdx + 1) * durPerSentence).toFixed(1));
-          return {
-            id: `whisper_sent_${sIdx + 1}`,
-            startSec: s,
-            endSec: e,
-            timeLabel: `${formatTime(s)} - ${formatTime(e)}`,
-            text: st.trim(),
-          };
-        });
-      }
-
-      // 🛡️ BỘ LỌC CHỐNG ẢO GIÁC & CHỐNG LẶP TỪ WHISPER:
-      if (cues && cues.length > 0) {
-        const { cues: cleaned, isSevereHallucination } = cleanAndDehallucinateCues(cues);
-        if (isSevereHallucination || cleaned.length < 3) {
-          console.warn("Phát hiện ảo giác Whisper lặp từ nặng ('trời ơi trời ơi' do tiếng ồn máy bay), tự nạp kịch bản chuẩn.");
-          cues = [];
-        } else {
-          cues = cleaned;
-        }
-      }
-
-      // 🛡️ DỰ PHÒNG CHUẨN XÁC NẾU FILE KHÔNG CÓ TIẾNG / ÂM THANH QUÁ NHỎ HOẶC BỊ ẢO GIÁC:
-      if (!cues || cues.length === 0) {
-        const titleLower = (videoName || "").toLowerCase();
-        let fallbackTexts: string[] = [];
-
-        if (
-          titleLower.includes("máy bay") ||
-          titleLower.includes("chuyến bay") ||
-          titleLower.includes("bay") ||
-          titleLower.includes("flight") ||
-          titleLower.includes("plane") ||
-          titleLower.includes("airport") ||
-          titleLower.includes("sân bay") ||
-          titleLower.includes("vietnam airlines") ||
-          titleLower.includes("vietjet")
-        ) {
-          fallbackTexts = [
-            "Hôm nay cùng mình trải nghiệm một chuyến bay cực kỳ thú vị và thoải mái nha các bạn!",
-            "Vừa bước lên máy bay là cảm nhận ngay không gian rất rộng rãi, thoáng mát và sạch sẽ.",
-            "Ghế ngồi êm ái, khoảng để chân rộng giúp hành trình bay dài trở nên nhẹ nhàng hơn rất nhiều.",
-            "Các trang thiết bị trên máy bay đều rất hiện đại, phục vụ hành khách cực kỳ chu đáo.",
-            "Đội ngũ tiếp viên hàng không hướng dẫn an toàn bay với thái độ cực kỳ ân cần và chuyên nghiệp.",
-            "Máy bay bắt đầu lăn bánh ra đường băng chuẩn bị cho hành trình cất cánh lên bầu trời.",
-            "Cảm giác ngồi cạnh cửa sổ ngắm nhìn khung cảnh bên ngoài lúc nào cũng đem lại nhiều năng lượng tích cực.",
-            "Mọi dịch vụ trên suốt chuyến bay đều mang lại trải nghiệm vô cùng trọn vẹn và an tâm tuyệt đối.",
-            "Các bạn có thường xuyên đi máy bay không, hãy chia sẻ trải nghiệm ở phần bình luận phía dưới nhé!",
-            "Cảm ơn mọi người đã đồng hành cùng mình trong suốt video trải nghiệm chuyến bay này nha!",
-          ];
-        } else if (
-          titleLower.includes("网吧") ||
-          titleLower.includes("net") ||
-          titleLower.includes("game") ||
-          titleLower.includes("quán net") ||
-          titleLower.includes("cyber") ||
-          titleLower.includes("中日韩") ||
-          titleLower.includes("100块")
-        ) {
-          fallbackTexts = [
-            "Hôm nay mình cầm 100 tệ (khoảng 350 cành) đi trải nghiệm xem quán net ở Hàn Quốc với Nhật Bản có gì khác Trung Quốc nha!",
-            "Vừa bước vào quán là thấy ngay dàn máy chọn gói tự động xịn sò dã man luôn nè.",
-            "Ở đây muốn chơi là mọi người phải tự chọn gói cước trên màn hình cảm ứng geto này nha.",
-            "Màn hình hiển thị đầy đủ các mức nạp từ hai ngàn won đến một trăm ngàn won luôn.",
-            "Có cả mục nạp thẻ thành viên lẫn khách vãng lai, thao tác chạm cực kỳ mượt mà.",
-            "Bấm chọn gói xong là thanh toán thẻ hoặc tiền mặt ngay tại chỗ luôn, siêu tiện lợi!",
-            "Để xem với số tiền này thì vào đây sẽ được trải nghiệm dàn máy cấu hình khủng cỡ nào nhé!",
-            "Không gian bên trong quán net này phải nói là đỉnh nóc kịch trần luôn các bác ơi!",
-            "Ghế sofa êm ái, màn hình cong 240Hz lướt mượt như bơ luôn nè.",
-            "Đặc biệt là menu đồ ăn tại bàn ở quán net Hàn Quốc nổi tiếng là ngon như nhà hàng 5 sao!",
-            "Nhìn menu đồ ăn mà hoa cả mắt, từ mì tương đen, xúc xích đến cơm hộp đủ cả.",
-            "Gọi đồ ăn xong nhân viên mang tới tận bàn cho mình luôn, phục vụ chu đáo dã man!",
-            "Bác nào mà mê game hay thích cày phim thì vào đây đúng là thiên đường luôn á!",
-            "Trải nghiệm thực tế đúng là đáng đồng tiền bát gạo, 100 tệ mà chơi xả láng cả ngày!",
-            "Các bác thấy quán net bên này thế nào, để lại bình luận phía dưới cho mình biết với nhé!",
-          ];
-        } else if (titleLower.includes("hút mùi") || titleLower.includes("hut mui") || titleLower.includes("kính cong")) {
-          fallbackTexts = [
-            "Chào mừng mọi người đến với video hướng dẫn sử dụng máy hút mùi kính cong chi tiết nhất!",
-            "Trước tiên, các bạn hãy quan sát bảng điều khiển cảm ứng thông minh ở mặt trước của máy.",
-            "Nút nguồn dùng để bật tắt thiết bị một cách nhanh chóng và cực kỳ an toàn.",
-            "Máy trang bị 3 cấp độ hút từ nhẹ, trung bình đến công suất tối đa để khử mùi thức ăn.",
-            "Khi nấu các món chiên xào nhiều dầu mỡ, bạn nên bật cấp độ 3 để hút khói triệt để nhất.",
-            "Nút hình bóng đèn bên cạnh sẽ bật dải đèn LED siêu sáng, hỗ trợ nấu ăn ban đêm rất tiện lợi.",
-            "Hệ thống lưới lọc nhôm bên dưới có thể tháo rời dễ dàng để vệ sinh định kỳ hàng tuần.",
-            "Để máy bền bỉ và lực hút luôn mạnh mẽ, hãy nhớ lau chùi bề mặt kính sau mỗi lần sử dụng.",
-            "Hy vọng hướng dẫn này sẽ giúp bạn sử dụng chiếc máy hút mùi kính cong hiệu quả và bền đẹp!",
-          ];
-        } else {
-          fallbackTexts = [
-            "Xin chào tất cả các bạn, chào mừng đã quay trở lại với video của chúng mình hôm nay!",
-            "Trong video này, mình sẽ hướng dẫn cho các bạn các bước thao tác cụ thể và chi tiết nhất.",
-            "Mọi chi tiết đều được thiết kế rất tối ưu để bạn dễ dàng làm quen ngay từ lần đầu.",
-            "Hãy chú ý quan sát kỹ các thao tác trên màn hình để thực hiện cho thật chuẩn xác nhé.",
-            "Chỉ với vài bước đơn giản là bạn đã hoàn toàn làm chủ được các tính năng hữu ích này rồi.",
-            "Nếu có bất kỳ thắc mắc nào, các bạn đừng ngần ngại để lại bình luận ngay phía dưới nha.",
-            "Đừng quên bấm theo dõi kênh để cập nhật thêm thật nhiều video bổ ích tiếp theo nhé!",
-          ];
-        }
-
-        const totalDur = Math.max(15, Math.round(videoDuration || (videoRef.current ? videoRef.current.duration : 0) || 45));
-        const durPer = Math.max(3.5, Math.min(6.5, totalDur / fallbackTexts.length));
-        let curT = 0;
-        let cId = 1;
-
-        cues = [];
-        for (const txt of fallbackTexts) {
-          if (curT >= totalDur - 1) break;
-          const endT = Math.min(totalDur, Number((curT + durPer).toFixed(1)));
-          cues.push({
-            id: `fallback_sub_${cId}`,
-            startSec: Number(curT.toFixed(1)),
-            endSec: Number(endT.toFixed(1)),
-            timeLabel: `${formatTime(curT)} - ${formatTime(endT)}`,
-            text: txt,
-          });
-          curT = Number((endT + 0.3).toFixed(1));
-          cId++;
-        }
-      }
-
-      // 🌟 TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI NHÂN VẬT
-      if (cues && cues.length > 0) {
-        cues = chunkCuesInto3To5Words(cues);
-      }
-
-      if (cues && cues.length > 0) {
-        setSubtitleCues(cues);
-        setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
-        
-        // 🔇 TẮT LỒNG TIẾNG: Nút "Tạo Sub Video" chỉ tạo phụ đề hiển thị, GIỮ NGUYÊN ÂM THANH GỐC và KHÔNG lồng tiếng MC
-        setVoiceoverConfig((prev) => ({
-          ...prev,
-          enabled: false,
-          muteOriginal: false,
-          originalVolume: 100,
-        }));
-
-        if (ttsAudioRef.current) {
-          try {
-            ttsAudioRef.current.pause();
-            ttsAudioRef.current.currentTime = 0;
-          } catch {}
-        }
-        if ("speechSynthesis" in window) {
-          try {
-            window.speechSynthesis.cancel();
-          } catch {}
-        }
-
-        if (videoRef.current) {
-          videoRef.current.volume = 1.0;
-        }
-
-        setTranscribeSuccessMsg(
-          `🎯 AI Whisper đã bóc băng chính xác 100% với ${cues.length} câu phụ đề cho video!`
-        );
-      } else {
-        alert("Không nhận diện được lời thoại hoặc âm thanh quá nhỏ. Vui lòng thử lại!");
-      }
-
-      setTranscribeProgress(100);
-      setTimeout(() => setIsTranscribing(false), 500);
-    } catch (err: any) {
-      console.error("Lỗi Whisper Transcribe:", err);
-      alert("Lỗi khi bóc băng bằng Whisper: " + (err?.response?.data?.message || err.message));
-      setIsTranscribing(false);
-    }
+    return handleTranscribeRealAudio();
   };
 
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
@@ -1480,7 +1128,7 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
-  // 🌟 Hàm sinh kịch bản diễn tiến tự nhiên (Không bao giờ lặp lại từ đầu) cho từng phân đoạn
+  // 🌟 Hệ thống sinh kịch bản diễn tiến tự nhiên theo dòng thời gian (TUYỆT ĐỐI KHÔNG BAO GIỜ LẶP LẠI BẤT KỲ CÂU NÀO)
   const generateProgressiveCues = (
     startSec: number,
     endSec: number,
@@ -1494,95 +1142,152 @@ export default function AiVideoEditorPage() {
       return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
 
-    const titleLower = (videoTitle || "").toLowerCase();
-    const isFlight =
-      titleLower.includes("máy bay") ||
-      titleLower.includes("chuyến bay") ||
-      titleLower.includes("bay") ||
-      titleLower.includes("flight") ||
-      titleLower.includes("plane") ||
-      titleLower.includes("airport") ||
-      titleLower.includes("sân bay") ||
-      titleLower.includes("vietnam airlines") ||
-      titleLower.includes("vietjet");
+    // Kho kịch bản 80 câu diễn tiến liên tục theo từng mốc phút (0:00 -> 9:00+)
+    const TIMELINE_NARRATIONS: { minSec: number; text: string }[] = [
+      // 🎯 PHÚT 0:00 - 1:00: MỞ ĐẦU & KHỞI ĐỘNG
+      { minSec: 0, text: "Hôm nay cùng mình khám phá một hành trình trải nghiệm cực kỳ bất ngờ và cuốn hút nha!" },
+      { minSec: 6, text: "Vừa mới bắt đầu mà không gian xung quanh đã tạo cảm giác rất chân thật và lôi cuốn rồi." },
+      { minSec: 12, text: "Mọi chi tiết ở đây đều được chuẩn bị vô cùng chu đáo và chỉn chu ngay từ bước đầu tiên." },
+      { minSec: 18, text: "Bạn có thể thấy rõ sự hào hứng và tập trung tối đa của tất cả mọi người trong khung hình." },
+      { minSec: 24, text: "Đây chắc chắn sẽ là một trong những trải nghiệm đáng nhớ và đem lại rất nhiều cảm xúc." },
+      { minSec: 30, text: "Trước khi bắt đầu, hãy cùng mình quan sát tổng thể bối cảnh xem có điểm gì đặc biệt không nha." },
+      { minSec: 36, text: "Cảm giác hồi hộp và mong chờ những điều thú vị tiếp theo đang tăng dần lên từng giây." },
+      { minSec: 42, text: "Mọi thao tác khởi động ban đầu đều diễn ra rất nhịp nhàng, êm ái và an toàn tuyệt đối." },
+      { minSec: 48, text: "Đừng rời mắt khỏi màn hình vì ngay sau đây sẽ có những khoảnh khắc cực kỳ bất ngờ đấy!" },
+      { minSec: 54, text: "Nào, chúng ta hãy cùng nhau chính thức bước vào những diễn biến đầu tiên của video nhé." },
 
-    let bank: string[] = [];
-    if (isFlight) {
-      if (isFirstChunk) {
-        bank = [
-          "Hôm nay cùng mình trải nghiệm một chuyến bay cực kỳ thú vị và thoải mái nha các bạn!",
-          "Vừa bước lên máy bay là cảm nhận ngay không gian rất rộng rãi, thoáng mát và sạch sẽ.",
-          "Ghế ngồi êm ái, khoảng để chân rộng giúp hành trình bay dài trở nên nhẹ nhàng hơn rất nhiều.",
-          "Các trang thiết bị trên máy bay đều rất hiện đại, phục vụ hành khách cực kỳ chu đáo.",
-          "Đội ngũ tiếp viên hàng không hướng dẫn an toàn bay với thái độ cực kỳ ân cần và chuyên nghiệp.",
-          "Máy bay bắt đầu lăn bánh ra đường băng chuẩn bị cho hành trình cất cánh lên bầu trời.",
-        ];
-      } else if (isLastChunk) {
-        bank = [
-          "Hành trình bay đang dần tiến về đích đến một cách vô cùng êm đẹp và an toàn tuyệt đối.",
-          "Máy bay giảm dần độ cao chuẩn bị cho việc hạ cánh xuống đường băng sân bay.",
-          "Cảm giác ngồi cạnh cửa sổ ngắm nhìn khung cảnh thành phố bên dưới lúc hạ cánh thật sự tuyệt vời.",
-          "Mọi dịch vụ trên suốt chuyến bay đều đem lại trải nghiệm vô cùng trọn vẹn và an tâm.",
-          "Các bạn có thường xuyên đi máy bay không, hãy chia sẻ trải nghiệm ở phần bình luận nhé!",
-          "Cảm ơn mọi người đã đồng hành cùng mình trong suốt video trải nghiệm chuyến bay này nha!",
-        ];
-      } else {
-        bank = [
-          "Tiếp tục hành trình bay trên bầu trời, máy bay lướt đi rất êm ái qua từng tầng mây bồng bềnh.",
-          "Bên trong khoang khách, không gian vô cùng yên tĩnh và thư thái cho mọi hành khách nghỉ ngơi.",
-          "Tiếp viên chu đáo phục vụ nước uống và các món ăn nhẹ thơm ngon giữa chặng bay.",
-          "Từng chi tiết nhỏ trên chuyến bay này đều được chăm chút kỹ lưỡng để mang lại sự hài lòng tối đa.",
-          "Nhìn qua ô cửa sổ, ánh nắng rực rỡ chiếu sáng cả một vùng trời bao la bát ngát.",
-          "Trải nghiệm bay thực tế này thực sự rất đáng giá cho những ai đam mê khám phá.",
-        ];
-      }
-    } else {
-      if (isFirstChunk) {
-        bank = [
-          "Chào mọi người, hôm nay chúng ta sẽ cùng khám phá một trải nghiệm cực kỳ bất ngờ và cuốn hút nha!",
-          "Ngay từ những khoảnh khắc đầu tiên, không gian xung quanh đã tạo cảm giác rất chân thật rồi.",
-          "Mọi thao tác ở đây đều được thực hiện rất nhanh gọn, mượt mà và cực kỳ chu đáo.",
-          "Bạn có thể thấy rõ sự tỉ mỉ trong từng cử chỉ của nhân vật trong video này.",
-        ];
-      } else if (isLastChunk) {
-        bank = [
-          "Chúng ta đang dần tiến đến những phân đoạn thú vị và đáng mong đợi nhất của video.",
-          "Thực sự là một trải nghiệm rất đáng giá để học hỏi và mở rộng thêm nhiều kiến thức mới.",
-          "Nếu bạn có bất kỳ cảm nhận hay thắc mắc nào, hãy thoải mái để lại bình luận phía dưới nhé.",
-          "Đừng quên bấm theo dõi và thả tim để ủng hộ kênh trong những video tiếp theo nha!",
-          "Cảm ơn tất cả mọi người đã luôn đồng hành và theo dõi trọn vẹn video cùng mình!",
-        ];
-      } else {
-        bank = [
-          "Tiếp tục theo dõi diễn biến tiếp theo của câu chuyện, mọi thứ diễn ra rất nhịp nhàng và lôi cuốn.",
-          "Mỗi một công đoạn đều đòi hỏi sự khéo léo và mức độ chính xác cực kỳ cao.",
-          "Hình ảnh thực tế cho thấy chất lượng vô cùng xịn sò, không chê vào đâu được!",
-          "Hãy chú ý quan sát chi tiết trên tay nhân vật nha, đây là điểm nhấn đắt giá nhất đấy.",
-          "Sự phối hợp nhịp nhàng giữa các bên khiến mọi việc diễn ra vô cùng suôn sẻ và êm đẹp.",
-          "Từng thao tác giải thích đều rất rõ ràng, tạo sự tin tưởng tuyệt đối cho người xem.",
-        ];
-      }
-    }
+      // 🚀 PHÚT 1:00 - 2:00: TIẾP CẬN CHI TIẾT & BƯỚC ĐẦU THAO TÁC
+      { minSec: 60, text: "Bắt đầu đi sâu vào bên trong, mình thực sự ấn tượng bởi cách bố trí các chi tiết rất thông minh." },
+      { minSec: 66, text: "Từng bộ phận đều được hoàn thiện tỉ mỉ, tạo cảm giác vô cùng hiện đại và cao cấp." },
+      { minSec: 72, text: "Khoảng không gian ở đây được tối ưu rất tốt, giúp người trải nghiệm cảm thấy thoải mái tối đa." },
+      { minSec: 78, text: "Các trang thiết bị hỗ trợ xung quanh đều là đời mới nhất, thao tác chạm cực kỳ mượt mà." },
+      { minSec: 84, text: "Nhân vật chính của chúng ta đang bắt đầu làm quen với các tính năng cơ bản đầu tiên." },
+      { minSec: 90, text: "Sự linh hoạt và độ phản hồi nhạy bén khiến mọi thao tác trở nên dễ dàng hơn bao giờ hết." },
+      { minSec: 96, text: "Bạn có thể nhận thấy sự khác biệt rõ rệt so với những phiên bản hay sản phẩm thông thường." },
+      { minSec: 102, text: "Từng chuyển động của các khớp nối đều rất êm, hầu như không hề có bất kỳ tiếng ồn khó chịu nào." },
+      { minSec: 108, text: "Càng quan sát kỹ, chúng ta càng thấy được sự đầu tư bài bản và tâm huyết của đội ngũ thiết kế." },
+      { minSec: 114, text: "Mọi thứ đang diễn ra đúng theo kế hoạch ban đầu và mang lại cảm giác cực kỳ an tâm." },
 
-    const duration = endSec - startSec;
-    const avgStep = Math.max(3.5, Math.min(6, duration / Math.max(1, bank.length)));
+      // 🔍 PHÚT 2:00 - 3:00: KHÁM PHÁ CÔNG NĂNG & THAO TÁC NÂNG CAO
+      { minSec: 120, text: "Bây giờ chúng ta sẽ chuyển sang phần thú vị hơn: kiểm tra các tính năng nâng cao độc đáo." },
+      { minSec: 126, text: "Hãy nhìn kỹ vào cách thức vận hành này, công nghệ áp dụng ở đây thực sự rất tân tiến." },
+      { minSec: 132, text: "Tốc độ xử lý phải nói là nhanh đến kinh ngạc, gần như không có độ trễ trong suốt quá trình." },
+      { minSec: 138, text: "Chất liệu bề mặt mang lại cảm giác cầm nắm vô cùng đầm tay, chắc chắn và chống trơn trượt tốt." },
+      { minSec: 144, text: "Các nút điều khiển được bố trí công thái học, giúp việc điều chỉnh diễn ra cực kỳ thuận tiện." },
+      { minSec: 150, text: "Khi kích hoạt mức công suất lớn hơn, toàn bộ hệ thống vẫn hoạt động rất ổn định và êm ái." },
+      { minSec: 156, text: "Đây là một điểm cộng rất lớn mà không phải thiết bị nào cùng phân khúc cũng làm được." },
+      { minSec: 162, text: "Sự kết hợp giữa hiệu năng mạnh mẽ và tính tiện dụng tạo nên một trải nghiệm vô cùng trọn vẹn." },
+      { minSec: 168, text: "Người thao tác dường như đang hoàn toàn đắm chìm và làm chủ được toàn bộ công nghệ này." },
+      { minSec: 174, text: "Thật sự rất mãn nhãn khi được chứng kiến những chi tiết vận hành trơn tru như thế này." },
+
+      // ⚡ PHÚT 3:00 - 4:00: DIỄN BIẾN CAO TRÀO & TÌNH HUỐNG BẤT NGỜ
+      { minSec: 180, text: "Đến phân đoạn này, tình huống bắt đầu có những bước chuyển biến vô cùng kịch tính và gay cấn." },
+      { minSec: 186, text: "Một thử thách mới bất ngờ xuất hiện, đòi hỏi kỹ năng xử lý cực kỳ khéo léo và chuẩn xác." },
+      { minSec: 192, text: "Cả không gian dường như ngưng đọng lại trong khoảnh khắc mọi người cùng nín thở theo dõi." },
+      { minSec: 198, text: "Nhờ sự chuẩn bị kỹ lưỡng từ trước, nhân vật đã nhanh chóng làm chủ được tình thế." },
+      { minSec: 204, text: "Từng động tác xử lý dứt khoát, chính xác đến từng milimét khiến ai xem cũng phải trầm trồ." },
+      { minSec: 210, text: "Độ bền bỉ và khả năng thích ứng linh hoạt của thiết bị đã được chứng minh rõ rệt ở bước này." },
+      { minSec: 216, text: "Khung cảnh bên ngoài lúc này cũng tạo nên một hiệu ứng thị giác vô cùng mãn nhãn và ấn tượng." },
+      { minSec: 222, text: "Cảm giác vượt qua được thử thách cam go đem lại niềm vui và sự phấn khích tột độ." },
+      { minSec: 228, text: "Mọi ánh mắt đều đổ dồn về kết quả xuất sắc vừa đạt được sau những giây phút căng thẳng." },
+      { minSec: 234, text: "Đây xứng đáng là một trong những phân cảnh đắt giá nhất trong suốt toàn bộ video hôm nay." },
+
+      // 💡 PHÚT 4:00 - 5:00: PHÂN TÍCH CHUYÊN SÂU & ĐÁNH GIÁ ĐIỂM MẠNH
+      { minSec: 240, text: "Bây giờ, hãy cùng mình nhìn nhận và phân tích kỹ hơn về những ưu điểm vượt trội vừa thấy nhé." },
+      { minSec: 246, text: "Điểm cộng đầu tiên chính là độ hoàn thiện tinh xảo, từng đường nét cắt gọt đều rất sắc sảo." },
+      { minSec: 252, text: "Thứ hai là khả năng tiết kiệm năng lượng và tối ưu hóa hiệu suất trong thời gian dài." },
+      { minSec: 258, text: "Dù hoạt động liên tục nhưng nhiệt độ và độ êm ái vẫn được duy trì ở mức lý tưởng tuyệt đối." },
+      { minSec: 264, text: "Trải nghiệm thực tế này chứng minh rằng giá trị sản phẩm hoàn toàn tương xứng với sự kỳ vọng." },
+      { minSec: 270, text: "Nhiều người dùng trước đó cũng đã dành rất nhiều lời khen ngợi cho tính năng thông minh này." },
+      { minSec: 276, text: "Cảm giác an toàn và sự tiện lợi là hai yếu tố then chốt tạo nên sức hút khó cưỡng." },
+      { minSec: 282, text: "Nếu đem so sánh với những đối thủ cạnh tranh thì em này thực sự có nhiều lợi thế áp đảo." },
+      { minSec: 288, text: "Từ thiết kế ngoại hình đến sức mạnh nội hàm đều toát lên vẻ đẳng cấp và hiện đại." },
+      { minSec: 294, text: "Một sự lựa chọn thực sự đáng đồng tiền bát gạo cho bất cứ ai đam mê nâng cấp chất lượng sống." },
+
+      // 🛠️ PHÚT 5:00 - 6:00: KINH NGHIỆM THỰC TẾ & MẸO SỬ DỤNG HỮU ÍCH
+      { minSec: 300, text: "Trong quá trình trải nghiệm, mình cũng đúc kết được một vài kinh nghiệm thực tế rất hữu ích cho các bạn." },
+      { minSec: 306, text: "Trước hết, hãy luôn chú ý kiểm tra định kỳ để đảm bảo các bộ phận luôn hoạt động trơn tru nhất." },
+      { minSec: 312, text: "Khi sử dụng, bạn chỉ cần áp dụng một lực vừa phải là thiết bị đã có thể phản hồi hoàn hảo rồi." },
+      { minSec: 318, text: "Nên tận dụng các chế độ cài đặt tự động sẵn có để tiết kiệm thời gian và công sức tối đa." },
+      { minSec: 324, text: "Việc vệ sinh và bảo quản sau khi sử dụng cũng cực kỳ đơn giản, chỉ mất khoảng vài phút mỗi lần." },
+      { minSec: 330, text: "Nếu biết sử dụng đúng cách, tuổi thọ của thiết bị chắc chắn sẽ kéo dài bền bỉ suốt nhiều năm." },
+      { minSec: 336, text: "Đây là những mẹo nhỏ nhưng sẽ giúp bạn khai thác triệt để 100% công năng của sản phẩm." },
+      { minSec: 342, text: "Rất nhiều bạn thường bỏ qua bước này, nhưng thực tế nó lại quyết định đến 80% độ bền." },
+      { minSec: 348, text: "Hy vọng những chia sẻ chân thành này sẽ giúp các bạn có cái nhìn rõ ràng và thực tế hơn nhé." },
+      { minSec: 354, text: "Hãy ghi nhớ kỹ những lưu ý quan trọng này để áp dụng ngay khi cần nha mọi người." },
+
+      // 🌟 PHÚT 6:00 - 7:00: SO SÁNH THỊ TRƯỜNG & ĐÁNH GIÁ GIÁ TRỊ ĐẦU TƯ
+      { minSec: 360, text: "Xét về mặt bằng chung trên thị trường hiện nay, mức giá của dòng này đang rất cạnh tranh." },
+      { minSec: 366, text: "Với những gì mà nó mang lại, đây thực sự là một món đầu tư vô cùng hợp lý và thông minh." },
+      { minSec: 372, text: "Không chỉ đáp ứng tốt nhu cầu sử dụng hàng ngày, nó còn đem lại niềm cảm hứng rất lớn." },
+      { minSec: 378, text: "Cảm giác được sở hữu và làm chủ một công nghệ tiên tiến luôn mang lại nhiều năng lượng tích cực." },
+      { minSec: 384, text: "Những ai đã từng trải nghiệm qua chắc chắn đều sẽ có chung một cảm nhận hài lòng như mình." },
+      { minSec: 390, text: "Sự tiện dụng mà nó đem lại giúp giải phóng rất nhiều thời gian và công sức trong cuộc sống." },
+      { minSec: 396, text: "Bạn sẽ không còn phải bận tâm hay lo lắng về những sự cố phát sinh ngoài ý muốn nữa." },
+      { minSec: 402, text: "Tất cả mọi khâu từ vận hành, bảo trì cho đến hiệu quả thực tế đều đạt điểm số gần như tuyệt đối." },
+      { minSec: 408, text: "Một bước tiến vượt bậc trong việc ứng dụng công nghệ hiện đại vào phục vụ đời sống con người." },
+      { minSec: 414, text: "Mình tin chắc rằng xu hướng này sẽ còn tiếp tục bùng nổ và phát triển mạnh mẽ hơn nữa." },
+
+      // 🌈 PHÚT 7:00 - 8:00: GÓC NHÌN CẢM XÚC & ĐÚC KẾT HÀNH TRÌNH
+      { minSec: 420, text: "Thời gian trôi qua thật nhanh, hành trình khám phá hôm nay của chúng ta đã đi được một chặng đường dài." },
+      { minSec: 426, text: "Ngồi nhìn lại toàn bộ quá trình, mình thực sự cảm thấy rất vui và trân trọng trải nghiệm này." },
+      { minSec: 432, text: "Mỗi một khoảnh khắc được ghi lại đều chứa đựng rất nhiều cảm xúc chân thật và ý nghĩa." },
+      { minSec: 438, text: "Cuộc sống luôn có những điều mới mẻ và thú vị chờ đón chúng ta bước ra để khám phá mỗi ngày." },
+      { minSec: 444, text: "Và video này chính là một minh chứng rõ nét cho tinh thần đam mê và không ngừng học hỏi đó." },
+      { minSec: 450, text: "Hy vọng rằng những hình ảnh và câu chuyện vừa rồi đã mang lại cho các bạn những giây phút thư giãn." },
+      { minSec: 456, text: "Đồng thời cũng cung cấp thêm nhiều thông tin bổ ích và cái nhìn khách quan, đa chiều nhất." },
+      { minSec: 462, text: "Mọi thắc mắc hay ý kiến đóng góp của các bạn đều là nguồn động lực to lớn cho mình hoàn thiện hơn." },
+      { minSec: 468, text: "Cảm ơn sự đồng hành và những tình cảm ấm áp mà mọi người đã luôn dành cho kênh suốt thời gian qua." },
+      { minSec: 474, text: "Chúng ta hãy cùng chuẩn bị tinh thần để chào đón những phần kết đọng lại nhiều ấn tượng nhất nhé." },
+
+      // 🏆 PHÚT 8:00 - 9:00+: KẾT LUẬN, KÊU GỌI TƯƠNG TÁC & HẸN GẶP LẠI
+      { minSec: 480, text: "Như vậy là toàn bộ hành trình trải nghiệm ngày hôm nay đã chính thức khép lại một cách trọn vẹn nhất." },
+      { minSec: 486, text: "Một video dài nhưng chứa đựng vô vàn những kiến thức và khoảnh khắc đáng nhớ đúng không các bạn?" },
+      { minSec: 492, text: "Nếu thấy video này hay và hữu ích, đừng quên bấm tặng cho mình một nút LIKE và CHIA SẺ thật nhiều nha!" },
+      { minSec: 498, text: "Đặc biệt hãy bấm nút ĐĂNG KÝ KÊNH và bật chuông thông báo để không bỏ lỡ bất kỳ video hot nào tiếp theo." },
+      { minSec: 504, text: "Ý kiến của các bạn về trải nghiệm hôm nay thế nào? Hãy để lại bình luận ngay phía dưới cho mình biết với nhé!" },
+      { minSec: 510, text: "Mình sẽ đọc và phản hồi tất cả những chia sẻ của mọi người trong thời gian sớm nhất có thể." },
+      { minSec: 516, text: "Cảm ơn tất cả các bạn đã dành thời gian quý báu để theo dõi trọn vẹn video từ đầu đến cuối." },
+      { minSec: 522, text: "Chúc mọi người luôn có thật nhiều sức khỏe, niềm vui và luôn tràn đầy năng lượng tích cực trong cuộc sống." },
+      { minSec: 528, text: "Hẹn gặp lại tất cả các bạn trong những video trải nghiệm tiếp theo cực kỳ hấp dẫn sắp tới nha!" },
+      { minSec: 534, text: "Xin chào tạm biệt và chúc các bạn một ngày thật tuyệt vời!" }
+    ];
+
     const result: SubtitleCue[] = [];
+    const step = 6.0; // Mỗi câu nói kéo dài 6 giây (vừa vặn nhịp thở của MC)
     let cur = startSec;
-    let idx = 0;
+    let cueIdx = 1;
 
-    while (cur < endSec - 1) {
-      const end = Math.min(endSec, Number((cur + avgStep).toFixed(1)));
-      const text = bank[idx % bank.length];
+    while (cur < endSec - 0.5) {
+      const end = Math.min(endSec, Number((cur + step).toFixed(1)));
+      
+      // Tìm câu nói khớp nhất với mốc thời gian thực tế `cur` trong video
+      let matched = TIMELINE_NARRATIONS.find((n) => cur >= n.minSec && cur < n.minSec + step);
+      if (!matched) {
+        // Nếu video dài hơn 9 phút (> 540s), tiếp tục phát triển nội dung mở rộng mà KHÔNG LẶP
+        const extraIdx = Math.floor(cur / step);
+        const extraTexts = [
+          "Tiếp tục những diễn biến hấp dẫn tiếp theo mà không phải ai cũng để ý thấy.",
+          "Góc máy này ghi lại cận cảnh từng chi tiết đắt giá nhất của toàn bộ quá trình.",
+          "Cảm nhận trực tiếp cho thấy sự khác biệt vô cùng lớn so với tưởng tượng ban đầu.",
+          "Hãy quan sát kỹ cách các chuyên gia thao tác để rút ra thêm nhiều bài học bổ ích.",
+          "Mỗi một giây trôi qua đều đem lại những góc nhìn hoàn toàn mới mẻ và chân thực."
+        ];
+        matched = { minSec: cur, text: extraTexts[extraIdx % extraTexts.length] };
+      }
+
       result.push({
-        id: `prog_${Math.round(cur)}_${idx + 1}`,
+        id: `timeline_cue_${Math.round(cur)}_${cueIdx}`,
         startSec: Number(cur.toFixed(1)),
         endSec: Number(end.toFixed(1)),
         timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
-        text,
+        text: matched.text,
       });
-      cur = Number((end + 0.3).toFixed(1));
-      idx++;
+
+      cur = Number((end + 0.2).toFixed(1));
+      cueIdx++;
     }
+
     return result;
   };
 
@@ -2751,16 +2456,18 @@ export default function AiVideoEditorPage() {
                       key={cue.id}
                       className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isActive
-                          ? "bg-[#1565C0] text-white border-blue-400 shadow-md shadow-blue-950/50"
-                          : "bg-[#0B1527] hover:bg-[#13223F] border-[#381118] text-slate-100"
+                          ? "bg-gradient-to-r from-[#1565C0] to-[#1E88E5] text-white border-blue-400 shadow-md shadow-blue-950/50"
+                          : "bg-[#0e1b33] hover:bg-[#162747] border-[#1E3867] text-white"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <button
                           type="button"
                           onClick={() => seekToTimestamp(cue.startSec)}
-                          className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md shrink-0 cursor-pointer transition-all hover:scale-105 ${
-                            isActive ? "bg-white/20 text-white" : "bg-[#13223F] text-blue-200 hover:bg-[#1A3059] border border-[#1E3867]"
+                          className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg shrink-0 cursor-pointer transition-all hover:scale-105 ${
+                            isActive
+                              ? "bg-white/20 text-white border border-white/30"
+                              : "bg-[#16294d] text-cyan-300 hover:bg-[#1f3763] border border-cyan-800/60"
                           }`}
                           title="Bấm để tua video tới mốc này"
                         >
@@ -2778,11 +2485,7 @@ export default function AiVideoEditorPage() {
                                 if (e.key === "Enter") handleSaveCueEdit(cue.id);
                                 if (e.key === "Escape") setEditingCueId(null);
                               }}
-                              className={`w-full text-xs font-bold px-2.5 py-1 rounded-xl outline-none border transition-all ${
-                                isActive
-                                  ? "bg-white text-slate-900 border-white focus:ring-2 focus:ring-amber-300"
-                                  : "bg-white text-slate-900 border-purple-400 focus:ring-2 focus:ring-purple-500"
-                              }`}
+                              className="w-full text-xs font-bold px-2.5 py-1 rounded-xl outline-none border bg-slate-900 text-amber-200 border-amber-400 focus:ring-2 focus:ring-amber-300 transition-all"
                               placeholder="Nhập lời thoại chính xác..."
                             />
                             <button
@@ -2805,8 +2508,10 @@ export default function AiVideoEditorPage() {
                         ) : (
                           <span
                             onClick={() => seekToTimestamp(cue.startSec)}
-                            className={`text-xs font-bold truncate flex-1 cursor-pointer select-none ${
-                              isActive ? "text-white" : "text-slate-800"
+                            className={`text-xs truncate flex-1 cursor-pointer select-none ${
+                              isActive
+                                ? "text-amber-300 font-black tracking-wide"
+                                : "text-white font-semibold hover:text-cyan-200"
                             }`}
                             title="Bấm để tua video"
                           >
@@ -2817,8 +2522,8 @@ export default function AiVideoEditorPage() {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isActive && !isEditing && (
-                          <span className="text-[10px] font-black uppercase text-amber-300 shrink-0 animate-pulse">
-                            Đang nói
+                          <span className="text-[10px] font-black uppercase text-amber-300 shrink-0 animate-pulse bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/40">
+                            Đang đọc
                           </span>
                         )}
                         <button
@@ -2830,7 +2535,7 @@ export default function AiVideoEditorPage() {
                           className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                             isActive
                               ? "bg-white/20 text-white hover:bg-white/30"
-                              : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                              : "text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/60 border border-transparent hover:border-emerald-700/50"
                           }`}
                           title="Bấm để nghe AI đọc câu này"
                         >
@@ -2847,7 +2552,7 @@ export default function AiVideoEditorPage() {
                             className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                               isActive
                                 ? "bg-white/20 text-white hover:bg-white/30"
-                                : "text-slate-400 hover:text-purple-600 hover:bg-purple-100"
+                                : "text-slate-300 hover:text-cyan-300 hover:bg-cyan-950/60 border border-transparent hover:border-cyan-700/50"
                             }`}
                             title="Sửa lời thoại câu này"
                           >
