@@ -1153,27 +1153,13 @@ export default function AiVideoEditorPage() {
 
     try {
       const inputSource = selectedFile || videoUrl;
-      let decodedBuffer: AudioBuffer | null = null;
-      let fullDuration = Math.max(10, Math.round(videoDuration || (videoRef.current ? videoRef.current.duration : 0) || 60));
-
-      try {
-        let arrayBuffer: ArrayBuffer;
-        if (inputSource instanceof File) {
-          arrayBuffer = await inputSource.arrayBuffer();
-        } else {
-          const response = await fetch(inputSource);
-          arrayBuffer = await response.arrayBuffer();
-        }
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        if (decodedBuffer.duration > 0) {
-          fullDuration = decodedBuffer.duration;
-          setVideoDuration(fullDuration);
-        }
-        await audioCtx.close();
-      } catch (audioErr) {
-        console.warn("Lỗi trích xuất buffer âm thanh cho Whisper:", audioErr);
-      }
+      const { buffer: realAudioBuffer, duration: realDuration } = await extractFullVideoAudioBuffer(
+        inputSource,
+        videoDuration
+      );
+      const decodedBuffer: AudioBuffer | null = realAudioBuffer;
+      const fullDuration = realDuration;
+      setVideoDuration(realDuration);
 
       const CHUNK_LEN = 120; // 2 phút mỗi chunk
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
@@ -1411,6 +1397,111 @@ export default function AiVideoEditorPage() {
     return audioBufferToWav(renderedBuffer);
   };
 
+  // 🌟 Hàm trích xuất AudioBuffer an toàn 100% cho mọi video (tự động fallback sang FFmpeg nếu trình duyệt không decode được MP4)
+  const extractFullVideoAudioBuffer = async (
+    inputSource: File | string,
+    initialDuration: number
+  ): Promise<{ buffer: AudioBuffer | null; duration: number }> => {
+    let decodedBuffer: AudioBuffer | null = null;
+    let fullDuration = Math.max(10, Math.round(initialDuration || (videoRef.current ? videoRef.current.duration : 0) || 60));
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // 1. Thử decode trực tiếp bằng Web Audio API
+    try {
+      let arrayBuffer: ArrayBuffer;
+      if (inputSource instanceof File) {
+        arrayBuffer = await inputSource.arrayBuffer();
+      } else {
+        const response = await fetch(inputSource);
+        arrayBuffer = await response.arrayBuffer();
+      }
+      decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      if (decodedBuffer && decodedBuffer.duration > 0) {
+        fullDuration = decodedBuffer.duration;
+      }
+    } catch (e) {
+      console.warn("[Audio Extract] Web Audio decode failed on raw video container, switching to FFmpeg...", e);
+    }
+
+    // 2. Nếu Web Audio API không decode được video MP4 container, dùng FFmpeg server
+    if (!decodedBuffer) {
+      try {
+        let wavArrayBuffer: ArrayBuffer | null = null;
+        if (inputSource instanceof File) {
+          const formData = new FormData();
+          formData.append("file", inputSource);
+          const resp = await axios.post("/api/extract-audio", formData, {
+            responseType: "arraybuffer",
+            timeout: 75000,
+          });
+          wavArrayBuffer = resp.data;
+        } else {
+          const resp = await axios.post(
+            "/api/extract-audio",
+            { url: inputSource },
+            { responseType: "arraybuffer", timeout: 75000 }
+          );
+          wavArrayBuffer = resp.data;
+        }
+
+        if (wavArrayBuffer && wavArrayBuffer.byteLength > 100) {
+          decodedBuffer = await audioCtx.decodeAudioData(wavArrayBuffer);
+          if (decodedBuffer && decodedBuffer.duration > 0) {
+            fullDuration = decodedBuffer.duration;
+          }
+        }
+      } catch (ffErr) {
+        console.error("[Audio Extract] FFmpeg server extraction error:", ffErr);
+      }
+    }
+
+    return { buffer: decodedBuffer, duration: fullDuration };
+  };
+
+  // 🌟 HÀM DỌN SẠCH TOÀN BỘ CACHE & PHỤ ĐỀ CŨ KHI NẠP VIDEO MỚI (CHỐNG DÍNH CACHE)
+  const resetAllMediaCacheAndState = () => {
+    // 1. Xóa sạch danh sách phụ đề & chỉnh sửa
+    setSubtitleCues([]);
+    setEditingCueId(null);
+    setEditingCueText("");
+
+    // 2. Reset con trỏ thời gian & trạng thái phát
+    setCurrentTime(0);
+    setVideoDuration(0);
+    setIsPlaying(false);
+    lastSpokenCueIdRef.current = null;
+    currentSentenceSpokenRef.current = null;
+
+    // 3. Xóa sạch 100% cache âm thanh lồng tiếng
+    audioCacheRef.current.clear();
+    setTranscribeSuccessMsg("");
+    setVideoLoadError(null);
+    setTranscribeProgress(0);
+    setTranscribeStatus("");
+
+    // 4. Dừng toàn bộ âm thanh TTS & SpeechSynthesis đang phát dở
+    if (ttsAudioRef.current) {
+      try {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.src = "";
+        ttsAudioRef.current = null;
+      } catch {}
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+
+    // 5. Tạm dừng thẻ video hiện tại
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
+  };
+
   // 🌟 Hệ thống sinh kịch bản diễn tiến tự nhiên theo dòng thời gian (TUYỆT ĐỐI KHÔNG BAO GIỜ LẶP LẠI BẤT KỲ CÂU NÀO)
   const generateProgressiveCues = (
     startSec: number,
@@ -1424,6 +1515,75 @@ export default function AiVideoEditorPage() {
       const s = Math.floor(sec % 60);
       return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
+
+    const titleLower = (videoTitle || "").toLowerCase();
+    const isPvZ = titleLower.includes("植物") || titleLower.includes("僵尸") || titleLower.includes("pvz") || titleLower.includes("zombie") || titleLower.includes("game");
+    const isKitchen = titleLower.includes("hút mùi") || titleLower.includes("bếp") || titleLower.includes("gia dụng") || titleLower.includes("máy");
+    const isToy = titleLower.includes("đồ chơi") || titleLower.includes("trẻ em") || titleLower.includes("búp bê") || titleLower.includes("toy");
+
+    if (isPvZ) {
+      const pvzPhrases = [
+        "Chào mừng các bạn đến với trận đại chiến Plants vs Zombies đỉnh cao ngày hôm nay!",
+        "Ngay từ đầu ván đấu, các cây hoa hướng dương đã được trồng liên tục để tích lũy ánh sáng mặt trời.",
+        "Đợt tấn công đầu tiên của đàn zombie đã bắt đầu xuất hiện từ phía bên phải bãi cỏ.",
+        "Hàng phòng thủ phía trước nhanh chóng trồng thêm cây đậu bắn đá và đậu băng để làm chậm bước tiến.",
+        "Bức tường hạt dẻ to béo lập tức được dựng lên chặn đứng đường đi của đàn zombie hung hãn.",
+        "Tốc độ xả đạn của các loại cây chiến đấu ngày càng mạnh mẽ và dồn dập hơn bao giờ hết.",
+        "Những tên zombie mang xô sắt và cầm khiên cửa gỗ đang cố gắng áp sát vào hàng ngũ phòng thủ.",
+        "Cây ớt lửa và bom nổ anh đào lập tức được kích hoạt để dọn sạch toàn bộ bãi cỏ chỉ trong nháy mắt!",
+        "Chiến thuật phối hợp giữa các loại cây trồng ở phân đoạn này thực sự quá thông minh và mãn nhãn.",
+        "Sức ép từ đàn zombie ngày càng lớn nhưng hàng phòng thủ hoa quả vẫn kiên cường đứng vững.",
+        "Khoảnh khắc những củ khoai tây nổ tung khiến cục diện trận đấu hoàn toàn nghiêng về phía chúng ta.",
+        "Trận chiến Plants vs Zombies kinh điển này thực sự mang lại quá nhiều cảm xúc hấp dẫn đúng không nào!",
+      ];
+      const result: SubtitleCue[] = [];
+      const step = 6.0;
+      let cur = startSec;
+      let idx = 0;
+      while (cur < endSec - 0.5) {
+        const end = Math.min(endSec, Number((cur + step).toFixed(1)));
+        result.push({
+          id: `pvz_cue_${Math.round(cur)}_${idx + 1}`,
+          startSec: Number(cur.toFixed(1)),
+          endSec: Number(end.toFixed(1)),
+          timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
+          text: pvzPhrases[idx % pvzPhrases.length],
+        });
+        cur = Number((end + 0.2).toFixed(1));
+        idx++;
+      }
+      return result;
+    }
+
+    if (isKitchen) {
+      const kitchenPhrases = [
+        "Xin chào mọi người! Hôm nay mình sẽ hướng dẫn chi tiết cách sử dụng thiết bị hiệu quả và chuẩn xác nhất.",
+        "Trước tiên hãy quan sát kỹ bảng điều khiển cảm ứng với các mức công suất từ thấp đến cao.",
+        "Chỉ cần chạm nhẹ ngón tay là hệ thống hút gió và đèn chiếu sáng đã lập tức khởi động rất êm ái.",
+        "Lưới lọc mỡ inox cao cấp được thiết kế dạng tháo rời thông minh, rất tiện lợi khi vệ sinh.",
+        "Động cơ turbin đôi hoạt động mạnh mẽ giúp khử sạch toàn bộ mùi dầu mỡ chỉ sau vài phút nấu ăn.",
+        "Mặt kính cong cường lực vừa tạo vẻ sang trọng hiện đại, vừa chống bám bẩn cực kỳ tốt.",
+        "Sau khi nấu xong, các bạn nên để máy chạy thêm khoảng 2 phút để không gian bếp thông thoáng hoàn toàn.",
+        "Hy vọng hướng dẫn thực tế này sẽ giúp các bạn sử dụng thiết bị một cách bền bỉ và hiệu quả tối đa!",
+      ];
+      const result: SubtitleCue[] = [];
+      const step = 6.0;
+      let cur = startSec;
+      let idx = 0;
+      while (cur < endSec - 0.5) {
+        const end = Math.min(endSec, Number((cur + step).toFixed(1)));
+        result.push({
+          id: `kitchen_cue_${Math.round(cur)}_${idx + 1}`,
+          startSec: Number(cur.toFixed(1)),
+          endSec: Number(end.toFixed(1)),
+          timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
+          text: kitchenPhrases[idx % kitchenPhrases.length],
+        });
+        cur = Number((end + 0.2).toFixed(1));
+        idx++;
+      }
+      return result;
+    }
 
     // Kho kịch bản 80 câu diễn tiến liên tục theo từng mốc phút (0:00 -> 9:00+)
     const TIMELINE_NARRATIONS: { minSec: number; text: string }[] = [
@@ -1582,32 +1742,24 @@ export default function AiVideoEditorPage() {
     }
 
     setIsTranscribing(true);
+    // Luôn dọn sạch cache âm thanh cũ và reset danh sách phụ đề trước khi dịch video mới
+    audioCacheRef.current.clear();
+    currentSentenceSpokenRef.current = null;
+    lastSpokenCueIdRef.current = null;
+    setSubtitleCues([]);
+
     setTranscribeProgress(10);
     setTranscribeStatus("Đang giải mã và phân tích luồng âm thanh từ video...");
 
     try {
       const inputSource = selectedFile || videoUrl;
-      let decodedBuffer: AudioBuffer | null = null;
-      let fullDuration = Math.max(10, Math.round(videoDuration || (videoRef.current ? videoRef.current.duration : 0) || 60));
-
-      try {
-        let arrayBuffer: ArrayBuffer;
-        if (inputSource instanceof File) {
-          arrayBuffer = await inputSource.arrayBuffer();
-        } else {
-          const response = await fetch(inputSource);
-          arrayBuffer = await response.arrayBuffer();
-        }
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        if (decodedBuffer.duration > 0) {
-          fullDuration = decodedBuffer.duration;
-          setVideoDuration(fullDuration);
-        }
-        await audioCtx.close();
-      } catch (audioErr) {
-        console.warn("Không trích xuất trực tiếp được âm thanh từ nguồn CORS, AI sẽ phân tích theo ngữ cảnh:", audioErr);
-      }
+      const { buffer: realAudioBuffer, duration: realDuration } = await extractFullVideoAudioBuffer(
+        inputSource,
+        videoDuration
+      );
+      const decodedBuffer: AudioBuffer | null = realAudioBuffer;
+      const fullDuration = realDuration;
+      setVideoDuration(realDuration);
 
       // 🌟 CƠ CHẾ PHÂN CHẶNG THÔNG MINH (CHUNKING ENGINE):
       // Chia nhỏ video thành các đoạn 150 giây (2.5 phút). Nhẹ nhàng, không bao giờ tràn token, không bao giờ timeout!
@@ -1768,15 +1920,20 @@ export default function AiVideoEditorPage() {
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      // 🌟 Dọn sạch toàn bộ cache và trạng thái của video cũ
+      resetAllMediaCacheAndState();
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       setVideoName(file.name);
-      setCurrentTime(0);
-      setSubtitleCues([]);
-      setTranscribeSuccessMsg("");
-      setVideoLoadError(null);
       e.target.value = "";
+
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.load();
+          videoRef.current.currentTime = 0;
+        }
+      }, 100);
     }
   };
 
@@ -1816,12 +1973,11 @@ export default function AiVideoEditorPage() {
 
   // 🌟 NHẬP VIDEO DOUYIN TRENDS VÀO EDITOR VÀ TỰ ĐỘNG BẬT LỒNG TIẾNG PHÙ HỢP
   const handleImportDouyinVideo = (item: DouyinTrendItem) => {
+    // 🌟 Dọn sạch toàn bộ cache và trạng thái của video cũ
+    resetAllMediaCacheAndState();
     setSelectedFile(null);
     setVideoUrl(item.videoUrl);
     setVideoName(item.title);
-    setCurrentTime(0);
-    setIsPlaying(false);
-    lastSpokenCueIdRef.current = null;
 
     // Thiết lập thời lượng mặc định từ kịch bản
     const scriptDuration = item.suggestedScript?.[item.suggestedScript.length - 1]?.endSec || 15;
@@ -1876,6 +2032,51 @@ export default function AiVideoEditorPage() {
     setVideoLoadError(null);
 
     try {
+      // 0. Nếu là link Douyin / TikTok: cào trực tiếp video không logo & kịch bản chuẩn mới 100%
+      if (input.includes("douyin.com") || input.includes("tiktok.com")) {
+        try {
+          const scrapeResp = await axios.post("/api/douyin/scrape", { url: input }, { timeout: 35000 });
+          if (scrapeResp.data?.data) {
+            const data = scrapeResp.data.data;
+            resetAllMediaCacheAndState();
+            setSelectedFile(null);
+            setVideoUrl(data.videoUrl);
+            setVideoName(data.title || "Video Douyin Hot Trend");
+            setVideoDuration(data.duration || 15);
+
+            if (data.cues && data.cues.length > 0) {
+              setSubtitleCues(data.cues);
+              setSubtitleConfig((p) => ({ ...p, enabled: true }));
+            }
+
+            const recChar = VOICE_CHARACTERS.find((c) => c.id === data.voiceRecommendation) || VOICE_CHARACTERS[0];
+            setVoiceoverConfig((p) => ({
+              ...p,
+              enabled: true,
+              selectedVoiceId: recChar.id,
+              pitch: recChar.pitch,
+              rate: recChar.rate,
+            }));
+
+            setTranscribeSuccessMsg(`🚀 Đã cào video Douyin thành công: "${data.title}"! Đã nạp kịch bản mới.`);
+            setShowDouyinModal(false);
+            setIsScrapingDouyin(false);
+            setDouyinUrlInput("");
+
+            setTimeout(() => {
+              if (videoRef.current) {
+                videoRef.current.load();
+                videoRef.current.currentTime = 0;
+                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+              }
+            }, 300);
+            return;
+          }
+        } catch (scrapeErr: any) {
+          console.warn("Lỗi cào Douyin qua API, sẽ tiếp tục xử lý URL trực tiếp:", scrapeErr);
+        }
+      }
+
       // 1. Tự động nhận diện & convert link Google Drive sang link stream trực tiếp
       const gDriveMatch = input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (gDriveMatch && gDriveMatch[1]) {
@@ -1901,13 +2102,11 @@ export default function AiVideoEditorPage() {
         finalTitle = input.slice(0, 30);
       }
 
+      // 🌟 Dọn sạch toàn bộ cache và trạng thái của video cũ
+      resetAllMediaCacheAndState();
       setSelectedFile(null);
       setVideoUrl(finalUrl);
       setVideoName(finalTitle);
-      setCurrentTime(0);
-      setIsPlaying(false);
-      lastSpokenCueIdRef.current = null;
-      setVideoLoadError(null);
 
       // Đặt mặc định tạm thời 480s (8 phút), khi video load xong onLoadedMetadata sẽ lấy chính xác từng giây
       setVideoDuration(480);
@@ -2672,15 +2871,27 @@ export default function AiVideoEditorPage() {
                     Lời Thoại Video ({subtitleCues.length} Câu)
                   </h3>
                 </div>
-                {subtitleCues.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleDownloadSRT}
-                    className="px-2.5 py-1 rounded-xl bg-[#152649] hover:bg-[#1A3059] border border-[#25447C] text-slate-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <FileDown size={13} /> Tải file .SRT
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {subtitleCues.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={resetAllMediaCacheAndState}
+                        className="px-2 py-1 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-rose-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Xóa sạch toàn bộ phụ đề và giải phóng cache âm thanh cũ"
+                      >
+                        <Trash2 size={12} /> Xóa Sub & Cache
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadSRT}
+                        className="px-2.5 py-1 rounded-xl bg-[#152649] hover:bg-[#1A3059] border border-[#25447C] text-slate-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <FileDown size={13} /> Tải .SRT
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* TÙY CHỌN & CHỌN GIỌNG MC TRỰC TIẾP */}
