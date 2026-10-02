@@ -523,6 +523,7 @@ export default function AiVideoEditorPage() {
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
   const currentSentenceSpokenRef = useRef<string | null>(null);
+  const spokenTextsHistoryRef = useRef<Map<string, number>>(new Map());
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const [voiceChangeNotice, setVoiceChangeNotice] = useState<string | null>(null);
 
@@ -1021,10 +1022,21 @@ export default function AiVideoEditorPage() {
         if (count >= 1) continue; // Bỏ hoàn toàn các lần lặp tiếp theo
       }
 
-      // Bất kỳ câu nào ngắn lặp quá 2 lần trong video -> bỏ các lần lặp sau
-      if (count >= 2) {
+      // 🛡️ CHỐNG LẶP TUYỆT ĐỐI: Mỗi câu dịch/phụ đề chỉ được xuất hiện DUY NHẤT 1 LẦN trong cả video
+      if (count >= 1) {
         hallucinatedDropCount++;
         continue;
+      }
+
+      // Kiểm tra tiền tố 4 từ đầu (chống lặp các biến thể câu)
+      const words = c.text.split(/\s+/).filter(Boolean);
+      if (words.length >= 4) {
+        const prefix4 = `pref_${words.slice(0, 4).join(" ").toLowerCase()}`;
+        if (seenCounts.has(prefix4)) {
+          hallucinatedDropCount++;
+          continue;
+        }
+        seenCounts.set(prefix4, 1);
       }
 
       seenCounts.set(key, count + 1);
@@ -1358,20 +1370,26 @@ export default function AiVideoEditorPage() {
     return recent || null;
   }, [subtitleConfig.enabled, subtitleCues, adjustedCurrentTime]);
 
-  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực (LỒNG TIẾNG TRỌN CÂU, KHÔNG GIẬT CỤC)
+  // Đồng bộ phát âm thanh lồng tiếng theo phụ đề thời gian thực (LỒNG TIẾNG TRỌN CÂU, KHÔNG GIẬT CỤC, CHỐNG LẶP TUYỆT ĐỐI)
   useEffect(() => {
     if (!voiceoverConfig.enabled || isExporting || !isPlaying) return;
     if (currentSubtitleCue) {
       const sentenceKey = currentSubtitleCue.parentSentenceId || currentSubtitleCue.id;
-      const textToSpeak = currentSubtitleCue.parentSentenceText || currentSubtitleCue.text;
+      const textToSpeak = (currentSubtitleCue.parentSentenceText || currentSubtitleCue.text).trim();
+      const normText = textToSpeak.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
 
-      if (sentenceKey !== currentSentenceSpokenRef.current) {
+      // Kiểm tra chống lặp lời thoại: nếu câu thoại tương tự đã được nói trong 20s qua thì bỏ qua
+      const lastSpokenAt = spokenTextsHistoryRef.current.get(normText);
+      const isDuplicateRecent = lastSpokenAt !== undefined && Math.abs(adjustedCurrentTime - lastSpokenAt) < 20;
+
+      if (sentenceKey !== currentSentenceSpokenRef.current && !isDuplicateRecent) {
         currentSentenceSpokenRef.current = sentenceKey;
+        spokenTextsHistoryRef.current.set(normText, adjustedCurrentTime);
         lastSpokenCueIdRef.current = currentSubtitleCue.id;
         speakSentence(textToSpeak);
       }
     }
-  }, [currentSubtitleCue, voiceoverConfig.enabled, isPlaying]);
+  }, [currentSubtitleCue, voiceoverConfig.enabled, isPlaying, adjustedCurrentTime]);
 
   useEffect(() => {
     if (currentSubtitleCue && listContainerRef.current) {
@@ -1474,6 +1492,7 @@ export default function AiVideoEditorPage() {
 
     // 3. Xóa sạch 100% cache âm thanh lồng tiếng
     audioCacheRef.current.clear();
+    spokenTextsHistoryRef.current.clear();
     setTranscribeSuccessMsg("");
     setVideoLoadError(null);
     setTranscribeProgress(0);
@@ -1536,18 +1555,26 @@ export default function AiVideoEditorPage() {
         "Khoảnh khắc những củ khoai tây nổ tung khiến cục diện trận đấu hoàn toàn nghiêng về phía chúng ta.",
         "Trận chiến Plants vs Zombies kinh điển này thực sự mang lại quá nhiều cảm xúc hấp dẫn đúng không nào!",
       ];
+      const extraPvz = [
+        "Chiến thuật phòng ngự phản công ở phân đoạn tiếp theo tiếp tục phát huy sức mạnh tối đa.",
+        "Mỗi loại cây được bố trí cực kỳ chuẩn xác, khống chế toàn bộ đường đi của đàn zombie.",
+        "Nhịp độ trận chiến ngày càng dồn dập hơn đòi hỏi khả năng quan sát nhạy bén từng giây.",
+        "Khoảnh khắc bùng nổ tiếp theo hứa hẹn sẽ định đoạt hoàn toàn kết quả của toàn ván đấu.",
+        "Một màn thể hiện quá mãn nhãn và đỉnh cao của đội hình cây trồng dũng cảm!"
+      ];
       const result: SubtitleCue[] = [];
       const step = 6.0;
       let cur = startSec;
       let idx = 0;
       while (cur < endSec - 0.5) {
         const end = Math.min(endSec, Number((cur + step).toFixed(1)));
+        const textToUse = idx < pvzPhrases.length ? pvzPhrases[idx] : extraPvz[(idx - pvzPhrases.length) % extraPvz.length];
         result.push({
           id: `pvz_cue_${Math.round(cur)}_${idx + 1}`,
           startSec: Number(cur.toFixed(1)),
           endSec: Number(end.toFixed(1)),
           timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
-          text: pvzPhrases[idx % pvzPhrases.length],
+          text: textToUse,
         });
         cur = Number((end + 0.2).toFixed(1));
         idx++;
@@ -1566,18 +1593,26 @@ export default function AiVideoEditorPage() {
         "Sau khi nấu xong, các bạn nên để máy chạy thêm khoảng 2 phút để không gian bếp thông thoáng hoàn toàn.",
         "Hy vọng hướng dẫn thực tế này sẽ giúp các bạn sử dụng thiết bị một cách bền bỉ và hiệu quả tối đa!",
       ];
+      const extraKitchen = [
+        "Khả năng vận hành bền bỉ và êm ái giúp người dùng hoàn toàn yên tâm trong quá trình sử dụng.",
+        "Từng chi tiết cơ khí đều được chăm chút kỹ lưỡng nhằm đem lại sự hài lòng và tiện lợi tối đa.",
+        "Một thiết bị thực sự hữu ích và xứng đáng có mặt trong không gian sống hiện đại của mỗi gia đình.",
+        "Hãy cùng mình kiểm tra thêm những mẹo vận hành thông minh khác ở phân đoạn tiếp theo nhé.",
+        "Hy vọng những chia sẻ chân thành này sẽ giúp bạn khai thác triệt để 100% công năng của sản phẩm!"
+      ];
       const result: SubtitleCue[] = [];
       const step = 6.0;
       let cur = startSec;
       let idx = 0;
       while (cur < endSec - 0.5) {
         const end = Math.min(endSec, Number((cur + step).toFixed(1)));
+        const textToUse = idx < kitchenPhrases.length ? kitchenPhrases[idx] : extraKitchen[(idx - kitchenPhrases.length) % extraKitchen.length];
         result.push({
           id: `kitchen_cue_${Math.round(cur)}_${idx + 1}`,
           startSec: Number(cur.toFixed(1)),
           endSec: Number(end.toFixed(1)),
           timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
-          text: kitchenPhrases[idx % kitchenPhrases.length],
+          text: textToUse,
         });
         cur = Number((end + 0.2).toFixed(1));
         idx++;
@@ -1700,13 +1735,22 @@ export default function AiVideoEditorPage() {
     const step = 6.0; // Mỗi câu nói kéo dài 6 giây (vừa vặn nhịp thở của MC)
     let cur = startSec;
     let cueIdx = 1;
+    const usedTexts = new Set<string>();
 
     while (cur < endSec - 0.5) {
       const end = Math.min(endSec, Number((cur + step).toFixed(1)));
       
-      // Tìm câu nói khớp nhất với mốc thời gian thực tế `cur` trong video
-      let matched = TIMELINE_NARRATIONS.find((n) => cur >= n.minSec && cur < n.minSec + step);
+      // Tìm câu nói khớp nhất với mốc thời gian thực tế `cur` trong video và chưa từng dùng
+      let matched = TIMELINE_NARRATIONS.find((n) => cur >= n.minSec && cur < n.minSec + step && !usedTexts.has(n.text));
       if (!matched) {
+        matched = TIMELINE_NARRATIONS.find((n) => !usedTexts.has(n.text));
+      }
+
+      let textToUse = "";
+      if (matched) {
+        textToUse = matched.text;
+        usedTexts.add(matched.text);
+      } else {
         // Nếu video dài hơn 9 phút (> 540s), tiếp tục phát triển nội dung mở rộng mà KHÔNG LẶP
         const extraIdx = Math.floor(cur / step);
         const extraTexts = [
@@ -1714,9 +1758,14 @@ export default function AiVideoEditorPage() {
           "Góc máy này ghi lại cận cảnh từng chi tiết đắt giá nhất của toàn bộ quá trình.",
           "Cảm nhận trực tiếp cho thấy sự khác biệt vô cùng lớn so với tưởng tượng ban đầu.",
           "Hãy quan sát kỹ cách các chuyên gia thao tác để rút ra thêm nhiều bài học bổ ích.",
-          "Mỗi một giây trôi qua đều đem lại những góc nhìn hoàn toàn mới mẻ và chân thực."
+          "Mỗi một giây trôi qua đều đem lại những góc nhìn hoàn toàn mới mẻ và chân thực.",
+          "Khả năng thích ứng linh hoạt và độ chính xác ở đây thực sự rất đáng nể.",
+          "Từng góc cạnh đều phản chiếu sự công phu và tâm huyết của người thực hiện.",
+          "Đây là một điểm nhấn rất đặc sắc mà người xem khó lòng có thể rời mắt.",
+          "Càng theo dõi kỹ chúng ta càng nhận ra nhiều khía cạnh thú vị và bất ngờ.",
+          "Một trải nghiệm thực sự trọn vẹn và để lại ấn tượng vô cùng sâu sắc."
         ];
-        matched = { minSec: cur, text: extraTexts[extraIdx % extraTexts.length] };
+        textToUse = extraTexts[extraIdx % extraTexts.length];
       }
 
       result.push({
@@ -1724,7 +1773,7 @@ export default function AiVideoEditorPage() {
         startSec: Number(cur.toFixed(1)),
         endSec: Number(end.toFixed(1)),
         timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
-        text: matched.text,
+        text: textToUse,
       });
 
       cur = Number((end + 0.2).toFixed(1));
@@ -1862,8 +1911,22 @@ export default function AiVideoEditorPage() {
       setTranscribeProgress(92);
       setTranscribeStatus("Đang đồng bộ phụ đề viral & tối ưu giọng đọc MC tiếng Việt...");
 
+      // 🛡️ LỌC TOÀN CỤC CHỐNG LẶP TOÀN BỘ VIDEO (KHÔNG CHO PHÉP BẤT KỲ CÂU NÀO LẶP LẠI GIỮA CÁC CHUNK)
+      const { cues: globallyCleaned } = cleanAndDehallucinateCues(allCues);
+
+      // SẮP XẾP VÀ CHUẨN HÓA MỐC THỜI GIAN THEO THỨ TỰ TUYỆT ĐỐI KHÔNG CHỒNG LẤN
+      const sortedCues = [...globallyCleaned].sort((a, b) => a.startSec - b.startSec);
+      for (let i = 1; i < sortedCues.length; i++) {
+        if (sortedCues[i].startSec < sortedCues[i - 1].endSec) {
+          sortedCues[i].startSec = Number((sortedCues[i - 1].endSec + 0.2).toFixed(1));
+          if (sortedCues[i].endSec <= sortedCues[i].startSec) {
+            sortedCues[i].endSec = Number((sortedCues[i].startSec + 3.0).toFixed(1));
+          }
+        }
+      }
+
       // TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI
-      let cues = allCues;
+      let cues = sortedCues;
       if (cues && cues.length > 0) {
         cues = chunkCuesInto3To5Words(cues);
       }
@@ -1961,6 +2024,7 @@ export default function AiVideoEditorPage() {
       setCurrentTime(sec);
       currentSentenceSpokenRef.current = null;
       lastSpokenCueIdRef.current = null;
+      spokenTextsHistoryRef.current.clear();
       if (ttsAudioRef.current) {
         try { ttsAudioRef.current.pause(); } catch {}
       }
@@ -2575,8 +2639,10 @@ export default function AiVideoEditorPage() {
           );
           if (matchedCue) {
             const sKey = matchedCue.parentSentenceId || matchedCue.id;
-            if (!spokenCueKeys.has(sKey)) {
+            const normText = (matchedCue.parentSentenceText || matchedCue.text).toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+            if (!spokenCueKeys.has(sKey) && !spokenCueKeys.has(normText)) {
               spokenCueKeys.add(sKey);
+              spokenCueKeys.add(normText);
               const buffer = cueAudioBuffers.get(sKey);
               if (buffer) {
                 try {
