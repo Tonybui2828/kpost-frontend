@@ -1623,11 +1623,11 @@ export default function AiVideoEditorPage() {
         let res: any = null;
         let lastErrorMsg = "";
         const translateUrls = [
+          "https://api.kpost.vn/ai-content/transcribe-and-translate",
+          `${apiBase}/ai-content/transcribe-and-translate`,
           "/api/transcribe-and-translate",
           "/ai-content/transcribe-and-translate",
           `${apiBase}/api/transcribe-and-translate`,
-          `${apiBase}/ai-content/transcribe-and-translate`,
-          "https://api.kpost.vn/ai-content/transcribe-and-translate",
           "https://api.kpost.vn/api/transcribe-and-translate",
         ];
 
@@ -1652,8 +1652,25 @@ export default function AiVideoEditorPage() {
               break;
             }
           } catch (err: any) {
-            lastErrorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || lastErrorMsg;
-            if (lastErrorMsg) globalLastErrorMsg = lastErrorMsg;
+            const rawErr = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+            const strErr = typeof rawErr === 'object' ? JSON.stringify(rawErr) : String(rawErr || '');
+            
+            if (
+              strErr.includes("reported as leaked") ||
+              strErr.includes("use another API key") ||
+              strErr.includes("PERMISSION_DENIED")
+            ) {
+              globalLastErrorMsg = "Khóa GEMINI_API_KEY của bạn đã bị Google vô hiệu hóa vì lý do bảo mật (Google báo: 'Your API key was reported as leaked. Please use another API key'). Bạn hãy vào aistudio.google.com tạo 1 khóa API Key MỚI rồi thay vào Coolify nhé!";
+              break;
+            } else if (strErr.includes("API key not valid")) {
+              globalLastErrorMsg = "Khóa GEMINI_API_KEY không hợp lệ. Vui lòng kiểm tra lại khóa API trên Coolify!";
+              break;
+            } else if (strErr && !strErr.includes("Cannot POST")) {
+              lastErrorMsg = strErr;
+              globalLastErrorMsg = strErr;
+            } else if (!globalLastErrorMsg) {
+              globalLastErrorMsg = strErr || lastErrorMsg;
+            }
           }
         }
 
