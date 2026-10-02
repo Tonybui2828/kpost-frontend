@@ -1888,12 +1888,49 @@ export default function AiVideoEditorPage() {
           }
         }
 
+        // 📸 Trích xuất snapshot khung hình chứa sub chữ gốc (ví dụ '我真错了') để gửi cho Gemini đọc phụ đề màn hình
+        let frameSnapshots: string[] = [];
+        if (videoRef.current) {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.min(640, videoRef.current.videoWidth || 640);
+            canvas.height = Math.min(360, videoRef.current.videoHeight || 360);
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              const originalTime = videoRef.current.currentTime;
+              const sampleTimes = [
+                chunkStart + Math.min(4, chunkDur * 0.2),
+                chunkStart + chunkDur * 0.5,
+                chunkStart + chunkDur * 0.8
+              ];
+              for (const t of sampleTimes) {
+                try {
+                  videoRef.current.currentTime = t;
+                  await new Promise<void>((r) => {
+                    const h = () => { videoRef.current?.removeEventListener("seeked", h); r(); };
+                    videoRef.current?.addEventListener("seeked", h, { once: true });
+                    setTimeout(r, 180);
+                  });
+                  ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                  const img = canvas.toDataURL("image/jpeg", 0.55);
+                  if (img && img.length > 200) frameSnapshots.push(img);
+                } catch {}
+              }
+              videoRef.current.currentTime = originalTime;
+            }
+          } catch (snapErr) {
+            console.warn("Lỗi trích xuất snapshot phụ đề:", snapErr);
+          }
+        }
+
         let res: any = null;
         const translateUrls = [
-          `${apiBase}/ai-content/transcribe-and-translate`,
-          `${apiBase}/api/transcribe-and-translate`,
           "/api/transcribe-and-translate",
           "/ai-content/transcribe-and-translate",
+          `${apiBase}/api/transcribe-and-translate`,
+          `${apiBase}/ai-content/transcribe-and-translate`,
+          "https://api.kpost.vn/ai-content/transcribe-and-translate",
+          "https://api.kpost.vn/api/transcribe-and-translate",
         ];
 
         for (const url of translateUrls) {
@@ -1909,8 +1946,9 @@ export default function AiVideoEditorPage() {
                 totalChunks: totalChunks,
                 videoTitle: videoName || "Video Douyin Viral",
                 sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
+                frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
               },
-              { timeout: 75000 }
+              { timeout: 85000 }
             );
             if (res?.data?.cues && res.data.cues.length > 0) {
               break;
