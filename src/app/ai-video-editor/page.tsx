@@ -560,6 +560,8 @@ export default function AiVideoEditorPage() {
   const listContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioNodesMapRef = useRef<WeakMap<HTMLAudioElement, any>>(new WeakMap());
   const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
   // 🎙️ TỰ ĐỘNG NẠP VÀ LƯU DANH SÁCH GIỌNG NÓI HỆ THỐNG (CHROME, EDGE, SAFARI)
@@ -605,6 +607,142 @@ export default function AiVideoEditorPage() {
     });
   };
 
+  // 🎙️ ĐỊNH HÌNH CHẤT GIỌNG MC ĐẶC TRƯNG: BIẾN HÓA ĐÚNG TỪNG NHÂN VẬT (PITCH + SPEED + EQUALIZER)
+  const configureVoiceAudio = (audio: HTMLAudioElement, voiceId: string, customRate?: number) => {
+    try {
+      audio.crossOrigin = "anonymous";
+    } catch {}
+
+    let rate = 1.15;
+    let preservesPitch = true;
+    let bassGain = 0;
+    let midFreq = 1000;
+    let midGain = 0;
+    let trebleGain = 0;
+
+    switch (voiceId) {
+      case "cartoon": // ⚡ Pikachu Chibi (Hoạt hình lí lắc, giọng hoạt hình vui nhộn)
+        rate = customRate || 1.35;
+        preservesPitch = false; // Tắt bảo toàn cao độ: Pitch tăng vút thành giọng Chibi hoạt hình vui nhộn
+        bassGain = -8;
+        midFreq = 2200;
+        midGain = 6;
+        trebleGain = 10;
+        break;
+
+      case "adult_male_mc": // 🎙️ Minh Quân (Nam MC Trầm Ấm)
+        rate = customRate || 0.88;
+        preservesPitch = false; // Tắt bảo toàn cao độ: Pitch hạ sâu xuống dải âm nam trầm quyền lực
+        bassGain = 14;          // Kích âm trầm dày dặn như phòng thu phát thanh
+        midFreq = 380;
+        midGain = 5;
+        trebleGain = -8;        // Cắt bớt dải the thé nữ
+        break;
+
+      case "senior": // 👴 Bác Năm (Người lớn tuổi đôn hậu)
+        rate = customRate || 0.80;
+        preservesPitch = false; // Cao độ trầm ấm, từ tốn của người cao tuổi
+        bassGain = 12;
+        midFreq = 500;
+        midGain = 4;
+        trebleGain = -7;
+        break;
+
+      case "adult_male_reviewer": // 👱‍♂️ Đức Anh (Reviewer Bắt Trend)
+        rate = customRate || 0.94;
+        preservesPitch = false; // Giọng nam trẻ trung, dứt khoát, hiện đại
+        bassGain = 8;
+        midFreq = 850;
+        midGain = 6;
+        trebleGain = 2;
+        break;
+
+      case "adult_female_sweet": // 👩 Mai Anh (Nữ Review Dịu Dàng)
+        rate = customRate || 1.10;
+        preservesPitch = true;  // Giữ nguyên cao độ nữ ngọt ngào, mềm mại
+        bassGain = 0;
+        midFreq = 1400;
+        midGain = 3;
+        trebleGain = 5;
+        break;
+
+      case "speed_mc": // 🚀 MC Siêu Tốc (Khớp Douyin Nhanh)
+        rate = customRate || 1.38;
+        preservesPitch = true;  // Tốc độ nói cực nhanh, dồn dập chuẩn nhịp Douyin
+        bassGain = -2;
+        midFreq = 2000;
+        midGain = 4;
+        trebleGain = 6;
+        break;
+
+      case "child_boy": // 👦 Bé Bắp (5-7 tuổi)
+      case "child_girl": // 👧 Bé Dâu (4-6 tuổi)
+        rate = customRate || 1.28;
+        preservesPitch = false; // Cao độ trẻ con líu lo
+        bassGain = -6;
+        midFreq = 2000;
+        midGain = 5;
+        trebleGain = 8;
+        break;
+
+      default:
+        rate = customRate || 1.15;
+        preservesPitch = true;
+        break;
+    }
+
+    // 1. Áp dụng Pitch & PlaybackRate trên phần cứng trình duyệt (hỗ trợ mọi thiết bị)
+    audio.playbackRate = rate;
+    audio.preservesPitch = preservesPitch;
+    (audio as any).mozPreservesPitch = preservesPitch;
+    (audio as any).webkitPreservesPitch = preservesPitch;
+
+    // 2. Tinh chỉnh Equalizer qua Web Audio API (nếu được trình duyệt cho phép)
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioCtx();
+        }
+        const ctx = audioContextRef.current;
+        if (ctx.state === "suspended") {
+          ctx.resume().catch(() => {});
+        }
+        let nodes = audioNodesMapRef.current.get(audio);
+        if (!nodes) {
+          const source = ctx.createMediaElementSource(audio);
+          const bass = ctx.createBiquadFilter();
+          bass.type = "lowshelf";
+          bass.frequency.value = 180;
+
+          const mid = ctx.createBiquadFilter();
+          mid.type = "peaking";
+          mid.frequency.value = 1000;
+          mid.Q.value = 1.0;
+
+          const treble = ctx.createBiquadFilter();
+          treble.type = "highshelf";
+          treble.frequency.value = 3200;
+
+          const gain = ctx.createGain();
+
+          source.connect(bass);
+          bass.connect(mid);
+          mid.connect(treble);
+          treble.connect(gain);
+          gain.connect(ctx.destination);
+
+          nodes = { source, bass, mid, treble, gain };
+          audioNodesMapRef.current.set(audio, nodes);
+        }
+        nodes.bass.gain.value = bassGain;
+        nodes.mid.frequency.value = midFreq;
+        nodes.mid.gain.value = midGain;
+        nodes.treble.gain.value = trebleGain;
+      }
+    } catch {}
+  };
+
   // ⚡ HÀM ĐỔI GIỌNG MC & LOAD LẠI TRỰC TIẾP (KHÔNG CẦN DỊCH LẠI TỪ ĐẦU)
   const handleQuickChangeVoice = (voiceId: string, customRate?: number, customPitch?: number) => {
     const selectedChar = VOICE_CHARACTERS.find((c) => c.id === voiceId);
@@ -642,10 +780,10 @@ export default function AiVideoEditorPage() {
 
     // 4. Phát thử ngay câu mẫu của giọng MC mới để người dùng nghe
     const sample = selectedChar?.sampleText || (subtitleCues[0]?.text) || "Xin chào! Tôi là MC lồng tiếng mới của bạn.";
-    speakSentence(sample, voiceId);
+    speakSentence(sample, voiceId, newRate);
 
     // 5. Hiển thị thông báo thành công
-    setVoiceChangeNotice(`✅ Đã chuyển sang: ${selectedChar?.name || voiceId} (Tốc độ ${newRate}x) - Sẵn sàng lồng tiếng!`);
+    setVoiceChangeNotice(`✅ Đã chuyển sang: ${selectedChar?.name || voiceId} - Sẵn sàng lồng tiếng!`);
     setTimeout(() => setVoiceChangeNotice(null), 4000);
   };
 
@@ -660,7 +798,7 @@ export default function AiVideoEditorPage() {
   };
 
   // 🎙️ HÀM PHÁT GIỌNG LỒNG TIẾNG CHUẨN TIẾNG VIỆT 100% (NGỮ ĐIỆU TỰ NHIÊN, CỰC KỲ RÕ RÀNG VÀ BIẾN HÓA THEO NHÂN VẬT)
-  const speakSentence = (text: string, voiceId?: string) => {
+  const speakSentence = (text: string, voiceId?: string, explicitRate?: number) => {
     if (typeof window === "undefined" || !text.trim()) return;
 
     if (ttsAudioRef.current) {
@@ -700,7 +838,7 @@ export default function AiVideoEditorPage() {
 
     const activeVoiceId = voiceId || voiceoverConfig.selectedVoiceId;
     const char = VOICE_CHARACTERS.find((c) => c.id === activeVoiceId) || VOICE_CHARACTERS[0];
-    const rate = voiceoverConfig.rate || char.rate || 1.15;
+    const rateToUse = explicitRate || (voiceId ? char.rate : voiceoverConfig.rate) || char.rate || 1.15;
     const cleanSnippet = cleanText.slice(0, 250);
     const encoded = encodeURIComponent(cleanSnippet);
     const apiBase = getApiBaseUrl();
@@ -733,7 +871,9 @@ export default function AiVideoEditorPage() {
           audioCacheRef.current.set(cacheKey, audio);
         }
 
-        audio.playbackRate = rate;
+        // Cấu hình chất giọng MC đặc trưng (Cao độ Pitch + Tốc độ Rate + EQ BiquadFilter)
+        configureVoiceAudio(audio, activeVoiceId, rateToUse);
+
         audio.currentTime = 0;
         ttsAudioRef.current = audio;
 
@@ -2995,14 +3135,7 @@ export default function AiVideoEditorPage() {
                   return (
                     <div
                       key={char.id}
-                      onClick={() =>
-                        setVoiceoverConfig((p) => ({
-                          ...p,
-                          selectedVoiceId: char.id,
-                          pitch: char.pitch,
-                          rate: char.rate,
-                        }))
-                      }
+                      onClick={() => handleQuickChangeVoice(char.id, char.rate, char.pitch)}
                       className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected
                           ? "border-[#1877F2] bg-[#1565C0]/30 shadow-md shadow-blue-950/60"
@@ -3033,7 +3166,7 @@ export default function AiVideoEditorPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            speakSentence(char.sampleText, char.id);
+                            speakSentence(char.sampleText, char.id, char.rate);
                           }}
                           className="px-2.5 py-1 bg-[#152649] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                         >
