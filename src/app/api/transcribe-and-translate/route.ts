@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 
 // Kho kịch bản dự phòng diễn tiến liên tục theo thời gian (0:00 -> 10:00+)
 const TIMELINE_NARRATIONS: { minSec: number; text: string }[] = [
@@ -15,19 +14,70 @@ const TIMELINE_NARRATIONS: { minSec: number; text: string }[] = [
   { minSec: 54, text: "Hãy tin tưởng tôi thêm một lần này thôi, tôi nhất định sẽ chứng minh cho bạn thấy." }
 ];
 
+// Gọi trực tiếp Gemini REST API qua fetch gốc (Không cần cài @google/genai, không bao giờ lỗi Docker build)
+async function callGeminiRest(apiKey: string, systemPrompt: string, parts: any[]) {
+  const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const payload = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: parts,
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 8192,
+        },
+      };
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.warn(`[Gemini REST ${model} HTTP ${resp.status}]:`, errText);
+        continue;
+      }
+
+      const data = await resp.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      if (cleaned) {
+        const parsed = JSON.parse(cleaned);
+        if (parsed?.cues && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn(`[Gemini REST ${model} exception]:`, e);
+    }
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { 
-      audioBase64, 
-      mimeType, 
-      duration, 
-      videoTitle, 
-      sourceLang, 
-      startOffset: rawOffset, 
-      chunkIndex: rawChunk, 
+    const {
+      audioBase64,
+      mimeType,
+      duration,
+      videoTitle,
+      sourceLang,
+      startOffset: rawOffset,
+      chunkIndex: rawChunk,
       totalChunks: rawTotal,
-      frameSnapshots 
+      frameSnapshots,
     } = body;
 
     const totalDuration = Math.max(5, Math.round(Number(duration) || 60));
@@ -35,13 +85,11 @@ export async function POST(req: Request) {
     const chunkIndex = Math.max(1, Number(rawChunk) || 1);
     const totalChunks = Math.max(1, Number(rawTotal) || 1);
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
     let resultJson: any = null;
 
     if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const systemPrompt = `BẠN LÀ CHUYÊN GIA DỊCH THUẬT & LỒNG TIẾNG ĐIỆN ẢNH / VIDEO DOUYIN SÁT NGHĨA 100%.
+      const systemPrompt = `BẠN LÀ CHUYÊN GIA DỊCH THUẬT & LỒNG TIẾNG ĐIỆN ẢNH / VIDEO DOUYIN SÁT NGHĨA 100%.
 
 YÊU CẦU BẮT BUỘC:
 1. ĐỌC KỸ PHỤ ĐỀ GỐC TRÊN CÁC KHUNG HÌNH VIDEO (NẾU CÓ):
@@ -66,61 +114,37 @@ YÊU CẦU BẮT BUỘC:
   ]
 }`;
 
-        const parts: any[] = [];
+      const parts: any[] = [];
 
-        // 1. Đính kèm các ảnh chụp khung hình video để Gemini đọc phụ đề gốc (OCR sub màn hình)
-        if (Array.isArray(frameSnapshots) && frameSnapshots.length > 0) {
-          for (const img of frameSnapshots) {
-            if (typeof img === 'string') {
-              const cleanImg = img.includes(',') ? img.split(',')[1] : img;
-              parts.push({
-                inlineData: {
-                  mimeType: 'image/jpeg',
-                  data: cleanImg,
-                },
-              });
-            }
-          }
-        }
-
-        // 2. Đính kèm âm thanh thật của phân đoạn
-        if (audioBase64 && typeof audioBase64 === 'string') {
-          const rawBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
-          parts.push({
-            inlineData: {
-              mimeType: mimeType || 'audio/wav',
-              data: rawBase64,
-            },
-          });
-        }
-        parts.push({ text: systemPrompt });
-
-        const modelsToTry = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-        for (const model of modelsToTry) {
-          try {
-            const response = await ai.models.generateContent({
-              model,
-              contents: parts,
-              config: {
-                responseMimeType: 'application/json',
-                maxOutputTokens: 8192,
+      // 1. Đính kèm các ảnh chụp khung hình video để Gemini đọc phụ đề gốc (OCR sub màn hình)
+      if (Array.isArray(frameSnapshots) && frameSnapshots.length > 0) {
+        for (const img of frameSnapshots) {
+          if (typeof img === 'string') {
+            const cleanImg = img.includes(',') ? img.split(',')[1] : img;
+            parts.push({
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: cleanImg,
               },
             });
-            const rawText = response.text || '';
-            const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-            if (cleaned) {
-              resultJson = JSON.parse(cleaned);
-              if (resultJson?.cues && Array.isArray(resultJson.cues) && resultJson.cues.length > 0) {
-                break;
-              }
-            }
-          } catch (modelErr) {
-            console.warn(`[Gemini model ${model} error]:`, modelErr);
           }
         }
-      } catch (geminiErr: any) {
-        console.error('[Gemini Transcription Error]:', geminiErr);
       }
+
+      // 2. Đính kèm âm thanh thật của phân đoạn
+      if (audioBase64 && typeof audioBase64 === 'string') {
+        const rawBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
+        parts.push({
+          inlineData: {
+            mimeType: mimeType || 'audio/wav',
+            data: rawBase64,
+          },
+        });
+      }
+
+      parts.push({ text: 'Hãy đọc kỹ phụ đề gốc trong ảnh và nghe âm thanh để dịch đúng 100% lời thoại của nhân vật sang tiếng Việt.' });
+
+      resultJson = await callGeminiRest(apiKey, systemPrompt, parts);
     }
 
     // Dự phòng an toàn nếu không có API key
@@ -133,7 +157,7 @@ YÊU CẦU BẮT BUỘC:
       while (cur < totalDuration - 0.5) {
         const end = Math.min(totalDuration, Number((cur + step).toFixed(1)));
         const idx = Math.floor((startOffset + cur) / step) % TIMELINE_NARRATIONS.length;
-        
+
         fallbackCues.push({
           id: cueId,
           startSec: Number(cur.toFixed(1)),
@@ -146,8 +170,8 @@ YÊU CẦU BẮT BUỘC:
       }
 
       resultJson = {
-        detectedLanguage: "Tiếng Trung / Video Gốc",
-        summary: "Phụ đề đối thoại tiếng Việt",
+        detectedLanguage: 'Tiếng Trung / Video Gốc',
+        summary: 'Phụ đề đối thoại tiếng Việt',
         cues: fallbackCues,
       };
     }
@@ -159,10 +183,10 @@ YÊU CẦU BẮT BUỘC:
       const seen = new Set<string>();
 
       for (const c of rawCuesList) {
-        const textStr = String(c.text || "").trim();
+        const textStr = String(c.text || '').trim();
         if (!textStr) continue;
 
-        const norm = textStr.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+        const norm = textStr.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, '');
         if (norm.length < 2 || seen.has(norm)) continue;
         seen.add(norm);
 
@@ -184,8 +208,8 @@ YÊU CẦU BẮT BUỘC:
       chunkIndex,
       totalChunks,
       startOffset,
-      detectedLanguage: resultJson?.detectedLanguage || "Tiếng Trung / Video Gốc",
-      summary: resultJson?.summary || "",
+      detectedLanguage: resultJson?.detectedLanguage || 'Tiếng Trung / Video Gốc',
+      summary: resultJson?.summary || '',
       cues: finalCues,
     });
   } catch (error: any) {
