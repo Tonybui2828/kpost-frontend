@@ -1543,19 +1543,24 @@ export default function AiVideoEditorPage() {
       const fullDuration = realDuration;
       setVideoDuration(realDuration);
 
-      // 🌟 CƠ CHẾ PHÂN CHẶNG 30 GIÂY THÔNG MINH (CHUNKING ENGINE):
-      // Chia nhỏ video thành các đoạn 30 giây: Siêu nhẹ (~1.2MB), không bao giờ lỗi 413, bóc băng chính xác từng câu đối thoại!
-      const CHUNK_LEN = 30;
+      // 🌟 CƠ CHẾ PHÂN CHẶNG 90 GIÂY THÔNG MINH (CHUNKING ENGINE):
+      // Chia nhỏ video thành các đoạn 90 giây: Vừa đủ ngữ cảnh, siêu nhẹ, giảm 67% số lần gọi API, tránh hoàn toàn Rate Limit 429!
+      const CHUNK_LEN = 90;
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
       let allCues: any[] = [];
       let detectedLang = "Tiếng Trung / Video Gốc";
       let globalLastErrorMsg = "";
       const apiBase = getApiBaseUrl();
 
-      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn (30s/đoạn)...`);
+      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn (90s/đoạn)...`);
       const globalUsedTexts = new Set<string>();
 
       for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+        // Tạm dừng 1.2s giữa các phân đoạn để tránh chạm trần giới hạn 15 RPM của Google Free Tier
+        if (chunkIdx > 0) {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+
         const chunkStart = chunkIdx * CHUNK_LEN;
         const chunkEnd = Math.min(fullDuration, (chunkIdx + 1) * CHUNK_LEN);
         const chunkDur = Number((chunkEnd - chunkStart).toFixed(1));
@@ -1623,11 +1628,11 @@ export default function AiVideoEditorPage() {
         let res: any = null;
         let lastErrorMsg = "";
         const translateUrls = [
+          "/api/transcribe-and-translate",
+          `${apiBase}/api/transcribe-and-translate`,
           "https://api.kpost.vn/ai-content/transcribe-and-translate",
           `${apiBase}/ai-content/transcribe-and-translate`,
-          "/api/transcribe-and-translate",
           "/ai-content/transcribe-and-translate",
-          `${apiBase}/api/transcribe-and-translate`,
           "https://api.kpost.vn/api/transcribe-and-translate",
         ];
 
@@ -1645,6 +1650,7 @@ export default function AiVideoEditorPage() {
                 videoTitle: videoName || "Video Douyin Viral",
                 sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
                 frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
+                model: "gemini-2.5-flash",
               },
               { timeout: 85000 }
             );
@@ -1662,6 +1668,14 @@ export default function AiVideoEditorPage() {
             ) {
               globalLastErrorMsg = "Khóa GEMINI_API_KEY của bạn đã bị Google vô hiệu hóa vì lý do bảo mật (Google báo: 'Your API key was reported as leaked. Please use another API key'). Bạn hãy vào aistudio.google.com tạo 1 khóa API Key MỚI rồi thay vào Coolify nhé!";
               break;
+            } else if (
+              strErr.includes("429") ||
+              strErr.includes("RESOURCE_EXHAUSTED") ||
+              strErr.includes("exceeded your current quota") ||
+              strErr.includes("limit: 20")
+            ) {
+              globalLastErrorMsg = "Backend đang gọi model 'gemini-3.8-flash' vốn bị Google giới hạn chỉ 20 lượt/ngày. Hãy chuyển sang model 'gemini-2.5-flash' để được miễn phí 1.500 lượt/ngày!";
+              // Không break để các URL khác (như /api/transcribe-and-translate với gemini-2.5-flash) được thử!
             } else if (strErr.includes("API key not valid")) {
               globalLastErrorMsg = "Khóa GEMINI_API_KEY không hợp lệ. Vui lòng kiểm tra lại khóa API trên Coolify!";
               break;
