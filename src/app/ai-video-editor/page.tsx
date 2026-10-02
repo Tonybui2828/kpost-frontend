@@ -1010,36 +1010,27 @@ export default function AiVideoEditorPage() {
 
     let hallucinatedDropCount = 0;
     const filteredByFreq: SubtitleCue[] = [];
-    const seenCounts = new Map<string, number>();
+    const lastSeenTimeMap = new Map<string, number>();
 
     for (const c of normalized) {
       const key = c.text.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
-      const count = seenCounts.get(key) || 0;
 
-      // Nếu là cụm từ ảo giác (như trời ơi, cảm ơn) -> chỉ cho phép tối đa 1 lần trong cả video!
+      // Nếu là cụm từ ảo giác kinh điển (như trời ơi, cảm ơn bạn đã xem) -> chỉ cho phép tối đa 1 lần
       if (isHallucinatedPattern(c.text)) {
-        hallucinatedDropCount++;
-        if (count >= 1) continue; // Bỏ hoàn toàn các lần lặp tiếp theo
+        if (lastSeenTimeMap.has(key)) {
+          hallucinatedDropCount++;
+          continue;
+        }
       }
 
-      // 🛡️ CHỐNG LẶP TUYỆT ĐỐI: Mỗi câu dịch/phụ đề chỉ được xuất hiện DUY NHẤT 1 LẦN trong cả video
-      if (count >= 1) {
+      // 🛡️ CHỐNG LẶP SÁT NHAU: Chỉ loại bỏ nếu câu giống hệt xuất hiện trong vòng 6 giây gần nhất
+      const lastTime = lastSeenTimeMap.get(key);
+      if (lastTime !== undefined && Math.abs(c.startSec - lastTime) < 6.0) {
         hallucinatedDropCount++;
         continue;
       }
 
-      // Kiểm tra tiền tố 4 từ đầu (chống lặp các biến thể câu)
-      const words = c.text.split(/\s+/).filter(Boolean);
-      if (words.length >= 4) {
-        const prefix4 = `pref_${words.slice(0, 4).join(" ").toLowerCase()}`;
-        if (seenCounts.has(prefix4)) {
-          hallucinatedDropCount++;
-          continue;
-        }
-        seenCounts.set(prefix4, 1);
-      }
-
-      seenCounts.set(key, count + 1);
+      lastSeenTimeMap.set(key, c.startSec);
       filteredByFreq.push(c);
     }
 
@@ -1852,15 +1843,15 @@ export default function AiVideoEditorPage() {
       const fullDuration = realDuration;
       setVideoDuration(realDuration);
 
-      // 🌟 CƠ CHẾ PHÂN CHẶNG THÔNG MINH (CHUNKING ENGINE):
-      // Chia nhỏ video thành các đoạn 150 giây (2.5 phút). Nhẹ nhàng, không bao giờ tràn token, không bao giờ timeout!
-      const CHUNK_LEN = 150;
+      // 🌟 CƠ CHẾ PHÂN CHẶNG 30 GIÂY THÔNG MINH (CHUNKING ENGINE):
+      // Chia nhỏ video thành các đoạn 30 giây: Siêu nhẹ (~1.2MB), không bao giờ lỗi 413, bóc băng chính xác từng câu đối thoại!
+      const CHUNK_LEN = 30;
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
       let allCues: any[] = [];
       let detectedLang = "Tiếng Trung / Video Gốc";
       const apiBase = getApiBaseUrl();
 
-      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn...`);
+      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn (30s/đoạn)...`);
       const globalUsedTexts = new Set<string>();
 
       for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
@@ -1888,31 +1879,36 @@ export default function AiVideoEditorPage() {
           }
         }
 
-        // 📸 Trích xuất snapshot khung hình chứa sub chữ gốc (ví dụ '我真错了') để gửi cho Gemini đọc phụ đề màn hình
+        // 📸 Trích xuất snapshot khung hình cận cảnh vùng phụ đề chữ gốc (ví dụ '小小僵尸', '我没打你啊')
         let frameSnapshots: string[] = [];
         if (videoRef.current) {
           try {
             const canvas = document.createElement("canvas");
-            canvas.width = Math.min(640, videoRef.current.videoWidth || 640);
-            canvas.height = Math.min(360, videoRef.current.videoHeight || 360);
+            const vW = videoRef.current.videoWidth || 640;
+            const vH = videoRef.current.videoHeight || 360;
+            canvas.width = Math.min(640, vW);
+            canvas.height = Math.floor(canvas.width * 0.35); // Vùng phụ đề 35% phía dưới
             const ctx = canvas.getContext("2d");
             if (ctx) {
               const originalTime = videoRef.current.currentTime;
-              const sampleTimes = [
-                chunkStart + Math.min(4, chunkDur * 0.2),
-                chunkStart + chunkDur * 0.5,
-                chunkStart + chunkDur * 0.8
-              ];
+              // Mẫu 7 khung hình cách nhau mỗi 4 giây trong đoạn 30s
+              const sampleTimes: number[] = [];
+              for (let t = chunkStart + 1.5; t < chunkEnd - 0.5; t += 4.0) {
+                sampleTimes.push(t);
+              }
               for (const t of sampleTimes) {
                 try {
                   videoRef.current.currentTime = t;
                   await new Promise<void>((r) => {
                     const h = () => { videoRef.current?.removeEventListener("seeked", h); r(); };
                     videoRef.current?.addEventListener("seeked", h, { once: true });
-                    setTimeout(r, 180);
+                    setTimeout(r, 120);
                   });
-                  ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                  const img = canvas.toDataURL("image/jpeg", 0.55);
+                  // Cắt vùng phụ đề dưới đáy
+                  const subH = Math.floor(vH * 0.35);
+                  const subY = Math.floor(vH * 0.65);
+                  ctx.drawImage(videoRef.current, 0, subY, vW, subH, 0, 0, canvas.width, canvas.height);
+                  const img = canvas.toDataURL("image/jpeg", 0.6);
                   if (img && img.length > 200) frameSnapshots.push(img);
                 } catch {}
               }
@@ -1980,12 +1976,6 @@ export default function AiVideoEditorPage() {
 
           const { cues: cleaned } = cleanAndDehallucinateCues(rawCues);
           allCues.push(...cleaned);
-        } else {
-          // Sinh kịch bản diễn tiến tự nhiên cho riêng phân đoạn này
-          const isFirstChunk = chunkIdx === 0;
-          const isLastChunk = chunkIdx === totalChunks - 1;
-          const fallbackForChunk = generateProgressiveCues(chunkStart, chunkEnd, isFirstChunk, isLastChunk, videoName || "", globalUsedTexts);
-          allCues.push(...fallbackForChunk);
         }
       }
 
