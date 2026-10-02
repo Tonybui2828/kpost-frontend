@@ -1521,13 +1521,14 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 Hệ thống sinh kịch bản diễn tiến tự nhiên theo dòng thời gian (TUYỆT ĐỐI KHÔNG BAO GIỜ LẶP LẠI BẤT KỲ CÂU NÀO)
+  // 🌟 Hệ thống sinh kịch bản diễn tiến tự nhiên theo dòng thời gian (HỖ TRỢ MỌI VIDEO DÀI TỪ 1 ĐẾN 60+ PHÚT, TUYỆT ĐỐI KHÔNG LẶP HOẶC BỊ CẮT)
   const generateProgressiveCues = (
     startSec: number,
     endSec: number,
     isFirstChunk: boolean,
     isLastChunk: boolean,
-    videoTitle: string
+    videoTitle?: string,
+    globalUsedTexts?: Set<string>
   ): SubtitleCue[] => {
     const formatTime = (sec: number) => {
       const m = Math.floor(sec / 60);
@@ -1535,94 +1536,213 @@ export default function AiVideoEditorPage() {
       return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
 
+    const used = globalUsedTexts || new Set<string>();
     const titleLower = (videoTitle || "").toLowerCase();
     const isPvZ = titleLower.includes("植物") || titleLower.includes("僵尸") || titleLower.includes("pvz") || titleLower.includes("zombie") || titleLower.includes("game");
     const isKitchen = titleLower.includes("hút mùi") || titleLower.includes("bếp") || titleLower.includes("gia dụng") || titleLower.includes("máy");
-    const isToy = titleLower.includes("đồ chơi") || titleLower.includes("trẻ em") || titleLower.includes("búp bê") || titleLower.includes("toy");
 
+    const result: SubtitleCue[] = [];
+    const step = 6.0;
+    let cur = startSec;
+    let cueIdx = Math.floor(startSec / step) + 1;
+
+    // 🧟 CHIẾN DỊCH PLANTS VS ZOMBIES / GAMEPLAY LIÊN TỤC 30+ PHÚT
     if (isPvZ) {
-      const pvzPhrases = [
-        "Chào mừng các bạn đến với trận đại chiến Plants vs Zombies đỉnh cao ngày hôm nay!",
-        "Ngay từ đầu ván đấu, các cây hoa hướng dương đã được trồng liên tục để tích lũy ánh sáng mặt trời.",
-        "Đợt tấn công đầu tiên của đàn zombie đã bắt đầu xuất hiện từ phía bên phải bãi cỏ.",
-        "Hàng phòng thủ phía trước nhanh chóng trồng thêm cây đậu bắn đá và đậu băng để làm chậm bước tiến.",
-        "Bức tường hạt dẻ to béo lập tức được dựng lên chặn đứng đường đi của đàn zombie hung hãn.",
-        "Tốc độ xả đạn của các loại cây chiến đấu ngày càng mạnh mẽ và dồn dập hơn bao giờ hết.",
-        "Những tên zombie mang xô sắt và cầm khiên cửa gỗ đang cố gắng áp sát vào hàng ngũ phòng thủ.",
-        "Cây ớt lửa và bom nổ anh đào lập tức được kích hoạt để dọn sạch toàn bộ bãi cỏ chỉ trong nháy mắt!",
-        "Chiến thuật phối hợp giữa các loại cây trồng ở phân đoạn này thực sự quá thông minh và mãn nhãn.",
-        "Sức ép từ đàn zombie ngày càng lớn nhưng hàng phòng thủ hoa quả vẫn kiên cường đứng vững.",
-        "Khoảnh khắc những củ khoai tây nổ tung khiến cục diện trận đấu hoàn toàn nghiêng về phía chúng ta.",
-        "Trận chiến Plants vs Zombies kinh điển này thực sự mang lại quá nhiều cảm xúc hấp dẫn đúng không nào!",
+      const pvzMilestones: { minSec: number; text: string }[] = [
+        { minSec: 0, text: "Chào mừng các bạn đến với trận đại chiến Plants vs Zombies đỉnh cao ngày hôm nay!" },
+        { minSec: 6, text: "Ngay từ đầu ván đấu, các cây hoa hướng dương đã được trồng liên tục để tích lũy ánh sáng mặt trời." },
+        { minSec: 12, text: "Đợt tấn công đầu tiên của đàn zombie đã bắt đầu xuất hiện từ phía bên phải bãi cỏ." },
+        { minSec: 18, text: "Hàng phòng thủ phía trước nhanh chóng trồng thêm cây đậu bắn đá và đậu băng để làm chậm bước tiến." },
+        { minSec: 24, text: "Bức tường hạt dẻ to béo lập tức được dựng lên chặn đứng đường đi của đàn zombie hung hãn." },
+        { minSec: 30, text: "Tốc độ xả đạn của các loại cây chiến đấu ngày càng mạnh mẽ và dồn dập hơn bao giờ hết." },
+        { minSec: 36, text: "Những tên zombie mang xô sắt và cầm khiên cửa gỗ đang cố gắng áp sát vào hàng ngũ phòng thủ." },
+        { minSec: 42, text: "Cây ớt lửa và bom nổ anh đào lập tức được kích hoạt để dọn sạch toàn bộ bãi cỏ chỉ trong nháy mắt!" },
+        { minSec: 48, text: "Chiến thuật phối hợp giữa các loại cây trồng ở phân đoạn này thực sự quá thông minh và mãn nhãn." },
+        { minSec: 54, text: "Sức ép từ đàn zombie ngày càng lớn nhưng hàng phòng thủ hoa quả vẫn kiên cường đứng vững." },
+        { minSec: 60, text: "Khoảnh khắc những củ khoai tây nổ tung khiến cục diện trận đấu hoàn toàn nghiêng về phía chúng ta." },
+        { minSec: 66, text: "Trận chiến Plants vs Zombies kinh điển này thực sự mang lại quá nhiều cảm xúc hấp dẫn đúng không nào!" },
+        { minSec: 72, text: "Chiến thuật phòng ngự phản công ở phân đoạn tiếp theo tiếp tục phát huy sức mạnh tối đa." },
+        { minSec: 78, text: "Mỗi loại cây được bố trí cực kỳ chuẩn xác, khống chế toàn bộ đường đi của đàn zombie." },
+        { minSec: 84, text: "Nhịp độ trận chiến ngày càng dồn dập hơn đòi hỏi khả năng quan sát nhạy bén từng giây." },
+        { minSec: 90, text: "Khoảnh khắc bùng nổ tiếp theo hứa hẹn sẽ định đoạt hoàn toàn kết quả của toàn ván đấu." },
+        { minSec: 96, text: "Một màn thể hiện quá mãn nhãn và đỉnh cao của đội hình cây trồng dũng cảm!" },
+        { minSec: 102, text: "Đội hình hoa hướng dương song sinh đã được nâng cấp hoàn chỉnh, cung cấp nguồn năng lượng khổng lồ." },
+        { minSec: 108, text: "Hàng ngũ cây đậu 3 nòng và 4 nòng bắt đầu đồng loạt khai hỏa như một dàn pháo kích thực thụ." },
+        { minSec: 114, text: "Từng làn đạn xanh biếc quét sạch những đợt zombie chạy bộ đầu tiên ngay khi vừa đặt chân lên cỏ." },
+        { minSec: 120, text: "Bây giờ đàn zombie bắt đầu tung ra những tên cầm sào nhảy qua hàng rào hạt dẻ phòng thủ." },
+        { minSec: 130, text: "Cây hoa bẫy kẹp và nấm thôi miên lập tức được gieo xuống để chuyển hóa kẻ địch thành đồng minh." },
+        { minSec: 140, text: "Một pha thôi miên ngoạn mục khiến tên zombie cầm khiên quay lưng lại tấn công chính đồng đội của mình!" },
+        { minSec: 150, text: "Bãi cỏ rực sáng với những pha nổ mìn liên tiếp của củ khoai tây mini được trồng bí mật." },
+        { minSec: 160, text: "Đàn zombie nhảy dù từ trên không bất ngờ đổ bộ xuống khu vực giữa sân cỏ." },
+        { minSec: 170, text: "Cây dù lá chắn ô bắp cải lập tức xòe cánh bảo vệ toàn bộ các cây hoa non bên dưới an toàn." },
+        { minSec: 180, text: "Tiếng nhạc chiến đấu bắt đầu dồn dập báo hiệu đợt sóng tấn công lớn Huge Wave chuẩn bị ập đến!" },
+        { minSec: 190, text: "Các hũ phân bón lá siêu cấp được dồn toàn bộ cho cây súng máy bắn đậu để kích hoạt bão đạn." },
+        { minSec: 200, text: "Một cơn mưa đạn đậu bay ngợp trời cuốn phăng toàn bộ hàng rào phòng ngự của kẻ xâm lăng." },
+        { minSec: 210, text: "Bảo toàn nguyên vẹn tất cả máy cắt cỏ ở hàng cuối cùng là một kỳ tích đáng kinh ngạc." },
+        { minSec: 240, text: "Những tên zombie người cá nhảy lên từ hồ nước sâu lập tức bị rong biển cuốn chìm xuống đáy." },
+        { minSec: 270, text: "Hoa súng bèo tây tạo nên những bệ đỡ vững chắc cho các dàn pháo dưa hấu hạng nặng khai hỏa." },
+        { minSec: 300, text: "Zombie khổng lồ Gargantuar cầm cột đèn đường nặng hàng tấn đã chính thức xuất hiện!" },
+        { minSec: 330, text: "Cả màn hình rung chuyển theo từng bước chân của con quái vật hộ pháp khổng lồ này." },
+        { minSec: 360, text: "Ớt lửa Jalapeno bốc cháy thiêu rụi cả con đường, rút cạn thanh máu của quái vật trong nháy mắt!" },
+        { minSec: 400, text: "Một pha phối hợp nhịp nhàng và chuẩn xác đến từng phần trăm giây khiến người xem thót tim!" },
+        { minSec: 450, text: "Đàn zombie bóng bay lơ lửng trên cao đang cố gắng né tránh tầm bắn của các loại cây mặt đất." },
+        { minSec: 500, text: "Cây xương rồng và quạt gió ba tiêu lập tức thổi bay đàn bóng bay về lại vạch xuất phát." },
+        { minSec: 550, text: "Mỗi lần năng lượng mặt trời rơi xuống đều được thu thập với tốc độ chớp nhoáng không sót một điểm nào." },
+        { minSec: 600, text: "Khoảnh khắc mười phút trôi qua mà không mất một chiếc máy cắt cỏ nào chứng tỏ bản lĩnh thượng thừa." },
+        { minSec: 700, text: "Zombie đào hầm trồi lên từ phía sau lưng nhưng lập tức bị cây đậu bắn ngược tiêu diệt gọn gàng." },
+        { minSec: 800, text: "Hỏa lực bùng nổ liên tục tạo nên một bữa tiệc âm thanh và ánh sáng vô cùng kích thích thị giác." },
+        { minSec: 900, text: "Một pha xử lý clutch mẫu mực khiến tất cả khán giả theo dõi đều phải đứng bật dậy vỗ tay tán thưởng." },
+        { minSec: 1000, text: "Cả bãi cỏ ngập tràn các hiệu ứng đông lạnh, thiêu đốt và nổ tung đan xen nhau liên hồi." },
+        { minSec: 1100, text: "Quân đoàn zombie dù hung hãn đến đâu cũng không thể tiến thêm được một bước nào nữa." },
+        { minSec: 1200, text: "Thế trận đã hoàn toàn nằm trong tầm kiểm soát tuyệt đối của người chơi tài ba." },
+        { minSec: 1300, text: "Đợt Huge Wave cuối cùng của ván đấu 30 phút lịch sử đã chính thức gióng lên hồi chuông!" },
+        { minSec: 1400, text: "Toàn bộ kho vũ khí tối thượng được kích hoạt đồng loạt trong khoảnh khắc quyết định này." },
+        { minSec: 1500, text: "Những tia sấm sét và mưa đá trút xuống như vũ bão dọn sạch từng làn cỏ trên sân đấu." },
+        { minSec: 1600, text: "Không còn bất kỳ một bóng dáng zombie nào có thể trụ lại trước sức mạnh áp đảo này." },
+        { minSec: 1700, text: "Tất cả các máy cắt cỏ vẫn còn nguyên vẹn 100%, một thành tích hoàn hảo không tì vết!" },
+        { minSec: 1780, text: "Chiến thắng vang dội đã chính thức thuộc về đội quân cây trồng anh dũng của chúng ta." },
+        { minSec: 1810, text: "Một trận đại chiến 30 phút mãn nhãn từ giây đầu tiên cho tới tận khoảnh khắc cuối cùng!" }
       ];
-      const extraPvz = [
-        "Chiến thuật phòng ngự phản công ở phân đoạn tiếp theo tiếp tục phát huy sức mạnh tối đa.",
-        "Mỗi loại cây được bố trí cực kỳ chuẩn xác, khống chế toàn bộ đường đi của đàn zombie.",
-        "Nhịp độ trận chiến ngày càng dồn dập hơn đòi hỏi khả năng quan sát nhạy bén từng giây.",
-        "Khoảnh khắc bùng nổ tiếp theo hứa hẹn sẽ định đoạt hoàn toàn kết quả của toàn ván đấu.",
-        "Một màn thể hiện quá mãn nhãn và đỉnh cao của đội hình cây trồng dũng cảm!"
-      ];
-      const result: SubtitleCue[] = [];
-      const step = 6.0;
-      let cur = startSec;
-      let idx = 0;
+
+      const generateDynamicPvzPhrase = (timeSec: number): string => {
+        const m = Math.floor(timeSec / 60);
+        const s = Math.floor(timeSec % 60);
+        const intros = [
+          `Ở mốc ${m} phút ${s} giây,`,
+          `Quan sát diễn biến tại phút thứ ${m},`,
+          `Tại thời điểm ${m}p${s}s này,`,
+          `Thế trận ở phút thứ ${m} cho thấy`,
+          `Nhìn vào làn cỏ lúc ${m} phút ${s} giây,`,
+          `Tiếp tục diễn biến tại mốc ${m}p${s}s,`,
+          `Bước sang phút thứ ${m} của trận đấu,`,
+          `Ở phân đoạn ${m} phút ${s} giây này,`,
+          `Cận cảnh pha xử lý tại mốc ${m}p${s}s,`,
+          `Nhịp độ trận chiến ở phút thứ ${m}`
+        ];
+        const actions = [
+          "hàng phòng ngự hoa quả vẫn đang kiên cường xả đạn liên tục,",
+          "các đợt tấn công của đàn zombie ngày càng trở nên hung hãn và khó đoán,",
+          "những chậu cây hoa hướng dương tiếp tục cung cấp nguồn năng lượng dồi dào,",
+          "dàn súng bắn đậu và pháo dưa hấu phối hợp hỏa lực cực kỳ nhịp nhàng,",
+          "bức tường hạt dẻ khổng lồ vẫn đứng vững chặn đứng mọi nỗ lực áp sát,",
+          "các bẫy mìn khoai tây và bom nổ được kích hoạt chớp nhoáng rất đúng lúc,",
+          "chiến thuật điều phối vị trí các loại cây chứng minh sự già dơ và chuẩn xác,",
+          "những tên zombie mang khiên và giáp sắt bị bẻ gãy đòn tiến công hoàn toàn,",
+          "người chơi nhanh tay thu thập từng giọt ánh sáng mặt trời không sót một điểm nào,",
+          "khả năng ứng biến linh hoạt trước từng loại quái vật đem lại sự an tâm tuyệt đối,"
+        ];
+        const conclusions = [
+          "khiến cục diện ván đấu luôn được duy trì ở thế chủ động hoàn toàn.",
+          "mang lại cảm giác nghẹt thở và vô cùng mãn nhãn cho người theo dõi.",
+          "chứng minh đẳng cấp tư duy chiến thuật đỉnh cao của một cao thủ lão luyện.",
+          "giúp bảo vệ an toàn tuyệt đối cho toàn bộ khu vườn thân yêu.",
+          "khiến đàn zombie đông đúc phải chùn bước và thất bại thảm hại.",
+          "đem lại một pha phối hợp đẹp mắt không thể nào chê vào đâu được.",
+          "hứa hẹn sẽ tạo nên một bước ngoặt lớn cho chiến thắng vang dội phía trước.",
+          "để lại ấn tượng sâu sắc và sự thán phục cho bất kỳ ai đang theo dõi.",
+          "tiếp tục củng cố vững chắc con đường dẫn tới thắng lợi cuối cùng.",
+          "khiến từng giây trôi qua đều ngập tràn cảm xúc hồi hộp và thú vị."
+        ];
+
+        for (let i = 0; i < intros.length; i++) {
+          for (let j = 0; j < actions.length; j++) {
+            for (let k = 0; k < conclusions.length; k++) {
+              const candidate = `${intros[(i + m) % intros.length]} ${actions[(j + Math.floor(timeSec / 6)) % actions.length]} ${conclusions[(k + m + s) % conclusions.length]}`;
+              const norm = candidate.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+              if (!used.has(norm)) {
+                return candidate;
+              }
+            }
+          }
+        }
+        return `Trận đại chiến tại mốc ${m} phút ${s} giây diễn ra vô cùng kịch tính và xuất sắc!`;
+      };
+
       while (cur < endSec - 0.5) {
         const end = Math.min(endSec, Number((cur + step).toFixed(1)));
-        const textToUse = idx < pvzPhrases.length ? pvzPhrases[idx] : extraPvz[(idx - pvzPhrases.length) % extraPvz.length];
+        let matched = pvzMilestones.find(
+          (m) => cur >= m.minSec && cur < m.minSec + step && !used.has(m.text.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, ""))
+        );
+        let textToUse = "";
+        if (matched) {
+          textToUse = matched.text;
+        } else {
+          textToUse = generateDynamicPvzPhrase(cur);
+        }
+
+        const normKey = textToUse.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+        used.add(normKey);
+
         result.push({
-          id: `pvz_cue_${Math.round(cur)}_${idx + 1}`,
+          id: `pvz_cue_${Math.round(cur)}_${cueIdx}`,
           startSec: Number(cur.toFixed(1)),
           endSec: Number(end.toFixed(1)),
           timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
           text: textToUse,
         });
+
         cur = Number((end + 0.2).toFixed(1));
-        idx++;
+        cueIdx++;
       }
       return result;
     }
 
+    // 🍳 KỊCH BẢN THIẾT BỊ GIA DỤNG / BẾP / REVIEW LIÊN TỤC 30+ PHÚT
     if (isKitchen) {
-      const kitchenPhrases = [
-        "Xin chào mọi người! Hôm nay mình sẽ hướng dẫn chi tiết cách sử dụng thiết bị hiệu quả và chuẩn xác nhất.",
-        "Trước tiên hãy quan sát kỹ bảng điều khiển cảm ứng với các mức công suất từ thấp đến cao.",
-        "Chỉ cần chạm nhẹ ngón tay là hệ thống hút gió và đèn chiếu sáng đã lập tức khởi động rất êm ái.",
-        "Lưới lọc mỡ inox cao cấp được thiết kế dạng tháo rời thông minh, rất tiện lợi khi vệ sinh.",
-        "Động cơ turbin đôi hoạt động mạnh mẽ giúp khử sạch toàn bộ mùi dầu mỡ chỉ sau vài phút nấu ăn.",
-        "Mặt kính cong cường lực vừa tạo vẻ sang trọng hiện đại, vừa chống bám bẩn cực kỳ tốt.",
-        "Sau khi nấu xong, các bạn nên để máy chạy thêm khoảng 2 phút để không gian bếp thông thoáng hoàn toàn.",
-        "Hy vọng hướng dẫn thực tế này sẽ giúp các bạn sử dụng thiết bị một cách bền bỉ và hiệu quả tối đa!",
+      const kitchenMilestones: { minSec: number; text: string }[] = [
+        { minSec: 0, text: "Xin chào mọi người! Hôm nay mình sẽ hướng dẫn chi tiết cách sử dụng thiết bị hiệu quả và chuẩn xác nhất." },
+        { minSec: 6, text: "Trước tiên hãy quan sát kỹ bảng điều khiển cảm ứng với các mức công suất từ thấp đến cao." },
+        { minSec: 12, text: "Chỉ cần chạm nhẹ ngón tay là hệ thống hút gió và đèn chiếu sáng đã lập tức khởi động rất êm ái." },
+        { minSec: 18, text: "Lưới lọc mỡ inox cao cấp được thiết kế dạng tháo rời thông minh, rất tiện lợi khi vệ sinh." },
+        { minSec: 24, text: "Động cơ turbin đôi hoạt động mạnh mẽ giúp khử sạch toàn bộ mùi dầu mỡ chỉ sau vài phút nấu ăn." },
+        { minSec: 30, text: "Mặt kính cong cường lực vừa tạo vẻ sang trọng hiện đại, vừa chống bám bẩn cực kỳ tốt." },
+        { minSec: 36, text: "Sau khi nấu xong, các bạn nên để máy chạy thêm khoảng 2 phút để không gian bếp thông thoáng hoàn toàn." },
+        { minSec: 42, text: "Hy vọng hướng dẫn thực tế này sẽ giúp các bạn sử dụng thiết bị một cách bền bỉ và hiệu quả tối đa!" },
+        { minSec: 60, text: "Bây giờ chúng ta sẽ cùng kiểm tra chi tiết cấu tạo bên trong và các linh kiện quan trọng của máy." },
+        { minSec: 120, text: "Động cơ đồng nguyên chất 100% giúp giảm rung chấn và tiếng ồn tối đa trong khi hoạt động." },
+        { minSec: 180, text: "Hệ thống đèn LED chiếu sáng tiết kiệm điện được bố trí khoa học, giúp việc nấu nướng rất tiện lợi." },
+        { minSec: 240, text: "Cách tháo lắp tấm lưới lọc mỡ chỉ mất chưa đầy 10 giây, bất kỳ ai cũng có thể tự làm được tại nhà." },
+        { minSec: 300, text: "Mẹo nhỏ giúp tăng tuổi thọ cho máy là nên lau sạch bề mặt kính sau mỗi lần sử dụng bằng khăn ẩm." },
+        { minSec: 600, text: "Cảm nhận sau một thời gian dài sử dụng cho thấy không gian bếp luôn giữ được sự thơm tho và sạch sẽ." },
+        { minSec: 900, text: "Đây thực sự là một khoản đầu tư vô cùng xứng đáng cho sức khỏe và chất lượng sống của cả gia đình." },
+        { minSec: 1200, text: "Tất cả các chế độ hẹn giờ và tự động làm sạch đều hoạt động rất chính xác và tiện lợi." },
+        { minSec: 1500, text: "Hãy lưu ý kiểm tra và bảo dưỡng định kỳ mỗi 6 tháng để thiết bị luôn duy trì hiệu suất đỉnh cao." },
+        { minSec: 1800, text: "Cảm ơn các bạn đã theo dõi trọn vẹn video hướng dẫn và chúc căn bếp của bạn luôn ấm cúng!" }
       ];
-      const extraKitchen = [
-        "Khả năng vận hành bền bỉ và êm ái giúp người dùng hoàn toàn yên tâm trong quá trình sử dụng.",
-        "Từng chi tiết cơ khí đều được chăm chút kỹ lưỡng nhằm đem lại sự hài lòng và tiện lợi tối đa.",
-        "Một thiết bị thực sự hữu ích và xứng đáng có mặt trong không gian sống hiện đại của mỗi gia đình.",
-        "Hãy cùng mình kiểm tra thêm những mẹo vận hành thông minh khác ở phân đoạn tiếp theo nhé.",
-        "Hy vọng những chia sẻ chân thành này sẽ giúp bạn khai thác triệt để 100% công năng của sản phẩm!"
-      ];
-      const result: SubtitleCue[] = [];
-      const step = 6.0;
-      let cur = startSec;
-      let idx = 0;
+
       while (cur < endSec - 0.5) {
         const end = Math.min(endSec, Number((cur + step).toFixed(1)));
-        const textToUse = idx < kitchenPhrases.length ? kitchenPhrases[idx] : extraKitchen[(idx - kitchenPhrases.length) % extraKitchen.length];
+        let matched = kitchenMilestones.find(
+          (m) => cur >= m.minSec && cur < m.minSec + step && !used.has(m.text.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, ""))
+        );
+        let textToUse = "";
+        if (matched) {
+          textToUse = matched.text;
+        } else {
+          const m = Math.floor(cur / 60);
+          const s = Math.floor(cur % 60);
+          textToUse = `Quan sát tại mốc ${m} phút ${s} giây, từng chi tiết và công năng vận hành đều mang lại sự tin cậy và hài lòng tối đa.`;
+        }
+
+        const normKey = textToUse.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+        used.add(normKey);
+
         result.push({
-          id: `kitchen_cue_${Math.round(cur)}_${idx + 1}`,
+          id: `kitchen_cue_${Math.round(cur)}_${cueIdx}`,
           startSec: Number(cur.toFixed(1)),
           endSec: Number(end.toFixed(1)),
           timeLabel: `${formatTime(cur)} - ${formatTime(end)}`,
           text: textToUse,
         });
+
         cur = Number((end + 0.2).toFixed(1));
-        idx++;
+        cueIdx++;
       }
       return result;
     }
 
-    // Kho kịch bản 80 câu diễn tiến liên tục theo từng mốc phút (0:00 -> 9:00+)
+    // 🏆 KỊCH BẢN TỔNG HỢP / ĐA NĂNG LIÊN TỤC 30+ PHÚT
     const TIMELINE_NARRATIONS: { minSec: number; text: string }[] = [
-      // 🎯 PHÚT 0:00 - 1:00: MỞ ĐẦU & KHỞI ĐỘNG
       { minSec: 0, text: "Hôm nay cùng mình khám phá một hành trình trải nghiệm cực kỳ bất ngờ và cuốn hút nha!" },
       { minSec: 6, text: "Vừa mới bắt đầu mà không gian xung quanh đã tạo cảm giác rất chân thật và lôi cuốn rồi." },
       { minSec: 12, text: "Mọi chi tiết ở đây đều được chuẩn bị vô cùng chu đáo và chỉn chu ngay từ bước đầu tiên." },
@@ -1633,8 +1753,6 @@ export default function AiVideoEditorPage() {
       { minSec: 42, text: "Mọi thao tác khởi động ban đầu đều diễn ra rất nhịp nhàng, êm ái và an toàn tuyệt đối." },
       { minSec: 48, text: "Đừng rời mắt khỏi màn hình vì ngay sau đây sẽ có những khoảnh khắc cực kỳ bất ngờ đấy!" },
       { minSec: 54, text: "Nào, chúng ta hãy cùng nhau chính thức bước vào những diễn biến đầu tiên của video nhé." },
-
-      // 🚀 PHÚT 1:00 - 2:00: TIẾP CẬN CHI TIẾT & BƯỚC ĐẦU THAO TÁC
       { minSec: 60, text: "Bắt đầu đi sâu vào bên trong, mình thực sự ấn tượng bởi cách bố trí các chi tiết rất thông minh." },
       { minSec: 66, text: "Từng bộ phận đều được hoàn thiện tỉ mỉ, tạo cảm giác vô cùng hiện đại và cao cấp." },
       { minSec: 72, text: "Khoảng không gian ở đây được tối ưu rất tốt, giúp người trải nghiệm cảm thấy thoải mái tối đa." },
@@ -1645,8 +1763,6 @@ export default function AiVideoEditorPage() {
       { minSec: 102, text: "Từng chuyển động của các khớp nối đều rất êm, hầu như không hề có bất kỳ tiếng ồn khó chịu nào." },
       { minSec: 108, text: "Càng quan sát kỹ, chúng ta càng thấy được sự đầu tư bài bản và tâm huyết của đội ngũ thiết kế." },
       { minSec: 114, text: "Mọi thứ đang diễn ra đúng theo kế hoạch ban đầu và mang lại cảm giác cực kỳ an tâm." },
-
-      // 🔍 PHÚT 2:00 - 3:00: KHÁM PHÁ CÔNG NĂNG & THAO TÁC NÂNG CAO
       { minSec: 120, text: "Bây giờ chúng ta sẽ chuyển sang phần thú vị hơn: kiểm tra các tính năng nâng cao độc đáo." },
       { minSec: 126, text: "Hãy nhìn kỹ vào cách thức vận hành này, công nghệ áp dụng ở đây thực sự rất tân tiến." },
       { minSec: 132, text: "Tốc độ xử lý phải nói là nhanh đến kinh ngạc, gần như không có độ trễ trong suốt quá trình." },
@@ -1657,8 +1773,6 @@ export default function AiVideoEditorPage() {
       { minSec: 162, text: "Sự kết hợp giữa hiệu năng mạnh mẽ và tính tiện dụng tạo nên một trải nghiệm vô cùng trọn vẹn." },
       { minSec: 168, text: "Người thao tác dường như đang hoàn toàn đắm chìm và làm chủ được toàn bộ công nghệ này." },
       { minSec: 174, text: "Thật sự rất mãn nhãn khi được chứng kiến những chi tiết vận hành trơn tru như thế này." },
-
-      // ⚡ PHÚT 3:00 - 4:00: DIỄN BIẾN CAO TRÀO & TÌNH HUỐNG BẤT NGỜ
       { minSec: 180, text: "Đến phân đoạn này, tình huống bắt đầu có những bước chuyển biến vô cùng kịch tính và gay cấn." },
       { minSec: 186, text: "Một thử thách mới bất ngờ xuất hiện, đòi hỏi kỹ năng xử lý cực kỳ khéo léo và chuẩn xác." },
       { minSec: 192, text: "Cả không gian dường như ngưng đọng lại trong khoảnh khắc mọi người cùng nín thở theo dõi." },
@@ -1669,104 +1783,32 @@ export default function AiVideoEditorPage() {
       { minSec: 222, text: "Cảm giác vượt qua được thử thách cam go đem lại niềm vui và sự phấn khích tột độ." },
       { minSec: 228, text: "Mọi ánh mắt đều đổ dồn về kết quả xuất sắc vừa đạt được sau những giây phút căng thẳng." },
       { minSec: 234, text: "Đây xứng đáng là một trong những phân cảnh đắt giá nhất trong suốt toàn bộ video hôm nay." },
-
-      // 💡 PHÚT 4:00 - 5:00: PHÂN TÍCH CHUYÊN SÂU & ĐÁNH GIÁ ĐIỂM MẠNH
       { minSec: 240, text: "Bây giờ, hãy cùng mình nhìn nhận và phân tích kỹ hơn về những ưu điểm vượt trội vừa thấy nhé." },
-      { minSec: 246, text: "Điểm cộng đầu tiên chính là độ hoàn thiện tinh xảo, từng đường nét cắt gọt đều rất sắc sảo." },
-      { minSec: 252, text: "Thứ hai là khả năng tiết kiệm năng lượng và tối ưu hóa hiệu suất trong thời gian dài." },
-      { minSec: 258, text: "Dù hoạt động liên tục nhưng nhiệt độ và độ êm ái vẫn được duy trì ở mức lý tưởng tuyệt đối." },
-      { minSec: 264, text: "Trải nghiệm thực tế này chứng minh rằng giá trị sản phẩm hoàn toàn tương xứng với sự kỳ vọng." },
-      { minSec: 270, text: "Nhiều người dùng trước đó cũng đã dành rất nhiều lời khen ngợi cho tính năng thông minh này." },
-      { minSec: 276, text: "Cảm giác an toàn và sự tiện lợi là hai yếu tố then chốt tạo nên sức hút khó cưỡng." },
-      { minSec: 282, text: "Nếu đem so sánh với những đối thủ cạnh tranh thì em này thực sự có nhiều lợi thế áp đảo." },
-      { minSec: 288, text: "Từ thiết kế ngoại hình đến sức mạnh nội hàm đều toát lên vẻ đẳng cấp và hiện đại." },
-      { minSec: 294, text: "Một sự lựa chọn thực sự đáng đồng tiền bát gạo cho bất cứ ai đam mê nâng cấp chất lượng sống." },
-
-      // 🛠️ PHÚT 5:00 - 6:00: KINH NGHIỆM THỰC TẾ & MẸO SỬ DỤNG HỮU ÍCH
-      { minSec: 300, text: "Trong quá trình trải nghiệm, mình cũng đúc kết được một vài kinh nghiệm thực tế rất hữu ích cho các bạn." },
-      { minSec: 306, text: "Trước hết, hãy luôn chú ý kiểm tra định kỳ để đảm bảo các bộ phận luôn hoạt động trơn tru nhất." },
-      { minSec: 312, text: "Khi sử dụng, bạn chỉ cần áp dụng một lực vừa phải là thiết bị đã có thể phản hồi hoàn hảo rồi." },
-      { minSec: 318, text: "Nên tận dụng các chế độ cài đặt tự động sẵn có để tiết kiệm thời gian và công sức tối đa." },
-      { minSec: 324, text: "Việc vệ sinh và bảo quản sau khi sử dụng cũng cực kỳ đơn giản, chỉ mất khoảng vài phút mỗi lần." },
-      { minSec: 330, text: "Nếu biết sử dụng đúng cách, tuổi thọ của thiết bị chắc chắn sẽ kéo dài bền bỉ suốt nhiều năm." },
-      { minSec: 336, text: "Đây là những mẹo nhỏ nhưng sẽ giúp bạn khai thác triệt để 100% công năng của sản phẩm." },
-      { minSec: 342, text: "Rất nhiều bạn thường bỏ qua bước này, nhưng thực tế nó lại quyết định đến 80% độ bền." },
-      { minSec: 348, text: "Hy vọng những chia sẻ chân thành này sẽ giúp các bạn có cái nhìn rõ ràng và thực tế hơn nhé." },
-      { minSec: 354, text: "Hãy ghi nhớ kỹ những lưu ý quan trọng này để áp dụng ngay khi cần nha mọi người." },
-
-      // 🌟 PHÚT 6:00 - 7:00: SO SÁNH THỊ TRƯỜNG & ĐÁNH GIÁ GIÁ TRỊ ĐẦU TƯ
-      { minSec: 360, text: "Xét về mặt bằng chung trên thị trường hiện nay, mức giá của dòng này đang rất cạnh tranh." },
-      { minSec: 366, text: "Với những gì mà nó mang lại, đây thực sự là một món đầu tư vô cùng hợp lý và thông minh." },
-      { minSec: 372, text: "Không chỉ đáp ứng tốt nhu cầu sử dụng hàng ngày, nó còn đem lại niềm cảm hứng rất lớn." },
-      { minSec: 378, text: "Cảm giác được sở hữu và làm chủ một công nghệ tiên tiến luôn mang lại nhiều năng lượng tích cực." },
-      { minSec: 384, text: "Những ai đã từng trải nghiệm qua chắc chắn đều sẽ có chung một cảm nhận hài lòng như mình." },
-      { minSec: 390, text: "Sự tiện dụng mà nó đem lại giúp giải phóng rất nhiều thời gian và công sức trong cuộc sống." },
-      { minSec: 396, text: "Bạn sẽ không còn phải bận tâm hay lo lắng về những sự cố phát sinh ngoài ý muốn nữa." },
-      { minSec: 402, text: "Tất cả mọi khâu từ vận hành, bảo trì cho đến hiệu quả thực tế đều đạt điểm số gần như tuyệt đối." },
-      { minSec: 408, text: "Một bước tiến vượt bậc trong việc ứng dụng công nghệ hiện đại vào phục vụ đời sống con người." },
-      { minSec: 414, text: "Mình tin chắc rằng xu hướng này sẽ còn tiếp tục bùng nổ và phát triển mạnh mẽ hơn nữa." },
-
-      // 🌈 PHÚT 7:00 - 8:00: GÓC NHÌN CẢM XÚC & ĐÚC KẾT HÀNH TRÌNH
-      { minSec: 420, text: "Thời gian trôi qua thật nhanh, hành trình khám phá hôm nay của chúng ta đã đi được một chặng đường dài." },
-      { minSec: 426, text: "Ngồi nhìn lại toàn bộ quá trình, mình thực sự cảm thấy rất vui và trân trọng trải nghiệm này." },
-      { minSec: 432, text: "Mỗi một khoảnh khắc được ghi lại đều chứa đựng rất nhiều cảm xúc chân thật và ý nghĩa." },
-      { minSec: 438, text: "Cuộc sống luôn có những điều mới mẻ và thú vị chờ đón chúng ta bước ra để khám phá mỗi ngày." },
-      { minSec: 444, text: "Và video này chính là một minh chứng rõ nét cho tinh thần đam mê và không ngừng học hỏi đó." },
-      { minSec: 450, text: "Hy vọng rằng những hình ảnh và câu chuyện vừa rồi đã mang lại cho các bạn những giây phút thư giãn." },
-      { minSec: 456, text: "Đồng thời cũng cung cấp thêm nhiều thông tin bổ ích và cái nhìn khách quan, đa chiều nhất." },
-      { minSec: 462, text: "Mọi thắc mắc hay ý kiến đóng góp của các bạn đều là nguồn động lực to lớn cho mình hoàn thiện hơn." },
-      { minSec: 468, text: "Cảm ơn sự đồng hành và những tình cảm ấm áp mà mọi người đã luôn dành cho kênh suốt thời gian qua." },
-      { minSec: 474, text: "Chúng ta hãy cùng chuẩn bị tinh thần để chào đón những phần kết đọng lại nhiều ấn tượng nhất nhé." },
-
-      // 🏆 PHÚT 8:00 - 9:00+: KẾT LUẬN, KÊU GỌI TƯƠNG TÁC & HẸN GẶP LẠI
-      { minSec: 480, text: "Như vậy là toàn bộ hành trình trải nghiệm ngày hôm nay đã chính thức khép lại một cách trọn vẹn nhất." },
-      { minSec: 486, text: "Một video dài nhưng chứa đựng vô vàn những kiến thức và khoảnh khắc đáng nhớ đúng không các bạn?" },
-      { minSec: 492, text: "Nếu thấy video này hay và hữu ích, đừng quên bấm tặng cho mình một nút LIKE và CHIA SẺ thật nhiều nha!" },
-      { minSec: 498, text: "Đặc biệt hãy bấm nút ĐĂNG KÝ KÊNH và bật chuông thông báo để không bỏ lỡ bất kỳ video hot nào tiếp theo." },
-      { minSec: 504, text: "Ý kiến của các bạn về trải nghiệm hôm nay thế nào? Hãy để lại bình luận ngay phía dưới cho mình biết với nhé!" },
-      { minSec: 510, text: "Mình sẽ đọc và phản hồi tất cả những chia sẻ của mọi người trong thời gian sớm nhất có thể." },
-      { minSec: 516, text: "Cảm ơn tất cả các bạn đã dành thời gian quý báu để theo dõi trọn vẹn video từ đầu đến cuối." },
-      { minSec: 522, text: "Chúc mọi người luôn có thật nhiều sức khỏe, niềm vui và luôn tràn đầy năng lượng tích cực trong cuộc sống." },
-      { minSec: 528, text: "Hẹn gặp lại tất cả các bạn trong những video trải nghiệm tiếp theo cực kỳ hấp dẫn sắp tới nha!" },
-      { minSec: 534, text: "Xin chào tạm biệt và chúc các bạn một ngày thật tuyệt vời!" }
+      { minSec: 300, text: "Một cột mốc đáng nhớ khẳng định sự đầu tư tâm huyết của toàn bộ đội ngũ thực hiện." },
+      { minSec: 600, text: "Khoảnh khắc mười phút trôi qua đánh dấu sự thuần thục tuyệt đối trong từng thao tác." },
+      { minSec: 900, text: "Phân đoạn giữa video mang lại cái nhìn toàn cảnh chân thực và đầy đủ góc cạnh nhất." },
+      { minSec: 1200, text: "Càng về sau chúng ta càng nhận ra nhiều giá trị chiều sâu vô cùng bất ngờ và đáng trân trọng." },
+      { minSec: 1500, text: "Từng chuyển động đều tạo nên sự gắn kết cảm xúc mạnh mẽ với người theo dõi từ đầu tới giờ." },
+      { minSec: 1800, text: "Hành trình trải nghiệm 30 phút tuyệt vời đã chính thức cán đích thành công tốt đẹp nhất!" }
     ];
-
-    const result: SubtitleCue[] = [];
-    const step = 6.0; // Mỗi câu nói kéo dài 6 giây (vừa vặn nhịp thở của MC)
-    let cur = startSec;
-    let cueIdx = 1;
-    const usedTexts = new Set<string>();
 
     while (cur < endSec - 0.5) {
       const end = Math.min(endSec, Number((cur + step).toFixed(1)));
-      
-      // Tìm câu nói khớp nhất với mốc thời gian thực tế `cur` trong video và chưa từng dùng
-      let matched = TIMELINE_NARRATIONS.find((n) => cur >= n.minSec && cur < n.minSec + step && !usedTexts.has(n.text));
-      if (!matched) {
-        matched = TIMELINE_NARRATIONS.find((n) => !usedTexts.has(n.text));
-      }
+      let matched = TIMELINE_NARRATIONS.find(
+        (n) => cur >= n.minSec && cur < n.minSec + step && !used.has(n.text.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, ""))
+      );
 
       let textToUse = "";
       if (matched) {
         textToUse = matched.text;
-        usedTexts.add(matched.text);
       } else {
-        // Nếu video dài hơn 9 phút (> 540s), tiếp tục phát triển nội dung mở rộng mà KHÔNG LẶP
-        const extraIdx = Math.floor(cur / step);
-        const extraTexts = [
-          "Tiếp tục những diễn biến hấp dẫn tiếp theo mà không phải ai cũng để ý thấy.",
-          "Góc máy này ghi lại cận cảnh từng chi tiết đắt giá nhất của toàn bộ quá trình.",
-          "Cảm nhận trực tiếp cho thấy sự khác biệt vô cùng lớn so với tưởng tượng ban đầu.",
-          "Hãy quan sát kỹ cách các chuyên gia thao tác để rút ra thêm nhiều bài học bổ ích.",
-          "Mỗi một giây trôi qua đều đem lại những góc nhìn hoàn toàn mới mẻ và chân thực.",
-          "Khả năng thích ứng linh hoạt và độ chính xác ở đây thực sự rất đáng nể.",
-          "Từng góc cạnh đều phản chiếu sự công phu và tâm huyết của người thực hiện.",
-          "Đây là một điểm nhấn rất đặc sắc mà người xem khó lòng có thể rời mắt.",
-          "Càng theo dõi kỹ chúng ta càng nhận ra nhiều khía cạnh thú vị và bất ngờ.",
-          "Một trải nghiệm thực sự trọn vẹn và để lại ấn tượng vô cùng sâu sắc."
-        ];
-        textToUse = extraTexts[extraIdx % extraTexts.length];
+        const m = Math.floor(cur / 60);
+        const s = Math.floor(cur % 60);
+        textToUse = `Tại mốc ${m} phút ${s} giây, diễn biến tiếp tục mang đến những góc nhìn mới mẻ và vô cùng lôi cuốn.`;
       }
+
+      const normKey = textToUse.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+      used.add(normKey);
 
       result.push({
         id: `timeline_cue_${Math.round(cur)}_${cueIdx}`,
@@ -1819,6 +1861,7 @@ export default function AiVideoEditorPage() {
       const apiBase = getApiBaseUrl();
 
       console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn...`);
+      const globalUsedTexts = new Set<string>();
 
       for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
         const chunkStart = chunkIdx * CHUNK_LEN;
@@ -1903,7 +1946,7 @@ export default function AiVideoEditorPage() {
           // Sinh kịch bản diễn tiến tự nhiên cho riêng phân đoạn này
           const isFirstChunk = chunkIdx === 0;
           const isLastChunk = chunkIdx === totalChunks - 1;
-          const fallbackForChunk = generateProgressiveCues(chunkStart, chunkEnd, isFirstChunk, isLastChunk, videoName || "");
+          const fallbackForChunk = generateProgressiveCues(chunkStart, chunkEnd, isFirstChunk, isLastChunk, videoName || "", globalUsedTexts);
           allCues.push(...fallbackForChunk);
         }
       }
