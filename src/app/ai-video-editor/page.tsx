@@ -1812,7 +1812,7 @@ export default function AiVideoEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  // 🌟 HÀM VẼ TOÀN BỘ OVERLAY (LOGO, BANNER, SUBTITLE) LÊN CANVAS
+  // 🌟 HÀM VẼ TOÀN BỘ OVERLAY (LOGO, BANNER, SUBTITLE, MASK) LÊN CANVAS
   const drawOverlaysOnCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -1820,7 +1820,69 @@ export default function AiVideoEditorPage() {
     currentSec: number,
     logoImg: HTMLImageElement | null
   ) => {
-    // 1. VẼ LOGO
+    // 1. VẼ DẢI CHE MỜ / XÓA SUB TIẾNG TRUNG GỐC (INPAINT BLUR MASK) TRƯỚC TIÊN
+    // Vẽ đè trực tiếp lên khung hình video gốc để che phụ đề cũ, trước khi vẽ Banner và Subtitle mới
+    if (maskConfig.enabled) {
+      ctx.save();
+      const maskY = height * (1 - maskConfig.positionYPercent / 100) - (maskConfig.heightPx * (height / 800)) / 2;
+      const maskH = maskConfig.heightPx * (height / 800);
+      ctx.fillStyle = maskConfig.bgColor || "#0e0406";
+      ctx.globalAlpha = maskConfig.opacity || 0.85;
+      ctx.roundRect(width * 0.04, maskY, width * 0.92, maskH, 16);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. VẼ BANNER QUẢNG CÁO RỰC RỠ, NÉT CĂNG CHUẨN XÁC 100% NHƯ TRÊN TIẾN TRÌNH
+    // Nằm đè lên trên Mask để không bao giờ bị mờ hay tối màu
+    if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
+      ctx.save();
+      const bannerMarginX = Math.round(width * 0.04);
+      const bannerW = width - bannerMarginX * 2;
+      const bannerH = Math.round(72 * (height / 800));
+      const bannerY = height - bannerH - Math.round(20 * (height / 800));
+      const bannerRadius = Math.round(18 * (height / 800));
+
+      // Bóng đổ 2XL sâu và nổi khối
+      ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+      ctx.shadowBlur = Math.round(18 * (height / 800));
+      ctx.shadowOffsetY = Math.round(5 * (height / 800));
+
+      // Dải màu gradient đỏ - hồng - cam rực rỡ chuẩn xác 100% như trên giao diện
+      const grad = ctx.createLinearGradient(bannerMarginX, bannerY, bannerMarginX + bannerW, bannerY);
+      grad.addColorStop(0, "#dc2626"); // Đỏ tươi red-600
+      grad.addColorStop(0.48, "#e11d48"); // Đỏ hồng rose-600
+      grad.addColorStop(1, "#ea580c"); // Cam hổ phách orange-600
+      ctx.fillStyle = grad;
+      ctx.roundRect(bannerMarginX, bannerY, bannerW, bannerH, bannerRadius);
+      ctx.fill();
+
+      // Viền trắng bán trong suốt sang trọng
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = Math.max(1.5, Math.round(2 * (width / 400)));
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.stroke();
+
+      const hasSub = Boolean(bannerConfig.subtitle && bannerConfig.subtitle.trim());
+
+      // Tiêu đề chính chữ trắng đậm nét, hoa toàn bộ
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = `900 ${Math.round(16 * (width / 400))}px Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const titleY = hasSub ? bannerY + bannerH * 0.38 : bannerY + bannerH * 0.5;
+      ctx.fillText(bannerConfig.title, width / 2, titleY);
+
+      // Tiêu đề phụ chữ vàng tươi nổi bật
+      if (hasSub) {
+        ctx.fillStyle = "#FEF08A";
+        ctx.font = `700 ${Math.round(11 * (width / 400))}px Arial, sans-serif`;
+        ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerH * 0.72);
+      }
+      ctx.restore();
+    }
+
+    // 3. VẼ LOGO THƯƠNG HIỆU
     if (logoConfig.enabled) {
       ctx.save();
       ctx.globalAlpha = logoConfig.opacity / 100;
@@ -1855,45 +1917,7 @@ export default function AiVideoEditorPage() {
       ctx.restore();
     }
 
-    // 2. VẼ BANNER
-    if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
-      ctx.save();
-      const bannerHeight = Math.round(75 * (height / 800));
-      const bannerY = height - bannerHeight - 30;
-
-      ctx.fillStyle = "rgba(220, 38, 38, 0.95)";
-      ctx.roundRect(24, bannerY, width - 48, bannerHeight, 18);
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-      ctx.stroke();
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = `bold ${Math.round(18 * (width / 400))}px Arial, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.fillText(bannerConfig.title, width / 2, bannerY + bannerHeight * 0.42);
-
-      if (bannerConfig.subtitle) {
-        ctx.fillStyle = "#FEF08A";
-        ctx.font = `bold ${Math.round(12 * (width / 400))}px Arial, sans-serif`;
-        ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerHeight * 0.78);
-      }
-      ctx.restore();
-    }
-
-    // 2.5. VẼ DẢI CHE MỜ / XÓA SUB TIẾNG TRUNG GỐC (INPAINT BLUR MASK)
-    if (maskConfig.enabled) {
-      ctx.save();
-      const maskY = height * (1 - maskConfig.positionYPercent / 100) - (maskConfig.heightPx * (height / 800)) / 2;
-      const maskH = maskConfig.heightPx * (height / 800);
-      ctx.fillStyle = maskConfig.bgColor || "#0e0406";
-      ctx.globalAlpha = maskConfig.opacity || 0.85;
-      ctx.roundRect(width * 0.04, maskY, width * 0.92, maskH, 16);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // 3. VẼ PHỤ ĐỀ TIKTOK
+    // 4. VẼ PHỤ ĐỀ TIKTOK (NẰM 1/4 TỪ GÓC DƯỚI LÊN, TRÊN BANNER VÀ TRONG TẦM MẮT)
     if (subtitleConfig.enabled && subtitleCues.length > 0) {
       const adjTime = currentSec + subtitleConfig.offsetSeconds;
       const matchedCue = subtitleCues.find(
@@ -1902,7 +1926,7 @@ export default function AiVideoEditorPage() {
 
       if (matchedCue) {
         ctx.save();
-        const subY = height * 0.75; // Nằm chuẩn 1/4 từ góc dưới màn hình lên (25% từ đáy)
+        const subY = height * 0.75;
         const fontSize = Math.round((subtitleConfig.fontSize || 20) * (width / 360));
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = "center";
@@ -1941,7 +1965,7 @@ export default function AiVideoEditorPage() {
     }
   };
 
-  // 🌟 TẢI VIDEO XUẤT KHẨU: DÙNG VIDEO ẢO ĐỘC LẬP
+  // 🌟 TẢI VIDEO XUẤT KHẨU: TÍCH HỢP ĐẦY ĐỦ 100% TIẾNG LỒNG MC VÀ BANNER SẮC NÉT
   const handleExportFullVideo = async () => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
@@ -1992,29 +2016,125 @@ export default function AiVideoEditorPage() {
       }
 
       const canvasStream = canvas.captureStream(30);
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const destination = audioCtx.createMediaStreamDestination();
 
+      // 1. KÊNH TIẾNG GỐC CỦA VIDEO
+      let videoGain: GainNode | null = null;
       try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioCtx.createMediaElementSource(exportVideo);
-        const destination = audioCtx.createMediaStreamDestination();
-
-        const gainNode = audioCtx.createGain();
-        // 🌟 LOẠI BỎ TIẾNG TRUNG/ANH/PHÁP GỐC: GAIN = 0 (TẮT HOÀN TOÀN TRONG VIDEO XUẤT)
+        const videoSource = audioCtx.createMediaElementSource(exportVideo);
+        videoGain = audioCtx.createGain();
         if (voiceoverConfig.muteOriginal || voiceoverConfig.originalVolume === 0) {
-          gainNode.gain.value = 0;
+          videoGain.gain.value = 0;
         } else {
-          gainNode.gain.value = (voiceoverConfig.originalVolume / 100) * (soundEffects.boostVoiceVolume ? 1.4 : 1.0);
+          videoGain.gain.value = voiceoverConfig.originalVolume / 100;
         }
-
-        source.connect(gainNode);
-        gainNode.connect(destination);
-
-        const audioTracks = destination.stream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          canvasStream.addTrack(audioTracks[0]);
-        }
+        videoSource.connect(videoGain);
+        videoGain.connect(destination);
       } catch (e) {
-        console.warn("Nối âm thanh video:", e);
+        console.warn("Nối âm thanh video gốc:", e);
+      }
+
+      // 2. KÊNH TIẾNG MC LỒNG TIẾNG (BOOST CLARITY + BỘ LỌC CHẤT GIỌNG ĐẶC TRƯNG)
+      const ttsGain = audioCtx.createGain();
+      ttsGain.gain.value = 1.35; // Âm lượng MC to rõ, nổi bật
+
+      const bassFilter = audioCtx.createBiquadFilter();
+      bassFilter.type = "lowshelf";
+      bassFilter.frequency.value = 180;
+
+      const midFilter = audioCtx.createBiquadFilter();
+      midFilter.type = "peaking";
+      midFilter.frequency.value = 1000;
+      midFilter.Q.value = 1.0;
+
+      const trebleFilter = audioCtx.createBiquadFilter();
+      trebleFilter.type = "highshelf";
+      trebleFilter.frequency.value = 3200;
+
+      const activeCharId = voiceoverConfig.selectedVoiceId;
+      const activeChar = VOICE_CHARACTERS.find((c) => c.id === activeCharId) || VOICE_CHARACTERS[0];
+      const rateToUse = voiceoverConfig.rate || activeChar.rate || 1.15;
+
+      switch (activeCharId) {
+        case "cartoon":
+          bassFilter.gain.value = -8;
+          midFilter.frequency.value = 2200;
+          midFilter.gain.value = 6;
+          trebleFilter.gain.value = 10;
+          break;
+        case "adult_male_mc":
+          bassFilter.gain.value = 14;
+          midFilter.frequency.value = 380;
+          midFilter.gain.value = 5;
+          trebleFilter.gain.value = -8;
+          break;
+        case "senior":
+          bassFilter.gain.value = 12;
+          midFilter.frequency.value = 500;
+          midFilter.gain.value = 4;
+          trebleFilter.gain.value = -7;
+          break;
+        case "adult_male_reviewer":
+          bassFilter.gain.value = 8;
+          midFilter.frequency.value = 850;
+          midFilter.gain.value = 6;
+          trebleFilter.gain.value = 2;
+          break;
+        case "adult_female_sweet":
+          bassFilter.gain.value = 0;
+          midFilter.frequency.value = 1400;
+          midFilter.gain.value = 3;
+          trebleFilter.gain.value = 5;
+          break;
+        case "speed_mc":
+          bassFilter.gain.value = -2;
+          midFilter.frequency.value = 2000;
+          midFilter.gain.value = 4;
+          trebleFilter.gain.value = 6;
+          break;
+      }
+
+      ttsGain.connect(bassFilter);
+      bassFilter.connect(midFilter);
+      midFilter.connect(trebleFilter);
+      trebleFilter.connect(destination);
+
+      // Đưa luồng âm thanh tổng vào Canvas Stream để MediaRecorder ghi nhận
+      const audioTracks = destination.stream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        canvasStream.addTrack(audioTracks[0]);
+      }
+
+      // 3. TẢI TRƯỚC TOÀN BỘ ÂM THANH CÂU THOẠI MC ĐỂ GHÉP CHÍNH XÁC 100% VÀO VIDEO XUẤT
+      const cueAudioBuffers = new Map<string, AudioBuffer>();
+      const spokenCueKeys = new Set<string>();
+
+      if (voiceoverConfig.enabled && subtitleCues.length > 0) {
+        const uniqueSentences = new Map<string, string>();
+        subtitleCues.forEach((cue) => {
+          const sKey = cue.parentSentenceId || cue.id;
+          if (!uniqueSentences.has(sKey)) {
+            const text = (cue.parentSentenceText || cue.text).trim().slice(0, 250);
+            uniqueSentences.set(sKey, text);
+          }
+        });
+
+        await Promise.all(
+          Array.from(uniqueSentences.entries()).map(async ([sKey, text]) => {
+            try {
+              const encoded = encodeURIComponent(text);
+              const res = await fetch(`https://api.kpost.vn/ai-content/tts?text=${encoded}`);
+              if (res.ok) {
+                const ab = await res.arrayBuffer();
+                const decoded = await audioCtx.decodeAudioData(ab);
+                cueAudioBuffers.set(sKey, decoded);
+              }
+            } catch (err) {
+              console.warn(`Lỗi tải audio cue ${sKey}:`, err);
+            }
+          })
+        );
       }
 
       let mimeType = 'video/webm;codecs=vp9';
@@ -2038,6 +2158,7 @@ export default function AiVideoEditorPage() {
         }
         exportVideo.pause();
         exportVideo.src = "";
+        try { audioCtx.close(); } catch {}
       };
 
       recorder.onstop = () => {
@@ -2051,7 +2172,7 @@ export default function AiVideoEditorPage() {
         const downloadUrl = URL.createObjectURL(exportedBlob);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `${videoName.replace(/\.[^/.]+$/, "") || "video"}_kpost_sub.${ext}`;
+        a.download = `${videoName.replace(/\.[^/.]+$/, "") || "video"}_kpost_dubbed.${ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -2085,6 +2206,41 @@ export default function AiVideoEditorPage() {
         }
         ctx.drawImage(exportVideo, 0, 0, width, height);
         ctx.restore();
+
+        // 🎙️ ĐỒNG BỘ PHÁT ÂM THANH MC CHÍNH XÁC TỪNG MILIGIÂY VÀO VIDEO XUẤT
+        if (voiceoverConfig.enabled && subtitleCues.length > 0) {
+          const matchedCue = subtitleCues.find(
+            (c) => curTime >= c.startSec && curTime <= c.endSec + 0.3
+          );
+          if (matchedCue) {
+            const sKey = matchedCue.parentSentenceId || matchedCue.id;
+            if (!spokenCueKeys.has(sKey)) {
+              spokenCueKeys.add(sKey);
+              const buffer = cueAudioBuffers.get(sKey);
+              if (buffer) {
+                try {
+                  const bSource = audioCtx.createBufferSource();
+                  bSource.buffer = buffer;
+                  bSource.playbackRate.value = rateToUse;
+                  bSource.connect(ttsGain);
+                  bSource.start(0);
+
+                  // Hạ âm lượng video gốc khi MC nói (Ducking)
+                  if (videoGain && !voiceoverConfig.muteOriginal && voiceoverConfig.originalVolume > 0) {
+                    videoGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                    const speechDur = buffer.duration / rateToUse;
+                    videoGain.gain.setValueAtTime(
+                      voiceoverConfig.originalVolume / 100,
+                      audioCtx.currentTime + speechDur
+                    );
+                  }
+                } catch (e) {
+                  console.warn("Lỗi phát audio cue trong export:", e);
+                }
+              }
+            }
+          }
+        }
 
         drawOverlaysOnCanvas(ctx, width, height, curTime, logoImg);
 
