@@ -1,15 +1,48 @@
 import { NextResponse } from 'next/server';
 
-// Gọi trực tiếp Google Gemini REST API đa phương thức (Audio + Vision OCR)
-async function callGeminiRest(apiKey: string, systemPrompt: string, parts: any[]) {
+// Gọi trực tiếp Google Gemini qua SDK chính thức @google/genai và REST API dự phòng
+async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
   const models = [
-    'gemini-3.8-flash',
-    'gemini-3.5-flash',
-    'gemini-3.7-flash',
+    'gemini-2.5-flash',
     'gemini-flash-latest',
-    'gemini-2.5-flash-lite'
+    'gemini-3.8-flash',
+    'gemini-3.1-flash-lite'
   ];
 
+  // 1. Thử gọi qua SDK chính thức @google/genai
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const contents = [...parts, { text: systemPrompt }];
+
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 8192,
+            temperature: 0.2,
+          },
+        });
+        const rawText = response.text || '';
+        const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        if (cleaned) {
+          const parsed = JSON.parse(cleaned);
+          if (parsed && Array.isArray(parsed.cues)) {
+            return parsed;
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[@google/genai ${model} error]:`, err?.message || err);
+      }
+    }
+  } catch (sdkErr) {
+    console.warn('[@google/genai import error]:', sdkErr);
+  }
+
+  // 2. Dự phòng qua REST API trực tiếp
   for (const model of models) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -37,6 +70,8 @@ async function callGeminiRest(apiKey: string, systemPrompt: string, parts: any[]
       });
 
       if (!resp.ok) {
+        const errText = await resp.text();
+        console.warn(`[Gemini REST ${model} HTTP ${resp.status}]:`, errText);
         continue;
       }
 
@@ -76,7 +111,7 @@ export async function POST(req: Request) {
     const chunkIndex = Math.max(1, Number(rawChunk) || 1);
     const totalChunks = Math.max(1, Number(rawTotal) || 1);
 
-    // Lấy API Key từ biến môi trường máy chủ
+    // Lấy API Key từ biến môi trường của hệ thống
     const apiKey = 
       process.env.GEMINI_API_KEY || 
       process.env.GOOGLE_API_KEY || 
@@ -86,28 +121,52 @@ export async function POST(req: Request) {
       '';
 
     if (!apiKey) {
+      // Nếu server Next.js chưa cấu hình key, thử gọi tự động sang backend chính
+      try {
+        const backendEndpoints = [
+          "https://api.kpost.vn/ai-content/transcribe-and-translate",
+          "https://api.kpost.vn/api/transcribe-and-translate",
+        ];
+        for (const bUrl of backendEndpoints) {
+          try {
+            const bResp = await fetch(bUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            if (bResp.ok) {
+              const bData = await bResp.json();
+              if (bData && Array.isArray(bData.cues)) {
+                return NextResponse.json(bData);
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+
       return NextResponse.json(
         {
           success: false,
           error: "MISSING_SERVER_API_KEY",
-          message: "Máy chủ kpost-frontend chưa được cấu hình GEMINI_API_KEY trong Environment Variables trên Coolify.",
+          message: "Máy chủ kpost-frontend chưa được cấu hình biến môi trường GEMINI_API_KEY trên Coolify. Vui lòng thêm GEMINI_API_KEY vào mục Environment Variables của kpost-frontend.",
           cues: [],
         },
         { status: 500 }
       );
     }
 
-    // 🌟 SYSTEM PROMPT ĐA NĂNG 100% CHO MỌI THỂ LOẠI VIDEO THƯƠNG MẠI
+    // 🌟 SYSTEM PROMPT ĐA NĂNG 100% CHO MỌI THỂ LOẠI VIDEO (THƯƠNG MẠI HOÁ TOÀN DIỆN)
+    // Tự động nhận diện mọi ngôn ngữ (Trung, Anh, Hàn, Nhật, Pháp, Đức, Việt...) và mọi thể loại (Phim ảnh, Hoạt hình, Vlog, Hướng dẫn, Đánh giá, Tin tức, Phỏng vấn...)
     const systemPrompt = `BẠN LÀ MỘT HỆ THỐNG AI ĐA PHƯƠNG THỨC CHUYÊN NGHIỆP VỀ BÓC BĂNG & DỊCH THUẬT PHỤ ĐỀ / LỒNG TIẾNG CHO MỌI LOẠI VIDEO.
 
-NHIỆM VỤ:
+NHIỆM VỤ CỦA BẠN:
 Xử lý phân đoạn video dài ${totalDuration} giây: Lắng nghe âm thanh giọng nói thật VÀ đọc phụ đề chữ gốc trên các khung hình video để bóc băng và dịch 100% lời thoại sang tiếng Việt chuẩn xác nhất.
 
 NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
 1. NHẬN DIỆN VÀ PHÂN TÍCH TỪ NỘI DUNG THỰC TẾ CỦA VIDEO:
-   - Tự động nhận diện ngôn ngữ gốc đang nói trong âm thanh hoặc hiển thị trên phụ đề (Tiếng Trung, Tiếng Anh, Tiếng Hàn, Tiếng Nhật...).
-   - Nếu trong các ảnh đính kèm có phụ đề chữ gốc, BẮT BUỘC nhận diện và đọc chuẩn xác từng chữ của phụ đề đó.
-   - Kết hợp âm thanh nói thật và chữ phụ đề trên hình để đảm bảo không bỏ sót bất kỳ câu đối thoại nào.
+   - Tự động nhận diện ngôn ngữ gốc đang nói trong âm thanh hoặc hiển thị trên phụ đề (ví dụ: Tiếng Trung, Tiếng Anh, Tiếng Hàn, Tiếng Nhật...).
+   - Nếu trong các ảnh đính kèm có phụ đề chữ gốc (chữ Trung, chữ Hàn, chữ Anh chạy dưới màn hình), BẮT BUỘC nhận diện và đọc chuẩn xác từng chữ của phụ đề đó.
+   - Kết hợp âm thanh nói thật và chữ phụ đề trên hình để đảm bảo không bỏ sót bất kỳ câu đối thoại nào của các nhân vật.
 
 2. NGUYÊN TẮC DỊCH THUẬT SANG TIẾNG VIỆT:
    - Dịch sát nghĩa, chuẩn ngữ cảnh, tự nhiên, diễn cảm theo đúng phong cách của video (hài hước, kịch tính, trang trọng, giải thích kiến thức...).
@@ -129,7 +188,7 @@ NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
 
     const parts: any[] = [];
 
-    // 1. Khung hình chụp từ video để AI nhận diện phụ đề chữ gốc nếu có
+    // 1. Gửi các khung hình chụp từ video để AI nhận diện phụ đề chữ gốc nếu có
     if (Array.isArray(frameSnapshots) && frameSnapshots.length > 0) {
       for (const img of frameSnapshots) {
         if (typeof img === 'string') {
@@ -144,7 +203,7 @@ NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
       }
     }
 
-    // 2. Dải âm thanh thật của video để AI nghe giọng nói
+    // 2. Gửi dải âm thanh thật của video để AI nghe giọng nói
     if (audioBase64 && typeof audioBase64 === 'string') {
       const rawBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
       parts.push({
@@ -159,7 +218,7 @@ NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
       text: `Tiêu đề video: "${videoTitle || 'Video'}". Hãy nghe giọng nói trong âm thanh và đọc phụ đề chữ trên các hình ảnh để bóc băng và dịch toàn bộ lời thoại sang tiếng Việt. Nếu không có tiếng nói và không có phụ đề chữ, trả về mảng cues: [].`,
     });
 
-    const resultJson = await callGeminiRest(apiKey, systemPrompt, parts);
+    const resultJson = await callGeminiAi(apiKey, systemPrompt, parts);
 
     if (!resultJson) {
       return NextResponse.json(
@@ -173,6 +232,7 @@ NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
       );
     }
 
+    // Chuẩn hóa và cộng dồn mốc thời gian startSec / endSec theo startOffset
     const finalCues: any[] = [];
     const rawCuesList = resultJson.cues || [];
 
