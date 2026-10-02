@@ -1139,9 +1139,171 @@ export default function AiVideoEditorPage() {
     return chunked;
   };
 
-  // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ & BÓC BĂNG VIDEO (ĐỒNG BỘ CHUNKING ENGINE 100%)
+  // 🌟 1. TÍNH NĂNG TẠO PHỤ ĐỀ GỐC (AI WHISPER / SPEECH-TO-TEXT NGUYÊN BẢN):
+  // Bóc băng nguyên văn từng từ người nói trong video (tiếng Việt hoặc ngôn ngữ gốc), giữ 100% âm thanh gốc, TẮT lồng tiếng MC
   const handleTranscribeWhisper = async () => {
-    return handleTranscribeRealAudio();
+    if (!videoUrl && !selectedFile) {
+      alert("Vui lòng tải video lên trước!");
+      return;
+    }
+
+    setIsTranscribing(true);
+    setTranscribeProgress(10);
+    setTranscribeStatus("Đang lắng nghe và bóc băng âm thanh gốc qua Whisper AI...");
+
+    try {
+      const inputSource = selectedFile || videoUrl;
+      let decodedBuffer: AudioBuffer | null = null;
+      let fullDuration = Math.max(10, Math.round(videoDuration || (videoRef.current ? videoRef.current.duration : 0) || 60));
+
+      try {
+        let arrayBuffer: ArrayBuffer;
+        if (inputSource instanceof File) {
+          arrayBuffer = await inputSource.arrayBuffer();
+        } else {
+          const response = await fetch(inputSource);
+          arrayBuffer = await response.arrayBuffer();
+        }
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        if (decodedBuffer.duration > 0) {
+          fullDuration = decodedBuffer.duration;
+          setVideoDuration(fullDuration);
+        }
+        await audioCtx.close();
+      } catch (audioErr) {
+        console.warn("Lỗi trích xuất buffer âm thanh cho Whisper:", audioErr);
+      }
+
+      const CHUNK_LEN = 120; // 2 phút mỗi chunk
+      const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
+      let allCues: any[] = [];
+      const apiBase = getApiBaseUrl();
+
+      for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+        const chunkStart = chunkIdx * CHUNK_LEN;
+        const chunkEnd = Math.min(fullDuration, (chunkIdx + 1) * CHUNK_LEN);
+        const chunkDur = Number((chunkEnd - chunkStart).toFixed(1));
+
+        const pctStart = 15 + Math.round((chunkIdx / totalChunks) * 75);
+        setTranscribeProgress(pctStart);
+        setTranscribeStatus(
+          `Đang bóc băng Whisper đoạn ${chunkIdx + 1}/${totalChunks} (${Math.floor(chunkStart / 60)}p${Math.round(chunkStart % 60)}s - ${Math.floor(chunkEnd / 60)}p${Math.round(chunkEnd % 60)}s)...`
+        );
+
+        let chunkBase64: string | undefined = undefined;
+        if (decodedBuffer) {
+          try {
+            const chunkBlob = await extractAudioChunkBlob(decodedBuffer, chunkStart, chunkDur);
+            chunkBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(chunkBlob);
+            });
+          } catch (e) {
+            console.warn(`Lỗi tạo chunk Whisper ${chunkIdx + 1}:`, e);
+          }
+        }
+
+        let res: any = null;
+        const whisperUrls = [
+          `${apiBase}/ai-content/transcribe-video`,
+          `${apiBase}/api/transcribe-video`,
+          "/api/transcribe-video",
+          "/ai-content/transcribe-video",
+          "https://api.kpost.vn/ai-content/transcribe-video",
+        ];
+
+        for (const url of whisperUrls) {
+          try {
+            res = await axios.post(
+              url,
+              {
+                audioBase64: chunkBase64,
+                mimeType: "audio/wav",
+                duration: chunkDur,
+                startOffset: chunkStart,
+                chunkIndex: chunkIdx + 1,
+                totalChunks: totalChunks,
+              },
+              { timeout: 60000 }
+            );
+            if (res?.data?.cues && res.data.cues.length > 0) {
+              break;
+            }
+          } catch {}
+        }
+
+        if (res?.data?.cues && res.data.cues.length > 0) {
+          const formatTime = (sec: number) => {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+          };
+
+          const rawCues = res.data.cues.map((c: any, i: number) => {
+            const s = Number(c.startSec);
+            const e = Number(c.endSec);
+            const finalS = s >= chunkStart ? s : Number((s + chunkStart).toFixed(1));
+            const finalE = e > finalS ? (e >= chunkStart ? e : Number((e + chunkStart).toFixed(1))) : Number((finalS + 2.5).toFixed(1));
+            return {
+              id: `whisper_${chunkIdx + 1}_cue_${i + 1}`,
+              startSec: finalS,
+              endSec: finalE,
+              timeLabel: `${formatTime(finalS)} - ${formatTime(finalE)}`,
+              text: String(c.text || "").trim(),
+            };
+          });
+
+          allCues.push(...rawCues);
+        }
+      }
+
+      setTranscribeProgress(95);
+      setTranscribeStatus("Đang hoàn thiện phụ đề Whisper...");
+
+      // Tách sub thành các cụm từ ngắn mượt mà
+      let cues = allCues;
+      if (cues && cues.length > 0) {
+        cues = chunkCuesInto3To5Words(cues);
+        setSubtitleCues(cues);
+        setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
+
+        // 🌟 TÍNH NĂNG TẠO SUB GỐC: TẮT HOÀN TOÀN LỒNG TIẾNG MC, GIỮ NGUYÊN 100% TIẾNG VIDEO GỐC
+        setVoiceoverConfig((prev) => ({
+          ...prev,
+          enabled: false,       // TẮT LỒNG TIẾNG MC
+          muteOriginal: false,  // GIỮ TIẾNG GỐC
+          originalVolume: 100,  // 100% ÂM LƯỢNG GỐC
+        }));
+
+        if (videoRef.current) {
+          videoRef.current.volume = 1.0;
+        }
+
+        if (ttsAudioRef.current) {
+          try {
+            ttsAudioRef.current.pause();
+            ttsAudioRef.current = null;
+          } catch {}
+        }
+
+        setTranscribeSuccessMsg(
+          `🎉 HOÀN TẤT: Đã bóc băng ${cues.length} câu phụ đề AI Whisper nguyên bản! Giữ 100% âm thanh gốc của video (không lồng tiếng MC).`
+        );
+      } else {
+        alert("Không phát hiện được giọng nói rõ ràng trong video để tạo phụ đề Whisper!");
+      }
+
+      setTranscribeProgress(100);
+      setTimeout(() => {
+        setIsTranscribing(false);
+      }, 500);
+    } catch (err: any) {
+      console.error("Lỗi tạo phụ đề Whisper:", err);
+      setIsTranscribing(false);
+      alert("Lỗi tạo phụ đề: " + (err?.message || "Vui lòng thử lại"));
+    }
   };
 
   // Tính toán chuỗi CSS Filter cho Video Preview & Canvas Export
@@ -2303,13 +2465,13 @@ export default function AiVideoEditorPage() {
           {/* DÃY NÚT CHỨC NĂNG */}
           <div className="flex items-center flex-wrap gap-2">
 
-            {/* 🎯 NÚT 1 (GỐC): TẠO PHỤ ĐỀ / BÓC BĂNG VIDEO BẰNG WHISPER */}
+            {/* 🎯 NÚT 1: TẠO PHỤ ĐỀ GỐC (AI WHISPER / TIẾNG VIỆT) */}
             <button
               type="button"
               onClick={handleTranscribeWhisper}
               disabled={isTranscribing || isExporting}
-              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#1E3867] transition-all cursor-pointer disabled:opacity-50"
-              title="Bóc băng chính xác 100% từng lời thoại người nói trong video (Whisper AI) và tự động tạo phụ đề chạy mượt mà"
+              className="px-3.5 py-2.5 bg-gradient-to-r from-cyan-900/60 to-blue-900/60 hover:from-cyan-800/80 hover:to-blue-800/80 text-cyan-200 border border-cyan-500/40 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-cyan-950/40 disabled:opacity-50"
+              title="Dành cho video tiếng Việt: Bóc băng nguyên văn từng từ người nói, giữ 100% tiếng video gốc (không lồng tiếng MC)"
             >
               {isTranscribing ? (
                 <>
@@ -2322,13 +2484,13 @@ export default function AiVideoEditorPage() {
               )}
             </button>
 
-            {/* 🌐 NÚT 2: AI DỊCH & LỒNG TIẾNG */}
+            {/* 🌐 NÚT 2: DỊCH & LỒNG TIẾNG MC (DOUYIN / NGOẠI NGỮ) */}
             <button
               type="button"
               onClick={handleTranscribeRealAudio}
               disabled={isTranscribing || isExporting}
-              className="px-3.5 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-100 rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#1E3867] transition-all cursor-pointer disabled:opacity-50"
-              title="Dịch toàn bộ lời thoại video Douyin/ngoại ngữ sang tiếng Việt và lồng tiếng MC"
+              className="px-3.5 py-2.5 bg-gradient-to-r from-amber-900/60 to-orange-900/60 hover:from-amber-800/80 hover:to-orange-800/80 text-amber-200 border border-amber-500/40 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-amber-950/40 disabled:opacity-50"
+              title="Dành cho video Douyin / tiếng nước ngoài: Dịch lời thoại sang tiếng Việt & bật MC lồng tiếng"
             >
               <Sparkles size={16} className="text-amber-300" /> 🌐 Dịch & Lồng Tiếng
             </button>
