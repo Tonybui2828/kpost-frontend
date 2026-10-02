@@ -3,10 +3,9 @@ import { NextResponse } from 'next/server';
 // Gọi trực tiếp Google Gemini qua SDK chính thức @google/genai và REST API dự phòng
 async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
   const models = [
-    'gemini-2.5-flash',
-    'gemini-flash-latest',
     'gemini-3.8-flash',
-    'gemini-3.1-flash-lite'
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest'
   ];
 
   // 1. Thử gọi qua SDK chính thức @google/genai

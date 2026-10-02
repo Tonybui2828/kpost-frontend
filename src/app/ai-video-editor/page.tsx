@@ -1543,16 +1543,16 @@ export default function AiVideoEditorPage() {
       const fullDuration = realDuration;
       setVideoDuration(realDuration);
 
-      // 🌟 CƠ CHẾ PHÂN CHẶNG 90 GIÂY THÔNG MINH (CHUNKING ENGINE):
-      // Chia nhỏ video thành các đoạn 90 giây: Vừa đủ ngữ cảnh, siêu nhẹ, giảm 67% số lần gọi API, tránh hoàn toàn Rate Limit 429!
-      const CHUNK_LEN = 90;
+      // 🌟 CƠ CHẾ PHÂN CHẶNG 180 GIÂY (3 PHÚT) THÔNG MINH (CHUNKING ENGINE):
+      // Chia nhỏ video thành các đoạn 180 giây: Video 30 phút chỉ cần đúng 10 lượt gọi, vừa tiết kiệm quota (không lo chạm mốc 20 lượt/ngày), vừa dịch ngữ cảnh liền mạch siêu chuẩn!
+      const CHUNK_LEN = 180;
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
       let allCues: any[] = [];
       let detectedLang = "Tiếng Trung / Video Gốc";
       let globalLastErrorMsg = "";
       const apiBase = getApiBaseUrl();
 
-      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn (90s/đoạn)...`);
+      console.log(`[Audio Chunking] Bắt đầu xử lý video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn (180s/đoạn)...`);
       const globalUsedTexts = new Set<string>();
 
       for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
@@ -1650,7 +1650,7 @@ export default function AiVideoEditorPage() {
                 videoTitle: videoName || "Video Douyin Viral",
                 sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
                 frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
-                model: "gemini-2.5-flash",
+                model: "gemini-3.8-flash",
               },
               { timeout: 85000 }
             );
@@ -1674,12 +1674,11 @@ export default function AiVideoEditorPage() {
               strErr.includes("exceeded your current quota") ||
               strErr.includes("limit: 20")
             ) {
-              globalLastErrorMsg = "Backend đang gọi model 'gemini-3.8-flash' vốn bị Google giới hạn chỉ 20 lượt/ngày. Hãy chuyển sang model 'gemini-2.5-flash' để được miễn phí 1.500 lượt/ngày!";
-              // Không break để các URL khác (như /api/transcribe-and-translate với gemini-2.5-flash) được thử!
+              globalLastErrorMsg = "Tài khoản Google Gemini miễn phí của bạn tạm thời chạm mốc quota hàng ngày. Hãy đợi Google cấp lại hoặc nâng hạn mức API!";
             } else if (strErr.includes("API key not valid")) {
               globalLastErrorMsg = "Khóa GEMINI_API_KEY không hợp lệ. Vui lòng kiểm tra lại khóa API trên Coolify!";
               break;
-            } else if (strErr && !strErr.includes("Cannot POST")) {
+            } else if (strErr && !strErr.includes("Cannot POST") && !strErr.includes("404")) {
               lastErrorMsg = strErr;
               globalLastErrorMsg = strErr;
             } else if (!globalLastErrorMsg) {
