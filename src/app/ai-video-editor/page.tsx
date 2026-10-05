@@ -541,6 +541,43 @@ export default function AiVideoEditorPage() {
       setShowApiKeyModal(false);
     }
   };
+
+  // 🌟 DỊCH NGAY DANH SÁCH PHỤ ĐỀ HIỆN TẠI SANG TIẾNG VIỆT
+  const [isTranslatingCues, setIsTranslatingCues] = useState<boolean>(false);
+  const hasChineseSubtitles = useMemo(() => {
+    return subtitleCues.some((c) => /[\u4e00-\u9fa5]/.test(c.text));
+  }, [subtitleCues]);
+
+  const handleTranslateExistingCues = async () => {
+    if (subtitleCues.length === 0) {
+      alert("Chưa có phụ đề để dịch!");
+      return;
+    }
+    setIsTranslatingCues(true);
+    try {
+      const resp = await axios.post("/api/translate-cues", {
+        cues: subtitleCues,
+      });
+
+      if (resp.data?.success && Array.isArray(resp.data.cues)) {
+        setSubtitleCues(resp.data.cues);
+        audioCacheRef.current.clear();
+        spokenTextsHistoryRef.current.clear();
+        currentSentenceSpokenRef.current = null;
+        lastSpokenCueIdRef.current = null;
+        setTranscribeSuccessMsg(`✅ Đã dịch thành công toàn bộ ${resp.data.cues.length} câu phụ đề sang Tiếng Việt chuẩn xác!`);
+        if (resp.data.cues.length > 0) {
+          speakSentence(resp.data.cues[0].text);
+        }
+      } else {
+        alert("Không thể dịch phụ đề. Vui lòng thử lại!");
+      }
+    } catch (e: any) {
+      alert("Lỗi dịch phụ đề: " + (e.message || "Vui lòng thử lại"));
+    } finally {
+      setIsTranslatingCues(false);
+    }
+  };
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
     selectedVoiceId: "adult_male_warm", // Minh Quân (Nam MC Trầm Ấm)
@@ -1773,6 +1810,19 @@ export default function AiVideoEditorPage() {
       // TÁCH SUB CHUẨN VIRAL: MỖI ĐOẠN CHỮ CHỈ 3 - 5 TỪ CHẠY THEO ĐÚNG NHỊP NÓI
       let cues = sortedCues;
       if (cues && cues.length > 0) {
+        // KIỂM TRA NẾU CÒN TIẾNG TRUNG / NGOẠI NGỮ: TỰ ĐỘNG DỊCH SANG TIẾNG VIỆT NGAY LẬP TỨC
+        const hasChinese = cues.some((c: any) => /[\u4e00-\u9fa5]/.test(c.text));
+        if (hasChinese) {
+          setTranscribeStatus("Đang tự động chuẩn hóa và chuyển ngữ 100% sang Tiếng Việt chuẩn...");
+          try {
+            const transResp = await axios.post("/api/translate-cues", { cues });
+            if (transResp.data?.success && Array.isArray(transResp.data.cues)) {
+              cues = transResp.data.cues;
+            }
+          } catch (tErr) {
+            console.warn("Auto translate cues error:", tErr);
+          }
+        }
         cues = chunkCuesInto3To5Words(cues);
       }
 
@@ -2795,6 +2845,29 @@ export default function AiVideoEditorPage() {
                 <div className="flex items-center gap-1.5">
                   {subtitleCues.length > 0 && (
                     <>
+                      {/* 🌐 NÚT DỊCH TỨC THÌ SANG TIẾNG VIỆT */}
+                      <button
+                        type="button"
+                        onClick={handleTranslateExistingCues}
+                        disabled={isTranslatingCues}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-black flex items-center gap-1.5 cursor-pointer shadow-md transition-all disabled:opacity-50 ${
+                          hasChineseSubtitles
+                            ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-orange-950/60 animate-pulse border border-amber-300"
+                            : "bg-[#1877F2] hover:bg-[#2563EB] text-white border border-blue-400"
+                        }`}
+                        title="Dịch ngay toàn bộ câu phụ đề này sang tiếng Việt chuẩn xác 100%"
+                      >
+                        {isTranslatingCues ? (
+                          <>
+                            <RefreshCw size={12} className="animate-spin" /> Đang dịch...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={12} /> 🌐 Dịch Sang Tiếng Việt
+                          </>
+                        )}
+                      </button>
+
                       <button
                         type="button"
                         onClick={resetAllMediaCacheAndState}
