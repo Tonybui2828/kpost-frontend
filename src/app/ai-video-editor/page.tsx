@@ -668,7 +668,8 @@ export default function AiVideoEditorPage() {
       try {
         const audio = new Audio();
         const encoded = encodeURIComponent(textToSpeak);
-        audio.src = `https://api.kpost.vn/ai-content/tts?text=${encoded}`;
+        audio.src = `/api/tts?text=${encoded}`;
+        audio.volume = 1.0;
         audio.playbackRate = voiceoverConfig.rate || 1.15;
         audio.preload = "auto";
         audioCacheRef.current.set(cacheKey, audio);
@@ -676,82 +677,46 @@ export default function AiVideoEditorPage() {
     });
   };
 
-  // 🎙️ ĐỊNH HÌNH CHẤT GIỌNG MC ĐẶC TRƯNG: BIẾN HÓA ĐÚNG TỪNG NHÂN VẬT (PITCH + SPEED + EQUALIZER)
+  // 🎙️ ĐỊNH HÌNH CHẤT GIỌNG MC ĐẶC TRƯNG: BIẾN HÓA ĐÚNG TỪNG NHÂN VẬT (PITCH + SPEED + VOLUME)
   const configureVoiceAudio = (audio: HTMLAudioElement, voiceId: string, customRate?: number) => {
-    try {
-      audio.crossOrigin = "anonymous";
-    } catch {}
-
     let rate = 1.15;
     let preservesPitch = true;
-    let bassGain = 0;
-    let midFreq = 1000;
-    let midGain = 0;
-    let trebleGain = 0;
 
     switch (voiceId) {
       case "cartoon": // ⚡ Pikachu Chibi (Hoạt hình lí lắc, giọng hoạt hình vui nhộn)
         rate = customRate || 1.35;
-        preservesPitch = false; // Tắt bảo toàn cao độ: Pitch tăng vút thành giọng Chibi hoạt hình vui nhộn
-        bassGain = -8;
-        midFreq = 2200;
-        midGain = 6;
-        trebleGain = 10;
+        preservesPitch = false;
         break;
 
       case "adult_male_mc": // 🎙️ Minh Quân (Nam MC Trầm Ấm)
         rate = customRate || 0.88;
-        preservesPitch = false; // Tắt bảo toàn cao độ: Pitch hạ sâu xuống dải âm nam trầm quyền lực
-        bassGain = 14;          // Kích âm trầm dày dặn như phòng thu phát thanh
-        midFreq = 380;
-        midGain = 5;
-        trebleGain = -8;        // Cắt bớt dải the thé nữ
+        preservesPitch = false;
         break;
 
       case "senior": // 👴 Bác Năm (Người lớn tuổi đôn hậu)
         rate = customRate || 0.80;
-        preservesPitch = false; // Cao độ trầm ấm, từ tốn của người cao tuổi
-        bassGain = 12;
-        midFreq = 500;
-        midGain = 4;
-        trebleGain = -7;
+        preservesPitch = false;
         break;
 
       case "adult_male_reviewer": // 👱‍♂️ Đức Anh (Reviewer Bắt Trend)
         rate = customRate || 0.94;
-        preservesPitch = false; // Giọng nam trẻ trung, dứt khoát, hiện đại
-        bassGain = 8;
-        midFreq = 850;
-        midGain = 6;
-        trebleGain = 2;
+        preservesPitch = false;
         break;
 
       case "adult_female_sweet": // 👩 Mai Anh (Nữ Review Dịu Dàng)
         rate = customRate || 1.10;
-        preservesPitch = true;  // Giữ nguyên cao độ nữ ngọt ngào, mềm mại
-        bassGain = 0;
-        midFreq = 1400;
-        midGain = 3;
-        trebleGain = 5;
+        preservesPitch = true;
         break;
 
       case "speed_mc": // 🚀 MC Siêu Tốc (Khớp Douyin Nhanh)
         rate = customRate || 1.38;
-        preservesPitch = true;  // Tốc độ nói cực nhanh, dồn dập chuẩn nhịp Douyin
-        bassGain = -2;
-        midFreq = 2000;
-        midGain = 4;
-        trebleGain = 6;
+        preservesPitch = true;
         break;
 
       case "child_boy": // 👦 Bé Bắp (5-7 tuổi)
       case "child_girl": // 👧 Bé Dâu (4-6 tuổi)
         rate = customRate || 1.28;
-        preservesPitch = false; // Cao độ trẻ con líu lo
-        bassGain = -6;
-        midFreq = 2000;
-        midGain = 5;
-        trebleGain = 8;
+        preservesPitch = false;
         break;
 
       default:
@@ -760,56 +725,12 @@ export default function AiVideoEditorPage() {
         break;
     }
 
-    // 1. Áp dụng Pitch & PlaybackRate trên phần cứng trình duyệt (hỗ trợ mọi thiết bị)
+    // Luôn đảm bảo âm lượng to rõ 100%, phát trực tiếp ra loa máy tính/điện thoại không qua trung gian
+    audio.volume = 1.0;
     audio.playbackRate = rate;
     audio.preservesPitch = preservesPitch;
     (audio as any).mozPreservesPitch = preservesPitch;
     (audio as any).webkitPreservesPitch = preservesPitch;
-
-    // 2. Tinh chỉnh Equalizer qua Web Audio API (nếu được trình duyệt cho phép)
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        if (!audioContextRef.current) {
-          audioContextRef.current = new AudioCtx();
-        }
-        const ctx = audioContextRef.current;
-        if (ctx.state === "suspended") {
-          ctx.resume().catch(() => {});
-        }
-        let nodes = audioNodesMapRef.current.get(audio);
-        if (!nodes) {
-          const source = ctx.createMediaElementSource(audio);
-          const bass = ctx.createBiquadFilter();
-          bass.type = "lowshelf";
-          bass.frequency.value = 180;
-
-          const mid = ctx.createBiquadFilter();
-          mid.type = "peaking";
-          mid.frequency.value = 1000;
-          mid.Q.value = 1.0;
-
-          const treble = ctx.createBiquadFilter();
-          treble.type = "highshelf";
-          treble.frequency.value = 3200;
-
-          const gain = ctx.createGain();
-
-          source.connect(bass);
-          bass.connect(mid);
-          mid.connect(treble);
-          treble.connect(gain);
-          gain.connect(ctx.destination);
-
-          nodes = { source, bass, mid, treble, gain };
-          audioNodesMapRef.current.set(audio, nodes);
-        }
-        nodes.bass.gain.value = bassGain;
-        nodes.mid.frequency.value = midFreq;
-        nodes.mid.gain.value = midGain;
-        nodes.treble.gain.value = trebleGain;
-      }
-    } catch {}
   };
 
   // ⚡ HÀM ĐỔI GIỌNG MC & LOAD LẠI TRỰC TIẾP (KHÔNG CẦN DỊCH LẠI TỪ ĐẦU)
@@ -912,21 +833,34 @@ export default function AiVideoEditorPage() {
     const encoded = encodeURIComponent(cleanSnippet);
     const apiBase = getApiBaseUrl();
 
-    // 🌟 MÁY CHỦ PHÁT ÂM TIẾNG VIỆT CHUẨN 100% (KHÔNG BAO GIỜ DÙNG GIỌNG MÁY TÍNH TIẾNG ANH)
-    // api.kpost.vn/ai-content/tts đang chạy online và trả về MP3 tiếng Việt chuẩn tuyệt đối
+    // 🌟 MÁY CHỦ PHÁT ÂM TIẾNG VIỆT CHUẨN 100%
+    // Ưu tiên /api/tts nội bộ cùng domain (10ms, không CORS) -> api.kpost.vn -> fallback SpeechSynthesis
     const candidateUrls = [
+      `/api/tts?text=${encoded}`,
       `https://api.kpost.vn/ai-content/tts?text=${encoded}`,
-      `https://api.kpost.vn/api/tts?text=${encoded}`,
       `${apiBase}/ai-content/tts?text=${encoded}`,
       `${apiBase}/api/tts?text=${encoded}`,
       `/ai-content/tts?text=${encoded}`,
-      `/api/tts?text=${encoded}`,
     ];
 
     let urlIdx = 0;
 
     const playNextAudioSource = () => {
       if (urlIdx >= candidateUrls.length) {
+        // Dự phòng an toàn 100%: Phát bằng SpeechSynthesis native của trình duyệt nếu mạng có vấn đề
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          try {
+            const utter = new SpeechSynthesisUtterance(cleanSnippet);
+            utter.lang = "vi-VN";
+            utter.rate = rateToUse;
+            const viVoice = availableVoices.find((v) => v.lang.startsWith("vi") || v.lang.includes("VN"));
+            if (viVoice) utter.voice = viVoice;
+            utter.onend = () => restoreVolume();
+            utter.onerror = () => restoreVolume();
+            window.speechSynthesis.speak(utter);
+            return;
+          } catch {}
+        }
         restoreVolume();
         return;
       }
@@ -2461,21 +2395,38 @@ export default function AiVideoEditorPage() {
           }
         });
 
-        await Promise.all(
-          Array.from(uniqueSentences.entries()).map(async ([sKey, text]) => {
-            try {
-              const encoded = encodeURIComponent(text);
-              const res = await fetch(`https://api.kpost.vn/ai-content/tts?text=${encoded}`);
-              if (res.ok) {
-                const ab = await res.arrayBuffer();
-                const decoded = await audioCtx.decodeAudioData(ab);
-                cueAudioBuffers.set(sKey, decoded);
+        // Tải theo từng đợt (batch) để không nghẽn trình duyệt, ưu tiên /api/tts nội bộ rồi tới api.kpost.vn
+        const entries = Array.from(uniqueSentences.entries());
+        const BATCH_SIZE = 12;
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE);
+          await Promise.all(
+            batch.map(async ([sKey, text]) => {
+              try {
+                const encoded = encodeURIComponent(text);
+                let ab: ArrayBuffer | null = null;
+                try {
+                  const r1 = await fetch(`/api/tts?text=${encoded}`);
+                  if (r1.ok) ab = await r1.arrayBuffer();
+                } catch {}
+
+                if (!ab) {
+                  try {
+                    const r2 = await fetch(`https://api.kpost.vn/ai-content/tts?text=${encoded}`);
+                    if (r2.ok) ab = await r2.arrayBuffer();
+                  } catch {}
+                }
+
+                if (ab && ab.byteLength > 100) {
+                  const decoded = await audioCtx.decodeAudioData(ab);
+                  cueAudioBuffers.set(sKey, decoded);
+                }
+              } catch (err) {
+                console.warn(`Lỗi tải audio cue ${sKey}:`, err);
               }
-            } catch (err) {
-              console.warn(`Lỗi tải audio cue ${sKey}:`, err);
-            }
-          })
-        );
+            })
+          );
+        }
       }
 
       let mimeType = 'video/webm;codecs=vp9';
