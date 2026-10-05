@@ -422,6 +422,7 @@ export default function AiVideoEditorPage() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const exportAbortRef = useRef<boolean>(false);
+  const exportForceDownloadRef = useRef<boolean>(false);
 
   // Whisper Subtitles State
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
@@ -2305,6 +2306,7 @@ export default function AiVideoEditorPage() {
     setIsExporting(true);
     setExportProgress(0);
     exportAbortRef.current = false;
+    exportForceDownloadRef.current = false;
 
     if (videoRef.current) {
       videoRef.current.pause();
@@ -2519,14 +2521,37 @@ export default function AiVideoEditorPage() {
       await exportVideo.play();
 
       let animationId: number;
+      let hasFinished = false;
+      let lastTimeCheck = -1;
+      let lastTimeAdvancedAt = Date.now();
 
       const renderLoop = () => {
         if (exportAbortRef.current) {
-          finishExport();
+          if (!hasFinished) {
+            hasFinished = true;
+            finishExport();
+          }
+          return;
+        }
+
+        // Người dùng bấm nút Tải Ngay (khi đạt >= 90%)
+        if (exportForceDownloadRef.current) {
+          if (!hasFinished) {
+            hasFinished = true;
+            setExportProgress(100);
+            finishExport();
+          }
           return;
         }
 
         const curTime = exportVideo.currentTime;
+
+        // Giám sát thời gian có đang tiến triển không
+        if (Math.abs(curTime - lastTimeCheck) > 0.05) {
+          lastTimeCheck = curTime;
+          lastTimeAdvancedAt = Date.now();
+        }
+
         const currentProgress = Math.min(99, Math.round((curTime / totalDur) * 100));
         setExportProgress(currentProgress);
 
@@ -2576,11 +2601,23 @@ export default function AiVideoEditorPage() {
 
         drawOverlaysOnCanvas(ctx, width, height, curTime, logoImg);
 
-        if (exportVideo.ended || curTime >= totalDur - 0.2) {
-          setExportProgress(100);
-          setTimeout(() => {
-            finishExport();
-          }, 300);
+        // 🌟 KIỂM TRA ĐIỀU KIỆN KẾT THÚC CHUẨN XÁC 100% (CHỐNG KẸT Ở 98% DO LỆCH FRAME):
+        // 1. Video báo ended
+        // 2. curTime sát đuôi video: >= totalDur - 1.2s hoặc >= 98.5%
+        // 3. Video bị pause khi đã chạy >= 95%
+        // 4. Watchdog: curTime không tăng trong 1.5 giây khi đã đạt >= 95%
+        const isStalledNearEnd = (Date.now() - lastTimeAdvancedAt > 1500) && (curTime >= totalDur * 0.95);
+        const isNearEnd = curTime >= totalDur - 1.2 || curTime >= totalDur * 0.985;
+        const isVideoEndedOrPaused = exportVideo.ended || (exportVideo.paused && curTime >= totalDur * 0.95);
+
+        if (isNearEnd || isVideoEndedOrPaused || isStalledNearEnd) {
+          if (!hasFinished) {
+            hasFinished = true;
+            setExportProgress(100);
+            setTimeout(() => {
+              finishExport();
+            }, 300);
+          }
           return;
         }
 
@@ -2590,8 +2627,25 @@ export default function AiVideoEditorPage() {
       animationId = requestAnimationFrame(renderLoop);
 
       exportVideo.onended = () => {
-        cancelAnimationFrame(animationId);
-        finishExport();
+        if (!hasFinished) {
+          hasFinished = true;
+          cancelAnimationFrame(animationId);
+          setExportProgress(100);
+          setTimeout(() => {
+            finishExport();
+          }, 300);
+        }
+      };
+
+      exportVideo.onpause = () => {
+        if (exportVideo.currentTime >= totalDur * 0.95 && !hasFinished) {
+          hasFinished = true;
+          cancelAnimationFrame(animationId);
+          setExportProgress(100);
+          setTimeout(() => {
+            finishExport();
+          }, 300);
+        }
       };
     } catch (err: any) {
       console.error("Lỗi xuất video:", err);
@@ -2787,6 +2841,18 @@ export default function AiVideoEditorPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
+                {exportProgress >= 90 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportForceDownloadRef.current = true;
+                    }}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black rounded-xl cursor-pointer shadow-lg shadow-emerald-950/60 animate-pulse flex items-center gap-1.5"
+                    title="Bấm để hoàn tất và tải file video về máy ngay lập tức"
+                  >
+                    <Download size={13} /> ⚡ Tải Video Ngay ({exportProgress}%)
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
