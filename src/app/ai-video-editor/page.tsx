@@ -2526,14 +2526,14 @@ export default function AiVideoEditorPage() {
           lastTimeCheck = curTime;
           lastTimeAdvancedAt = Date.now();
         } else {
-          // Nếu đứng yên > 1.5s, thử tự động resume play
+          // Nếu đứng yên > 1.2s, thử tự động resume play
           const stalledDurationMs = Date.now() - lastTimeAdvancedAt;
-          if (stalledDurationMs > 1500 && stalledDurationMs < 4000 && !hasFinished && !exportAbortRef.current) {
+          if (stalledDurationMs > 1200 && stalledDurationMs < 5000 && !hasFinished && !exportAbortRef.current) {
             exportVideo.play().catch(() => {});
           }
-          // Nếu đứng yên > 4 giây và đã chạy được >= 70% (hoặc còn dưới 10s):
-          // Luồng video đã chạm hết dải buffer hoặc ngắt mạng, tự động đóng gói xuất file ngay lập tức!
-          if (stalledDurationMs >= 4000 && (curTime >= totalDur * 0.70 || curTime >= totalDur - 10)) {
+          // Nếu đứng yên > 5 giây và đã có ít nhất 5s video:
+          // Luồng video bị đứt mạng hoặc hết dải buffer, tự động đóng gói xuất file ngay lập tức, không để kẹt!
+          if (stalledDurationMs >= 5000 && curTime > 5) {
             console.log(`[Export Watchdog] Video dừng ở ${curTime}s (${Math.round((curTime / totalDur) * 100)}%), tự động hoàn tất và tải về file...`);
             if (!hasFinished) {
               hasFinished = true;
@@ -2835,14 +2835,14 @@ export default function AiVideoEditorPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
-                {exportProgress >= 30 && (
+                {exportProgress >= 1 && (
                   <button
                     type="button"
                     onClick={() => {
                       exportForceDownloadRef.current = true;
                     }}
                     className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black rounded-xl cursor-pointer shadow-lg shadow-emerald-950/60 animate-pulse flex items-center gap-1.5"
-                    title="Bấm để hoàn tất và tải file video về máy ngay lập tức"
+                    title="Bấm để hoàn tất và tải ngay phần video đã render về máy"
                   >
                     <Download size={13} /> ⚡ Tải Video Ngay ({exportProgress}%)
                   </button>
@@ -2940,9 +2940,22 @@ export default function AiVideoEditorPage() {
                         type="button"
                         onClick={handleDownloadSRT}
                         className="px-2.5 py-1 rounded-xl bg-[#152649] hover:bg-[#1A3059] border border-[#25447C] text-slate-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Tải phụ đề tiếng Việt chuẩn định dạng .SRT về máy (1 giây)"
                       >
                         <FileDown size={13} /> Tải .SRT
                       </button>
+                      {videoUrl && (
+                        <a
+                          href={videoUrl}
+                          download={`${videoName.replace(/\.[^/.]+$/, "") || "video"}_original.mp4`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                          title="Tải ngay video gốc chất lượng cao về máy (1 giây)"
+                        >
+                          <Download size={13} /> Tải Video Gốc
+                        </a>
+                      )}
                     </>
                   )}
                 </div>
