@@ -31,7 +31,8 @@ import {
   Upload,
   AlertTriangle,
   FolderOpen,
-  Code
+  Code,
+  Key
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -511,6 +512,35 @@ export default function AiVideoEditorPage() {
 
   // 🎙️ MODAL & TÍNH NĂNG AI LỒNG TIẾNG ĐA GIỌNG (Adult to Kids)
   const [showVoiceoverModal, setShowVoiceoverModal] = useState<boolean>(false);
+
+  // ⚡ MODAL & CẤU HÌNH API KEYS (GROQ WHISPER LARGE V3 & GEMINI)
+  const [showApiKeyModal, setShowApiKeyModal] = useState<boolean>(false);
+  const [customGroqKey, setCustomGroqKey] = useState<string>("");
+  const [customGeminiKey, setCustomGeminiKey] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCustomGroqKey(localStorage.getItem("GROQ_API_KEY") || "");
+      setCustomGeminiKey(localStorage.getItem("GEMINI_API_KEY") || "");
+    }
+  }, []);
+
+  const handleSaveApiKeys = () => {
+    if (typeof window !== "undefined") {
+      if (customGroqKey.trim()) {
+        localStorage.setItem("GROQ_API_KEY", customGroqKey.trim());
+      } else {
+        localStorage.removeItem("GROQ_API_KEY");
+      }
+      if (customGeminiKey.trim()) {
+        localStorage.setItem("GEMINI_API_KEY", customGeminiKey.trim());
+      } else {
+        localStorage.removeItem("GEMINI_API_KEY");
+      }
+      alert("✅ Đã lưu cấu hình API Key thành công! Hệ thống sẽ ưu tiên sử dụng Groq Whisper Large v3 siêu tốc 100% miễn phí.");
+      setShowApiKeyModal(false);
+    }
+  };
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
     selectedVoiceId: "adult_male_warm", // Minh Quân (Nam MC Trầm Ấm)
@@ -1651,6 +1681,8 @@ export default function AiVideoEditorPage() {
                 sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
                 frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
                 model: "gemini-3.8-flash",
+                groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
+                geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
               },
               { timeout: 85000 }
             );
@@ -1667,6 +1699,13 @@ export default function AiVideoEditorPage() {
               strErr.includes("PERMISSION_DENIED")
             ) {
               globalLastErrorMsg = "Khóa GEMINI_API_KEY của bạn đã bị Google vô hiệu hóa vì lý do bảo mật (Google báo: 'Your API key was reported as leaked. Please use another API key'). Bạn hãy vào aistudio.google.com tạo 1 khóa API Key MỚI rồi thay vào Coolify nhé!";
+              break;
+            } else if (
+              strErr.includes("prepayment credits are depleted") ||
+              strErr.includes("402") ||
+              strErr.includes("billing#prepay")
+            ) {
+              globalLastErrorMsg = "Google AI Studio báo: 'Your prepayment credits are depleted' (Dự án đang bật chế độ Trả trước nhưng số dư là 0$). Bạn hãy vào https://aistudio.google.com/projects bấm 'Add credits' (tối thiểu 5$) hoặc tạo 1 API Key ở Project miễn phí (Free Tier) để sử dụng nhé!";
               break;
             } else if (
               strErr.includes("429") ||
