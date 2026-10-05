@@ -2319,6 +2319,15 @@ export default function AiVideoEditorPage() {
     exportVideo.muted = false;
     exportVideo.loop = false;
     exportVideo.playsInline = true;
+    exportVideo.style.position = "fixed";
+    exportVideo.style.bottom = "0";
+    exportVideo.style.right = "0";
+    exportVideo.style.width = "2px";
+    exportVideo.style.height = "2px";
+    exportVideo.style.opacity = "0.01";
+    exportVideo.style.pointerEvents = "none";
+    exportVideo.style.zIndex = "-999";
+    document.body.appendChild(exportVideo);
 
     try {
       await new Promise((resolve, reject) => {
@@ -2490,6 +2499,9 @@ export default function AiVideoEditorPage() {
         }
         exportVideo.pause();
         exportVideo.src = "";
+        if (exportVideo.parentNode) {
+          exportVideo.parentNode.removeChild(exportVideo);
+        }
         try { audioCtx.close(); } catch {}
       };
 
@@ -2516,6 +2528,18 @@ export default function AiVideoEditorPage() {
         }, 600);
       };
 
+      // Tự động hồi phục khi video bị khựng/buffering ngầm
+      exportVideo.onwaiting = () => {
+        if (!hasFinished && !exportAbortRef.current) {
+          exportVideo.play().catch(() => {});
+        }
+      };
+      exportVideo.onstalled = () => {
+        if (!hasFinished && !exportAbortRef.current) {
+          exportVideo.play().catch(() => {});
+        }
+      };
+
       exportVideo.currentTime = 0;
       recorder.start(1000);
       await exportVideo.play();
@@ -2534,7 +2558,7 @@ export default function AiVideoEditorPage() {
           return;
         }
 
-        // Người dùng bấm nút Tải Ngay (khi đạt >= 90%)
+        // Người dùng bấm nút Tải Ngay bất kỳ lúc nào
         if (exportForceDownloadRef.current) {
           if (!hasFinished) {
             hasFinished = true;
@@ -2550,6 +2574,25 @@ export default function AiVideoEditorPage() {
         if (Math.abs(curTime - lastTimeCheck) > 0.05) {
           lastTimeCheck = curTime;
           lastTimeAdvancedAt = Date.now();
+        } else {
+          // Nếu đứng yên > 1.5s, thử tự động resume play
+          const stalledDurationMs = Date.now() - lastTimeAdvancedAt;
+          if (stalledDurationMs > 1500 && stalledDurationMs < 4000 && !hasFinished && !exportAbortRef.current) {
+            exportVideo.play().catch(() => {});
+          }
+          // Nếu đứng yên > 4 giây và đã chạy được >= 70% (hoặc còn dưới 10s):
+          // Luồng video đã chạm hết dải buffer hoặc ngắt mạng, tự động đóng gói xuất file ngay lập tức!
+          if (stalledDurationMs >= 4000 && (curTime >= totalDur * 0.70 || curTime >= totalDur - 10)) {
+            console.log(`[Export Watchdog] Video dừng ở ${curTime}s (${Math.round((curTime / totalDur) * 100)}%), tự động hoàn tất và tải về file...`);
+            if (!hasFinished) {
+              hasFinished = true;
+              setExportProgress(100);
+              setTimeout(() => {
+                finishExport();
+              }, 300);
+            }
+            return;
+          }
         }
 
         const currentProgress = Math.min(99, Math.round((curTime / totalDur) * 100));
@@ -2841,7 +2884,7 @@ export default function AiVideoEditorPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-lg font-mono font-black text-emerald-300">{exportProgress}%</span>
-                {exportProgress >= 90 && (
+                {exportProgress >= 30 && (
                   <button
                     type="button"
                     onClick={() => {
