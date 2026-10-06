@@ -556,22 +556,70 @@ export default function AiVideoEditorPage() {
     }
     setIsTranslatingCues(true);
     try {
-      const resp = await axios.post("/api/translate-cues", {
-        cues: subtitleCues,
-      });
+      let translatedCues: SubtitleCue[] | null = null;
 
-      if (resp.data?.success && Array.isArray(resp.data.cues)) {
-        setSubtitleCues(resp.data.cues);
+      // 1. Thử gọi API backend
+      try {
+        const resp = await axios.post("/api/translate-cues", {
+          cues: subtitleCues,
+        }, { timeout: 35000 });
+
+        if (resp.data?.success && Array.isArray(resp.data.cues)) {
+          translatedCues = resp.data.cues;
+        }
+      } catch (srvErr) {
+        console.warn("[Backend translate failed, switching to direct in-browser translation]:", srvErr);
+      }
+
+      // 2. Dự phòng trực tiếp trên trình duyệt (Nếu backend lỗi hoặc còn sót câu tiếng Trung)
+      if (!translatedCues || translatedCues.some((c) => /[\u4e00-\u9fa5]/.test(c.text))) {
+        const sourceCues = translatedCues || subtitleCues;
+        const updated = [...sourceCues];
+        const BATCH = 12;
+
+        for (let i = 0; i < updated.length; i += BATCH) {
+          const slice = updated.slice(i, i + BATCH);
+          await Promise.all(
+            slice.map(async (cue, idx) => {
+              if (/[\u4e00-\u9fa5]/.test(cue.text)) {
+                try {
+                  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cue.text.trim())}&langpair=zh|vi&de=tech28.vn@gmail.com`;
+                  const res = await fetch(url);
+                  if (res.ok) {
+                    const data = await res.json();
+                    const trans = data?.responseData?.translatedText;
+                    if (trans && typeof trans === "string" && !trans.includes("MYMEMORY WARNING")) {
+                      updated[i + idx] = {
+                        ...cue,
+                        text: trans.trim(),
+                        words: undefined,
+                      };
+                    }
+                  }
+                } catch {}
+              }
+            })
+          );
+        }
+        translatedCues = updated;
+      }
+
+      if (translatedCues && translatedCues.length > 0) {
+        setSubtitleCues(translatedCues);
         audioCacheRef.current.clear();
         spokenTextsHistoryRef.current.clear();
         currentSentenceSpokenRef.current = null;
         lastSpokenCueIdRef.current = null;
-        setTranscribeSuccessMsg(`✅ Đã dịch thành công toàn bộ ${resp.data.cues.length} câu phụ đề sang Tiếng Việt chuẩn xác!`);
-        if (resp.data.cues.length > 0) {
-          speakSentence(resp.data.cues[0].text);
+        
+        const vietnameseCount = translatedCues.filter((c) => !/[\u4e00-\u9fa5]/.test(c.text)).length;
+        setTranscribeSuccessMsg(`✅ Đã dịch thành công ${vietnameseCount}/${translatedCues.length} câu sang Tiếng Việt chuẩn xác!`);
+        
+        // Phát ngay câu đầu tiên để người dùng nghe thử giọng lồng tiếng Việt
+        if (translatedCues[0]?.text) {
+          speakSentence(translatedCues[0].text);
         }
       } else {
-        alert("Không thể dịch phụ đề. Vui lòng thử lại!");
+        alert("Không thể dịch phụ đề. Vui lòng kiểm tra lại kết nối mạng!");
       }
     } catch (e: any) {
       alert("Lỗi dịch phụ đề: " + (e.message || "Vui lòng thử lại"));
@@ -588,6 +636,7 @@ export default function AiVideoEditorPage() {
     duckVolume: 0.05,    // Hạ xuống 5% khi MC cất lời
     pitch: 1.0,
     rate: 1.15,
+    focusMainDialogue: true, // 🎯 MẶC ĐỊNH BẬT: Chỉ lồng tiếng hội thoại chính, bỏ qua tiếng đệm / phụ
   });
   const lastSpokenCueIdRef = useRef<string | null>(null);
   const currentSentenceSpokenRef = useRef<string | null>(null);
@@ -945,6 +994,57 @@ export default function AiVideoEditorPage() {
     }
     merged.push(current);
     return merged;
+  };
+
+  // 🎯 BỘ NHẬN DIỆN & LỌC BỎ TIẾNG ĐỆM, THÁN TỪ, TIẾNG KÊU VÔ NGHĨA HOẶC TẠP ÂM PHỤ
+  const isFillerOrSecondaryCue = (text: string, durationSec: number = 1.0): boolean => {
+    if (!text || !text.trim()) return true;
+    const t = text.trim();
+
+    // 1. Ký hiệu âm thanh hoặc ghi chú trong ngoặc [], (), <>
+    if (/^(\[.*?\]|\(.*?\)|<.*?>|\*.*?\*|#.*?#)$/.test(t)) return true;
+
+    // 2. Thán từ tiếng Trung và tiếng kêu ngắn
+    const CHINESE_FILLER = /^(\s*(啊+|呃+|哦+|哈哈+|哼+|哎+|哇+|呀+|咦+|额+|嘛+|吧+|呢+|啦+|哈+|嘻嘻+|嘿嘿+|呼+|哎呀+|哎哟+|嗯+|切+|噢+|咕噜+|咚+|啪+|砰+|唰+|哗+|咻+|好啦|行啦|喂|呐|呀呵|哎哟喂|唉)\s*)+$/i;
+    if (CHINESE_FILLER.test(t)) return true;
+
+    // 3. Thán từ tiếng Việt và tiếng đệm cảm thán
+    const VIETNAMESE_FILLER = /^(\s*(à+|ừ+|ơ+|ờ+|ha+|haha+|hihi+|hehe+|hic+|hừm+|úi+|ôi+|ái+|ối+|ủa+|hả+|ừm+|á+|ú+|ô+|eh+|oh+|ah+|um+|uh+|wow+|này|nè|dạ|vâng|ơ kìa|ái chà|ối dồi ôi|ối trời|úi giời|chà|hơ|hử|hớ|eo ôi|éc|uầy|ồ)\s*)+$/i;
+    if (VIETNAMESE_FILLER.test(t)) return true;
+
+    // 4. Nếu phân đoạn cực ngắn (< 0.65s) và chỉ có 1-2 từ thán từ hoặc dưới 3 chữ cái
+    if (durationSec < 0.65 && t.length <= 4) return true;
+
+    // 5. Chuỗi toàn tiếng cười, tiếng reo hò hoặc tiếng đệm lặp lại (ví dụ "ha ha ha", "á á", "ôi ôi")
+    const words = t.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length > 0 && words.every((w) => VIETNAMESE_FILLER.test(w) || CHINESE_FILLER.test(w))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // 🧹 HÀM TINH GỌN LỜI THOẠI CHÍNH (LOẠI BỎ TOÀN BỘ TIẾNG ĐỆM & TẠP ÂM PHỤ)
+  const handleCleanAndFilterCues = () => {
+    if (subtitleCues.length === 0) return;
+    const initialCount = subtitleCues.length;
+
+    const filtered = subtitleCues.filter((cue) => {
+      const dur = cue.endSec - cue.startSec;
+      return !isFillerOrSecondaryCue(cue.text, dur);
+    });
+
+    const merged = smartMergeCues(filtered);
+
+    setSubtitleCues(merged);
+    audioCacheRef.current.clear();
+    spokenTextsHistoryRef.current.clear();
+    currentSentenceSpokenRef.current = null;
+    lastSpokenCueIdRef.current = null;
+
+    const removed = initialCount - merged.length;
+    setTranscribeSuccessMsg(`🎯 Đã tinh gọn lời thoại chính: Giữ lại ${merged.length} câu hội thoại quan trọng (Đã loại bỏ ${removed} tiếng đệm, tiếng kêu & tạp âm phụ)!`);
+    setTimeout(() => setTranscribeSuccessMsg(""), 6000);
   };
 
   // 🛡️ BỘ LỌC CHỐNG ẢO GIÁC & CHỐNG LẶP TỪ WHISPER ĐỈNH CAO:
@@ -1367,6 +1467,15 @@ export default function AiVideoEditorPage() {
   useEffect(() => {
     if (!voiceoverConfig.enabled || isExporting || !isPlaying) return;
     if (currentSubtitleCue) {
+      // 🎯 NẾU BẬT CHẾ ĐỘ CHỈ LỒNG TIẾNG HỘI THOẠI CHÍNH: Bỏ qua tiếng đệm / thán từ / tạp âm phụ
+      if (voiceoverConfig.focusMainDialogue) {
+        const dur = currentSubtitleCue.endSec - currentSubtitleCue.startSec;
+        const rawContent = currentSubtitleCue.parentSentenceText || currentSubtitleCue.text;
+        if (isFillerOrSecondaryCue(rawContent, dur)) {
+          return;
+        }
+      }
+
       const sentenceKey = currentSubtitleCue.parentSentenceId || currentSubtitleCue.id;
       const textToSpeak = (currentSubtitleCue.parentSentenceText || currentSubtitleCue.text).trim();
       const normText = textToSpeak.toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
@@ -2391,6 +2500,10 @@ export default function AiVideoEditorPage() {
           const sKey = cue.parentSentenceId || cue.id;
           if (!uniqueSentences.has(sKey)) {
             const text = (cue.parentSentenceText || cue.text).trim().slice(0, 250);
+            // Nếu bật chỉ lồng tiếng chính: bỏ qua thán từ / tiếng đệm
+            if (voiceoverConfig.focusMainDialogue && isFillerOrSecondaryCue(text, cue.endSec - cue.startSec)) {
+              return;
+            }
             uniqueSentences.set(sKey, text);
           }
         });
@@ -2562,31 +2675,36 @@ export default function AiVideoEditorPage() {
             (c) => curTime >= c.startSec && curTime <= c.endSec + 0.3
           );
           if (matchedCue) {
-            const sKey = matchedCue.parentSentenceId || matchedCue.id;
-            const normText = (matchedCue.parentSentenceText || matchedCue.text).toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
-            if (!spokenCueKeys.has(sKey) && !spokenCueKeys.has(normText)) {
-              spokenCueKeys.add(sKey);
-              spokenCueKeys.add(normText);
-              const buffer = cueAudioBuffers.get(sKey);
-              if (buffer) {
-                try {
-                  const bSource = audioCtx.createBufferSource();
-                  bSource.buffer = buffer;
-                  bSource.playbackRate.value = rateToUse;
-                  bSource.connect(ttsGain);
-                  bSource.start(0);
+            const rawContent = matchedCue.parentSentenceText || matchedCue.text;
+            if (voiceoverConfig.focusMainDialogue && isFillerOrSecondaryCue(rawContent, matchedCue.endSec - matchedCue.startSec)) {
+              // Bỏ qua thán từ / tiếng kêu vô nghĩa trong video xuất
+            } else {
+              const sKey = matchedCue.parentSentenceId || matchedCue.id;
+              const normText = (matchedCue.parentSentenceText || matchedCue.text).toLowerCase().replace(/[\.,\?!;:_~\-–—\s]/g, "");
+              if (!spokenCueKeys.has(sKey) && !spokenCueKeys.has(normText)) {
+                spokenCueKeys.add(sKey);
+                spokenCueKeys.add(normText);
+                const buffer = cueAudioBuffers.get(sKey);
+                if (buffer) {
+                  try {
+                    const bSource = audioCtx.createBufferSource();
+                    bSource.buffer = buffer;
+                    bSource.playbackRate.value = rateToUse;
+                    bSource.connect(ttsGain);
+                    bSource.start(0);
 
-                  // Hạ âm lượng video gốc khi MC nói (Ducking)
-                  if (videoGain && !voiceoverConfig.muteOriginal && voiceoverConfig.originalVolume > 0) {
-                    videoGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                    const speechDur = buffer.duration / rateToUse;
-                    videoGain.gain.setValueAtTime(
-                      voiceoverConfig.originalVolume / 100,
-                      audioCtx.currentTime + speechDur
-                    );
+                    // Hạ âm lượng video gốc khi MC nói (Ducking)
+                    if (videoGain && !voiceoverConfig.muteOriginal && voiceoverConfig.originalVolume > 0) {
+                      videoGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                      const speechDur = buffer.duration / rateToUse;
+                      videoGain.gain.setValueAtTime(
+                        voiceoverConfig.originalVolume / 100,
+                        audioCtx.currentTime + speechDur
+                      );
+                    }
+                  } catch (e) {
+                    console.warn("Lỗi phát audio cue trong export:", e);
                   }
-                } catch (e) {
-                  console.warn("Lỗi phát audio cue trong export:", e);
                 }
               }
             }
@@ -3084,6 +3202,40 @@ export default function AiVideoEditorPage() {
                       Âm Lượng
                     </button>
                   </div>
+                </div>
+
+                {/* 🎯 TÙY CHỌN: CHỈ LỒNG TIẾNG HỘI THOẠI CHÍNH (BỎ QUA TIẾNG ĐỆM / PHỤ) */}
+                <div className="pt-2 border-t border-[#1A3059] flex flex-wrap items-center justify-between gap-2 bg-[#091120] p-2.5 rounded-xl border border-indigo-900/50">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-slate-200 select-none">
+                    <input
+                      type="checkbox"
+                      checked={voiceoverConfig.focusMainDialogue}
+                      onChange={(e) => {
+                        setVoiceoverConfig((p) => ({ ...p, focusMainDialogue: e.target.checked }));
+                      }}
+                      className="w-4 h-4 accent-indigo-500 rounded"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-black text-indigo-300 flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-amber-400" />
+                        Chỉ lồng tiếng hội thoại chính (Chống xung đột giọng)
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Tự động bỏ qua tiếng kêu, thán từ đệm, tạp âm và các câu phụ vô nghĩa
+                      </span>
+                    </div>
+                  </label>
+
+                  {subtitleCues.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCleanAndFilterCues}
+                      className="px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-[11px] font-black rounded-lg flex items-center gap-1 cursor-pointer shadow-md shadow-indigo-950 transition-all"
+                      title="Lọc sạch danh sách câu: Chỉ giữ lại lời thoại đắt giá, loại bỏ tiếng đệm"
+                    >
+                      <Sparkles size={11} /> 🧹 Tinh Gọn Lời Thoại
+                    </button>
+                  )}
                 </div>
 
                 {/* DÒNG 3: BỘ CHỌN GIỌNG MC TRỰC TIẾP & LOAD LẠI KHÔNG CẦN DỊCH TỪ ĐẦU */}
