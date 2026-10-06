@@ -35,7 +35,8 @@ import {
   Key,
   Scissors,
   Film,
-  Layers
+  Layers,
+  ExternalLink
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -433,7 +434,7 @@ export default function AiVideoEditorPage() {
     partDurationMinutes: number;
     format: "mp4" | "webm";
     aspectRatio: "original" | "9:16" | "16:9" | "1:1";
-    resolution: "1080p" | "720p" | "original";
+    resolution: "4k" | "2k" | "1080p" | "720p" | "original";
   }>({
     splitMode: "auto_parts",
     customStartSec: 0,
@@ -445,6 +446,13 @@ export default function AiVideoEditorPage() {
   });
   const exportAbortRef = useRef<boolean>(false);
   const exportForceDownloadRef = useRef<boolean>(false);
+
+  // Batch Export State (Tải tất cả các tập tự động)
+  const [isBatchExporting, setIsBatchExporting] = useState<boolean>(false);
+  const [batchCurrentIndex, setBatchCurrentIndex] = useState<number>(0);
+  const [batchTotal, setBatchTotal] = useState<number>(0);
+  const [batchPartLabel, setBatchPartLabel] = useState<string>("");
+  const batchAbortRef = useRef<boolean>(false);
 
   // Whisper Subtitles State
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
@@ -993,10 +1001,10 @@ export default function AiVideoEditorPage() {
   };
 
   // ✂️ TÍNH TOÁN DANH SÁCH CÁC TẬP TỰ ĐỘNG KHI CHIA VIDEO DÀI THÀNH NHIỀU PHẦN NGẮN
+  // Quy tắc người dùng: Nếu tập cuối cùng dư < 70% thời lượng (ví dụ 16s so với 5 phút), gộp luôn vào tập trước!
   const autoParts = useMemo(() => {
     const dur = Math.max(10, videoDuration || 1800);
-    const partSec = Math.max(30, Math.round((exportOptions.partDurationMinutes || 3) * 60));
-    const totalParts = Math.ceil(dur / partSec);
+    const partSec = Math.max(30, Math.round((exportOptions.partDurationMinutes || 5) * 60));
     const parts: {
       id: string;
       partNumber: number;
@@ -1007,20 +1015,52 @@ export default function AiVideoEditorPage() {
       cuesCount: number;
     }[] = [];
 
-    for (let i = 0; i < totalParts; i++) {
-      const s = i * partSec;
-      const e = Math.min(dur, (i + 1) * partSec);
-      const count = subtitleCues.filter((c) => c.startSec >= s && c.startSec < e).length;
+    let currentStart = 0;
+    let partIndex = 1;
+
+    while (currentStart < dur) {
+      let currentEnd = currentStart + partSec;
+      const remainingAfter = dur - currentEnd;
+
+      // Nếu phần dư còn lại cuối cùng < 70% thời lượng của một tập (0.7 * partSec), gộp luôn vào tập hiện tại
+      if (remainingAfter > 0 && remainingAfter < 0.7 * partSec) {
+        currentEnd = dur;
+      } else {
+        currentEnd = Math.min(dur, currentEnd);
+      }
+
+      const count = subtitleCues.filter((c) => c.startSec >= currentStart && c.startSec < currentEnd).length;
       parts.push({
-        id: `part_${i + 1}`,
-        partNumber: i + 1,
-        startSec: s,
-        endSec: e,
-        label: `Tập ${i + 1}`,
-        timeLabel: `${formatSecToTime(s)} - ${formatSecToTime(e)}`,
+        id: `part_${partIndex}`,
+        partNumber: partIndex,
+        startSec: currentStart,
+        endSec: currentEnd,
+        label: `Tập ${partIndex}`,
+        timeLabel: `${formatSecToTime(currentStart)} - ${formatSecToTime(currentEnd)}`,
         cuesCount: count,
       });
+
+      partIndex++;
+      currentStart = currentEnd;
     }
+
+    // 🛡️ BẢO HIỂM TUYỆT ĐỐI THEO YÊU CẦU:
+    // Nếu tập cuối cùng có thời lượng < 70% của một tập chuẩn (ví dụ tập 7 chỉ có 16s so với 3-5 phút),
+    // GỘP TOÀN BỘ VÀO TẬP LIỀN TRƯỚC ĐÓ (Tập 6) và loại bỏ tập cụt 16s!
+    if (parts.length > 1) {
+      const last = parts[parts.length - 1];
+      const lastDuration = last.endSec - last.startSec;
+      if (lastDuration < 0.7 * partSec) {
+        const prev = parts[parts.length - 2];
+        prev.endSec = dur;
+        prev.timeLabel = `${formatSecToTime(prev.startSec)} - ${formatSecToTime(dur)}`;
+        prev.cuesCount = subtitleCues.filter(
+          (c) => c.startSec >= prev.startSec && c.startSec <= dur
+        ).length;
+        parts.pop();
+      }
+    }
+
     return parts;
   }, [videoDuration, exportOptions.partDurationMinutes, subtitleCues]);
 
@@ -2400,13 +2440,13 @@ export default function AiVideoEditorPage() {
     partTitle?: string;
     format?: "mp4" | "webm";
     aspectRatio?: "original" | "9:16" | "16:9" | "1:1";
-    resolution?: "1080p" | "720p" | "original";
+    resolution?: "4k" | "2k" | "1080p" | "720p" | "original";
   }
 
-  const handleExportFullVideo = async (params?: ExportCallParams) => {
+  const handleExportFullVideo = async (params?: ExportCallParams): Promise<boolean> => {
     if (!videoUrl) {
       alert("Vui lòng tải video lên trước!");
-      return;
+      return false;
     }
 
     const reqFormat = params?.format || exportOptions.format || "mp4";
@@ -2442,86 +2482,143 @@ export default function AiVideoEditorPage() {
       setIsPlaying(false);
     }
 
-    const exportVideo = document.createElement("video");
-    exportVideo.src = videoUrl;
-    exportVideo.crossOrigin = "anonymous";
-    exportVideo.muted = false;
-    exportVideo.loop = false;
-    exportVideo.playsInline = true;
-    exportVideo.style.position = "fixed";
-    exportVideo.style.bottom = "0";
-    exportVideo.style.right = "0";
-    exportVideo.style.width = "2px";
-    exportVideo.style.height = "2px";
-    exportVideo.style.opacity = "0.01";
-    exportVideo.style.pointerEvents = "none";
-    exportVideo.style.zIndex = "-999";
-    document.body.appendChild(exportVideo);
+    return new Promise<boolean>(async (resolvePromise) => {
+      const exportVideo = document.createElement("video");
+      exportVideo.src = videoUrl;
+      exportVideo.crossOrigin = "anonymous";
+      exportVideo.muted = false;
+      exportVideo.loop = false;
+      exportVideo.playsInline = true;
+      exportVideo.style.position = "fixed";
+      exportVideo.style.left = "-9999px";
+      exportVideo.style.top = "-9999px";
+      exportVideo.style.width = "1920px";
+      exportVideo.style.height = "1080px";
+      exportVideo.style.opacity = "0";
+      exportVideo.style.pointerEvents = "none";
+      exportVideo.style.zIndex = "-999";
+      document.body.appendChild(exportVideo);
 
-    try {
-      await new Promise((resolve, reject) => {
-        exportVideo.onloadedmetadata = resolve;
-        exportVideo.onerror = reject;
-      });
-
-      const videoDurationTotal = exportVideo.duration || videoDuration || 120;
-      const endSec = Math.min(
-        videoDurationTotal,
-        requestedEndSec && requestedEndSec > startSec ? requestedEndSec : videoDurationTotal
-      );
-      const targetDuration = Math.max(1, endSec - startSec);
-
-      // Tua video đến vị trí bắt đầu phân đoạn
-      if (startSec > 0) {
-        exportVideo.currentTime = startSec;
-        await new Promise((resolve) => {
-          let timeoutId: any;
-          const onSeeked = () => {
-            clearTimeout(timeoutId);
-            exportVideo.removeEventListener("seeked", onSeeked);
-            resolve(null);
-          };
-          exportVideo.addEventListener("seeked", onSeeked);
-          timeoutId = setTimeout(() => {
-            exportVideo.removeEventListener("seeked", onSeeked);
-            resolve(null);
-          }, 1500);
+      try {
+        await new Promise((resolve, reject) => {
+          exportVideo.onloadedmetadata = resolve;
+          exportVideo.onerror = reject;
         });
-      } else {
-        exportVideo.currentTime = 0;
-      }
 
-      const width = exportVideo.videoWidth || 720;
-      const height = exportVideo.videoHeight || 1280;
+        const videoDurationTotal = exportVideo.duration || videoDuration || 120;
+        const endSec = Math.min(
+          videoDurationTotal,
+          requestedEndSec && requestedEndSec > startSec ? requestedEndSec : videoDurationTotal
+        );
+        const targetDuration = Math.max(1, endSec - startSec);
 
-      // Tính toán kích thước Canvas theo Tỷ lệ khung hình & Độ phân giải được chọn
-      let canvasW = width;
-      let canvasH = height;
-
-      if (reqAspectRatio === "9:16") {
-        canvasW = reqResolution === "720p" ? 720 : 1080;
-        canvasH = reqResolution === "720p" ? 1280 : 1920;
-      } else if (reqAspectRatio === "16:9") {
-        canvasW = reqResolution === "720p" ? 1280 : 1920;
-        canvasH = reqResolution === "720p" ? 720 : 1080;
-      } else if (reqAspectRatio === "1:1") {
-        canvasW = reqResolution === "720p" ? 720 : 1080;
-        canvasH = reqResolution === "720p" ? 720 : 1080;
-      } else {
-        if (reqResolution === "1080p" && height < 1080) {
-          canvasH = 1080;
-          canvasW = Math.round((width * 1080) / height);
-        } else if (reqResolution === "720p" && height > 720) {
-          canvasH = 720;
-          canvasW = Math.round((width * 720) / height);
+        // Tua video đến vị trí bắt đầu phân đoạn
+        if (startSec > 0) {
+          exportVideo.currentTime = startSec;
+          await new Promise((resolve) => {
+            let timeoutId: any;
+            const onSeeked = () => {
+              clearTimeout(timeoutId);
+              exportVideo.removeEventListener("seeked", onSeeked);
+              resolve(null);
+            };
+            exportVideo.addEventListener("seeked", onSeeked);
+            timeoutId = setTimeout(() => {
+              exportVideo.removeEventListener("seeked", onSeeked);
+              resolve(null);
+            }, 1500);
+          });
+        } else {
+          exportVideo.currentTime = 0;
         }
-      }
 
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Không thể khởi tạo Canvas 2D");
-      canvas.width = canvasW % 2 === 0 ? canvasW : canvasW + 1;
-      canvas.height = canvasH % 2 === 0 ? canvasH : canvasH + 1;
+        const width = exportVideo.videoWidth || 720;
+        const height = exportVideo.videoHeight || 1280;
+
+        // Tính toán kích thước Canvas theo Tỷ lệ khung hình & Độ phân giải được chọn (Hỗ trợ 4K, 2K, 1080p siêu nét)
+        let canvasW = width;
+        let canvasH = height;
+
+        if (reqAspectRatio === "9:16") {
+          if (reqResolution === "4k") {
+            canvasW = 2160;
+            canvasH = 3840;
+          } else if (reqResolution === "2k") {
+            canvasW = 1440;
+            canvasH = 2560;
+          } else if (reqResolution === "720p") {
+            canvasW = 720;
+            canvasH = 1280;
+          } else {
+            canvasW = 1080;
+            canvasH = 1920;
+          }
+        } else if (reqAspectRatio === "16:9") {
+          if (reqResolution === "4k") {
+            canvasW = 3840;
+            canvasH = 2160;
+          } else if (reqResolution === "2k") {
+            canvasW = 2560;
+            canvasH = 1440;
+          } else if (reqResolution === "720p") {
+            canvasW = 1280;
+            canvasH = 720;
+          } else {
+            canvasW = 1920;
+            canvasH = 1080;
+          }
+        } else if (reqAspectRatio === "1:1") {
+          if (reqResolution === "4k") {
+            canvasW = 2160;
+            canvasH = 2160;
+          } else if (reqResolution === "2k") {
+            canvasW = 1440;
+            canvasH = 1440;
+          } else if (reqResolution === "720p") {
+            canvasW = 720;
+            canvasH = 720;
+          } else {
+            canvasW = 1080;
+            canvasH = 1080;
+          }
+        } else {
+          // Tỷ lệ gốc của video (Original)
+          if (reqResolution === "4k") {
+            const maxDim = Math.max(width, height);
+            const scale = 3840 / (maxDim || 1080);
+            canvasW = Math.round(width * scale);
+            canvasH = Math.round(height * scale);
+          } else if (reqResolution === "2k") {
+            const maxDim = Math.max(width, height);
+            const scale = 2560 / (maxDim || 1080);
+            canvasW = Math.round(width * scale);
+            canvasH = Math.round(height * scale);
+          } else if (reqResolution === "1080p") {
+            const maxDim = Math.max(width, height);
+            const scale = 1920 / (maxDim || 1080);
+            canvasW = Math.round(width * scale);
+            canvasH = Math.round(height * scale);
+          } else if (reqResolution === "720p") {
+            const maxDim = Math.max(width, height);
+            const scale = 1280 / (maxDim || 720);
+            canvasW = Math.round(width * scale);
+            canvasH = Math.round(height * scale);
+          } else {
+            canvasW = width;
+            canvasH = height;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
+        if (!ctx) {
+          resolvePromise(false);
+          throw new Error("Không thể khởi tạo Canvas 2D");
+        }
+        canvas.width = canvasW % 2 === 0 ? canvasW : canvasW + 1;
+        canvas.height = canvasH % 2 === 0 ? canvasH : canvasH + 1;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
 
       let logoImg: HTMLImageElement | null = null;
       if (logoConfig.enabled && logoConfig.imageSrc) {
@@ -2694,7 +2791,19 @@ export default function AiVideoEditorPage() {
         }
       }
 
-      const recorder = new MediaRecorder(canvasStream, { mimeType });
+      let videoBitsPerSecond = 20_000_000;
+      if (reqResolution === "4k") videoBitsPerSecond = 45_000_000;
+      else if (reqResolution === "2k") videoBitsPerSecond = 30_000_000;
+      else if (reqResolution === "1080p") videoBitsPerSecond = 18_000_000;
+      else if (reqResolution === "720p") videoBitsPerSecond = 8_000_000;
+      else videoBitsPerSecond = 28_000_000;
+
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond });
+      } catch {
+        recorder = new MediaRecorder(canvasStream, { mimeType });
+      }
       const chunks: Blob[] = [];
 
       recorder.ondataavailable = (e) => {
@@ -2716,6 +2825,7 @@ export default function AiVideoEditorPage() {
       recorder.onstop = () => {
         if (chunks.length === 0) {
           setIsExporting(false);
+          resolvePromise(false);
           return;
         }
 
@@ -2738,6 +2848,7 @@ export default function AiVideoEditorPage() {
         setExportProgress(100);
         setTimeout(() => {
           setIsExporting(false);
+          resolvePromise(true);
         }, 600);
       };
 
@@ -2926,11 +3037,99 @@ export default function AiVideoEditorPage() {
           }, 300);
         }
       };
-    } catch (err: any) {
-      console.error("Lỗi xuất video:", err);
-      setIsExporting(false);
-      alert("Lỗi xuất video: " + (err?.message || "Vui lòng thử lại"));
+      } catch (err: any) {
+        console.error("Lỗi xuất video:", err);
+        setIsExporting(false);
+        alert("Lỗi xuất video: " + (err?.message || "Vui lòng thử lại"));
+        resolvePromise(false);
+      }
+    });
+  };
+
+  // ↗️ MỞ PHÂN ĐOẠN TẬP TRONG TAB MỚI ĐỂ XEM VÀ TẢI TRỰC TIẾP
+  const handleOpenPartInNewTab = (part: { label: string; timeLabel: string; startSec: number; endSec: number; cuesCount: number }) => {
+    if (!videoUrl) return;
+    const durSec = Math.max(1, Math.round(part.endSec - part.startSec));
+    const htmlContent = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${part.label} (${part.timeLabel}) - KPost AI Video Player</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #070d18; color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .card { max-width: 960px; width: 100%; background: #0f1c33; border: 1px solid #25447c; border-radius: 24px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); text-align: center; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+    h2 { margin: 0 0 6px; font-size: 22px; font-weight: 900; color: #fff; }
+    p { margin: 0 0 16px; color: #94a3b8; font-size: 13px; font-family: monospace; }
+    video { width: 100%; max-height: 65vh; border-radius: 16px; background: #000; box-shadow: 0 10px 25px rgba(0,0,0,0.6); outline: none; }
+    .actions { display: flex; gap: 12px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+    .btn { padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 13px; text-decoration: none; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.15s, opacity 0.15s; }
+    .btn:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn-download { background: linear-gradient(to right, #059669, #0d9488); color: white; box-shadow: 0 10px 15px -3px rgba(5,150,105,0.4); }
+    .btn-replay { background: #1e3a8a; color: white; border: 1px solid #3b82f6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">KPOST AI STUDIO • TẬP PHÂN ĐOẠN</div>
+    <h2>🎬 ${part.label} (${part.timeLabel})</h2>
+    <p>Thời lượng: ${durSec} giây (${Math.floor(durSec / 60)}p ${durSec % 60}s) • ${part.cuesCount} câu phụ đề</p>
+    <video id="player" controls autoplay playsinline src="${videoUrl}#t=${part.startSec},${part.endSec}"></video>
+    <div class="actions">
+      <a class="btn btn-download" href="${videoUrl}" download="${(videoName || "video").replace(/\\.[^/.]+$/, "")}_${part.label}.mp4">⬇️ Tải Video Gốc Tập Này</a>
+      <button class="btn btn-replay" onclick="const p = document.getElementById('player'); p.currentTime = ${part.startSec}; p.play();">🔄 Phát Lại Từ Đầu Tập</button>
+    </div>
+  </div>
+  <script>
+    const p = document.getElementById('player');
+    p.currentTime = ${part.startSec};
+    p.ontimeupdate = () => {
+      if (p.currentTime >= ${part.endSec}) {
+        p.pause();
+      }
+    };
+  </script>
+</body>
+</html>`;
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
+
+  // ⚡ XUẤT HÀNG LOẠT TẤT CẢ CÁC TẬP TỰ ĐỘNG
+  const handleExportAllParts = async () => {
+    if (!autoParts || autoParts.length === 0) {
+      alert("Chưa có danh sách tập để xuất!");
+      return;
     }
+    batchAbortRef.current = false;
+    setIsBatchExporting(true);
+    setBatchTotal(autoParts.length);
+    setShowExportModal(false);
+
+    for (let i = 0; i < autoParts.length; i++) {
+      if (batchAbortRef.current) break;
+      const part = autoParts[i];
+      setBatchCurrentIndex(i + 1);
+      setBatchPartLabel(`${part.label} (${part.timeLabel})`);
+
+      const success = await handleExportFullVideo({
+        startTimeSec: part.startSec,
+        endTimeSec: part.endSec,
+        partTitle: `${part.label} (${part.timeLabel})`,
+        format: exportOptions.format,
+        aspectRatio: exportOptions.aspectRatio,
+        resolution: exportOptions.resolution,
+      });
+
+      if (!success && batchAbortRef.current) break;
+      // Nghỉ 1.5s giữa các tập để trình duyệt giải phóng bộ nhớ và kích hoạt download
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+
+    setIsBatchExporting(false);
   };
 
   const isBannerVisible = useMemo(() => {
@@ -3105,16 +3304,29 @@ export default function AiVideoEditorPage() {
           </div>
         </div>
 
-        {/* TIẾN TRÌNH XUẤT VIDEO */}
-        {isExporting && (
-          <div className="mb-6 p-6 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in">
+        {/* TIẾN TRÌNH XUẤT VIDEO (HỖ TRỢ XUẤT ĐƠN LẺ & HÀNG LOẠT) */}
+        {(isExporting || isBatchExporting) && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in border border-emerald-500/30">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <Download size={24} className="text-emerald-400 animate-bounce" />
                 <div>
-                  <h3 className="text-base font-black text-white">Đang Render & Xuất Video Hoàn Chỉnh...</h3>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    {isBatchExporting ? (
+                      <>
+                        <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-xs font-black shadow-sm">
+                          ⚡ XUẤT HÀNG LOẠT: TẬP {batchCurrentIndex}/{batchTotal}
+                        </span>
+                        <span>{batchPartLabel}</span>
+                      </>
+                    ) : (
+                      `Đang Render & Xuất Video ${exportPartTitle ? `• ${exportPartTitle}` : ""} (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})...`
+                    )}
+                  </h3>
                   <p className="text-xs text-emerald-200 mt-0.5">
-                    Hệ thống đang gắn phụ đề, logo, banner và hiệu ứng vào video (Tự động tải về khi đủ 100%)
+                    {isBatchExporting
+                      ? `Đang xuất tập ${batchCurrentIndex}/${batchTotal}. Mỗi tập khi xuất xong sẽ tự động tải file về máy!`
+                      : "Hệ thống đang gắn phụ đề, logo, banner và hiệu ứng vào video (Tự động tải về khi đủ 100%)"}
                   </p>
                 </div>
               </div>
@@ -3129,18 +3341,20 @@ export default function AiVideoEditorPage() {
                     className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black rounded-xl cursor-pointer shadow-lg shadow-emerald-950/60 animate-pulse flex items-center gap-1.5"
                     title="Bấm để hoàn tất và tải ngay phần video đã render về máy"
                   >
-                    <Download size={13} /> ⚡ Tải Video Ngay ({exportProgress}%)
+                    <Download size={13} /> ⚡ Tải Ngay ({exportProgress}%)
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => {
+                    batchAbortRef.current = true;
                     exportAbortRef.current = true;
+                    setIsBatchExporting(false);
                     setIsExporting(false);
                   }}
                   className="px-3 py-1 bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
                 >
-                  Hủy
+                  {isBatchExporting ? "Dừng Hàng Loạt" : "Hủy"}
                 </button>
               </div>
             </div>
@@ -4781,25 +4995,58 @@ export default function AiVideoEditorPage() {
 
                   {/* Độ phân giải */}
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Độ phân giải:</label>
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-blue-200">Độ phân giải (Độ nét):</label>
+                      <span className="text-[10px] text-emerald-400 font-extrabold uppercase">
+                        {exportOptions.resolution === "4k"
+                          ? "4K Ultra HD"
+                          : exportOptions.resolution === "2k"
+                          ? "2K Siêu Nét (>1080p)"
+                          : exportOptions.resolution === "1080p"
+                          ? "Full HD 1080p"
+                          : exportOptions.resolution === "original"
+                          ? "Gốc Siêu Nét"
+                          : "HD 720p"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 mb-1">
                       {[
+                        { id: "4k", label: "4K (2160p)", sub: "Ultra HD" },
+                        { id: "2k", label: "2K (1440p)", sub: "Siêu nét" },
                         { id: "1080p", label: "1080p", sub: "Full HD" },
-                        { id: "720p", label: "720p", sub: "HD Nhanh" },
-                        { id: "original", label: "Gốc", sub: "Original" },
                       ].map((res) => (
                         <button
                           key={res.id}
                           type="button"
                           onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center ${
+                          className={`py-1.5 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center ${
                             exportOptions.resolution === res.id
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950 font-black"
                               : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
                           }`}
                         >
                           <span className="font-black text-[11px]">{res.label}</span>
-                          <span className="text-[9px] opacity-75">{res.sub}</span>
+                          <span className="text-[9px] opacity-80">{res.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        { id: "original", label: "Gốc", sub: "100% Nguyên bản" },
+                        { id: "720p", label: "720p", sub: "HD Nhanh (File nhẹ)" },
+                      ].map((res) => (
+                        <button
+                          key={res.id}
+                          type="button"
+                          onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
+                          className={`py-1.5 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center ${
+                            exportOptions.resolution === res.id
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950 font-black"
+                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                          }`}
+                        >
+                          <span className="font-black text-[11px]">{res.label}</span>
+                          <span className="text-[9px] opacity-80">{res.sub}</span>
                         </button>
                       ))}
                     </div>
@@ -4925,11 +5172,44 @@ export default function AiVideoEditorPage() {
                       </div>
                     </div>
 
+                    {/* BATCH EXPORT ACTION BAR */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 border border-amber-500/40 rounded-2xl shadow-lg">
+                      <div className="flex items-center gap-2.5">
+                        <span className="p-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl shrink-0">
+                          <Download size={18} />
+                        </span>
+                        <div>
+                          <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
+                            ⚡ Tải nhanh toàn bộ {autoParts.length} tập
+                            <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[10px] font-black uppercase">
+                              Tự động
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-blue-200/80">
+                            Không cần ngồi bấm từng tập! Tự động render lần lượt và tải về máy từng file.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleExportAllParts}
+                        disabled={!videoUrl || isExporting || isBatchExporting}
+                        className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-950/80 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50"
+                      >
+                        <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                      </button>
+                    </div>
+
                     {/* Danh sách các tập */}
                     <div>
-                      <p className="text-[11px] font-bold text-blue-200 mb-2">
-                        Danh sách các tập ({autoParts.length} tập): Bấm xem trước hoặc xuất riêng từng tập
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-bold text-blue-200">
+                          Danh sách {autoParts.length} tập: Tải từng tập, mở trong tab mới hoặc xuất hàng loạt
+                        </p>
+                        <span className="text-[10px] text-emerald-400 font-bold uppercase">
+                          {exportOptions.format} • {exportOptions.resolution}
+                        </span>
+                      </div>
                       <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                         {autoParts.map((part) => (
                           <div
@@ -4948,7 +5228,7 @@ export default function AiVideoEditorPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -4961,7 +5241,15 @@ export default function AiVideoEditorPage() {
                                 className="px-2 py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                 title="Xem trước tập này trong trình phát"
                               >
-                                <Play size={11} /> Xem trước
+                                <Play size={11} /> Xem
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPartInNewTab(part)}
+                                className="px-2 py-1 bg-[#152747] hover:bg-[#1E3867] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Mở tập này trong Tab mới để xem hoặc tải riêng"
+                              >
+                                <ExternalLink size={11} /> Tab mới
                               </button>
                               <button
                                 type="button"
@@ -5120,7 +5408,7 @@ export default function AiVideoEditorPage() {
             </div>
 
             {/* Footer Modal */}
-            <div className="mt-4 pt-3 border-t border-[#1E3867] flex items-center justify-between gap-3 shrink-0">
+            <div className="mt-4 pt-3 border-t border-[#1E3867] flex items-center justify-between gap-3 shrink-0 flex-wrap">
               <button
                 type="button"
                 onClick={() => setShowExportModal(false)}
@@ -5129,51 +5417,64 @@ export default function AiVideoEditorPage() {
                 Đóng
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (exportOptions.splitMode === "full") {
-                    handleExportFullVideo({
-                      startTimeSec: 0,
-                      endTimeSec: videoDuration || undefined,
-                      partTitle: "Toàn bộ video",
-                      format: exportOptions.format,
-                      aspectRatio: exportOptions.aspectRatio,
-                      resolution: exportOptions.resolution,
-                    });
-                  } else if (exportOptions.splitMode === "custom") {
-                    handleExportFullVideo({
-                      startTimeSec: exportOptions.customStartSec,
-                      endTimeSec: exportOptions.customEndSec,
-                      partTitle: `Đoạn ${formatSecToTime(exportOptions.customStartSec)} - ${formatSecToTime(exportOptions.customEndSec)}`,
-                      format: exportOptions.format,
-                      aspectRatio: exportOptions.aspectRatio,
-                      resolution: exportOptions.resolution,
-                    });
-                  } else if (exportOptions.splitMode === "auto_parts") {
-                    const firstPart = autoParts[0];
-                    if (firstPart) {
+              <div className="flex items-center gap-2 flex-wrap">
+                {exportOptions.splitMode === "auto_parts" && autoParts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleExportAllParts}
+                    disabled={!videoUrl || isExporting || isBatchExporting}
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-950/80 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
+                  >
+                    <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (exportOptions.splitMode === "full") {
                       handleExportFullVideo({
-                        startTimeSec: firstPart.startSec,
-                        endTimeSec: firstPart.endSec,
-                        partTitle: `${firstPart.label} (${firstPart.timeLabel})`,
+                        startTimeSec: 0,
+                        endTimeSec: videoDuration || undefined,
+                        partTitle: "Toàn bộ video",
                         format: exportOptions.format,
                         aspectRatio: exportOptions.aspectRatio,
                         resolution: exportOptions.resolution,
                       });
+                    } else if (exportOptions.splitMode === "custom") {
+                      handleExportFullVideo({
+                        startTimeSec: exportOptions.customStartSec,
+                        endTimeSec: exportOptions.customEndSec,
+                        partTitle: `Đoạn ${formatSecToTime(exportOptions.customStartSec)} - ${formatSecToTime(exportOptions.customEndSec)}`,
+                        format: exportOptions.format,
+                        aspectRatio: exportOptions.aspectRatio,
+                        resolution: exportOptions.resolution,
+                      });
+                    } else if (exportOptions.splitMode === "auto_parts") {
+                      const firstPart = autoParts[0];
+                      if (firstPart) {
+                        handleExportFullVideo({
+                          startTimeSec: firstPart.startSec,
+                          endTimeSec: firstPart.endSec,
+                          partTitle: `${firstPart.label} (${firstPart.timeLabel})`,
+                          format: exportOptions.format,
+                          aspectRatio: exportOptions.aspectRatio,
+                          resolution: exportOptions.resolution,
+                        });
+                      }
                     }
-                  }
-                }}
-                disabled={!videoUrl || isExporting}
-                className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
-              >
-                <Download size={15} />
-                {exportOptions.splitMode === "auto_parts"
-                  ? `Xuất Tập 1 (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution})`
-                  : exportOptions.splitMode === "custom"
-                  ? `Xuất Đoạn Cắt (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution})`
-                  : `Xuất Toàn Bộ Video (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution})`}
-              </button>
+                  }}
+                  disabled={!videoUrl || isExporting || isBatchExporting}
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+                >
+                  <Download size={15} />
+                  {exportOptions.splitMode === "auto_parts"
+                    ? `Xuất Tập 1 (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`
+                    : exportOptions.splitMode === "custom"
+                    ? `Xuất Đoạn Cắt (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`
+                    : `Xuất Toàn Bộ Video (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
