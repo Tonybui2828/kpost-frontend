@@ -2518,19 +2518,44 @@ export default function AiVideoEditorPage() {
     return new Promise<boolean>(async (resolvePromise) => {
       const exportVideo = document.createElement("video");
       exportVideo.src = videoUrl;
-      exportVideo.crossOrigin = "anonymous";
+      if (!videoUrl.startsWith("blob:") && !videoUrl.startsWith("data:")) {
+        exportVideo.crossOrigin = "anonymous";
+      }
       exportVideo.muted = false;
       exportVideo.loop = false;
       exportVideo.playsInline = true;
+      // 🌟 ĐẶT VIDEO TRONG VIEWPORT ĐỂ GPU & TRÌNH DUYỆT GIẢI MÃ LIÊN TỤC TỪNG KHUNG HÌNH (KHÔNG BỊ CHROME FREEZE/THROTTLE VỀ 1 FRAME TĨNH)
       exportVideo.style.position = "fixed";
-      exportVideo.style.left = "-9999px";
-      exportVideo.style.top = "-9999px";
-      exportVideo.style.width = "1920px";
-      exportVideo.style.height = "1080px";
-      exportVideo.style.opacity = "0";
+      exportVideo.style.bottom = "20px";
+      exportVideo.style.right = "20px";
+      exportVideo.style.width = "260px";
+      exportVideo.style.height = "146px";
+      exportVideo.style.opacity = "0.98";
+      exportVideo.style.borderRadius = "12px";
+      exportVideo.style.border = "2px solid #10b981";
+      exportVideo.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7)";
+      exportVideo.style.zIndex = "99999";
       exportVideo.style.pointerEvents = "none";
-      exportVideo.style.zIndex = "-999";
+      exportVideo.style.objectFit = "cover";
+      exportVideo.style.backgroundColor = "#000000";
       document.body.appendChild(exportVideo);
+
+      const renderMonitorBadge = document.createElement("div");
+      renderMonitorBadge.style.position = "fixed";
+      renderMonitorBadge.style.bottom = "172px";
+      renderMonitorBadge.style.right = "20px";
+      renderMonitorBadge.style.zIndex = "99999";
+      renderMonitorBadge.style.pointerEvents = "none";
+      renderMonitorBadge.style.padding = "5px 12px";
+      renderMonitorBadge.style.borderRadius = "8px";
+      renderMonitorBadge.style.backgroundColor = "rgba(6, 78, 59, 0.95)";
+      renderMonitorBadge.style.color = "#a7f3d0";
+      renderMonitorBadge.style.fontSize = "11px";
+      renderMonitorBadge.style.fontWeight = "bold";
+      renderMonitorBadge.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+      renderMonitorBadge.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.4)";
+      renderMonitorBadge.innerHTML = "🔴 Màn hình Render GPU Realtime";
+      document.body.appendChild(renderMonitorBadge);
 
       try {
         await new Promise((resolve, reject) => {
@@ -2807,29 +2832,44 @@ export default function AiVideoEditorPage() {
         }
       }
 
-      let mimeType = "video/webm;codecs=vp9";
+      let mimeType = "video/webm;codecs=vp9,opus";
+      let actualExt = "webm";
+
       if (reqFormat === "mp4") {
-        if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1.42E01E,mp4a.40.2")) {
-          mimeType = "video/mp4;codecs=avc1.42E01E,mp4a.40.2";
-        } else if (MediaRecorder.isTypeSupported("video/mp4")) {
-          mimeType = "video/mp4";
-        } else if (MediaRecorder.isTypeSupported("video/webm;codecs=h264")) {
-          mimeType = "video/webm;codecs=h264";
+        const mp4Candidates = [
+          "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+          "video/mp4;codecs=avc1",
+          "video/mp4",
+        ];
+        const supportedMp4 = mp4Candidates.find((m) => MediaRecorder.isTypeSupported(m));
+        if (supportedMp4) {
+          mimeType = supportedMp4;
+          actualExt = "mp4";
+        } else {
+          const webmCandidates = [
+            "video/webm;codecs=vp9,opus",
+            "video/webm;codecs=vp8,opus",
+            "video/webm",
+          ];
+          mimeType = webmCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || "video/webm";
+          actualExt = "webm";
         }
       } else {
-        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-          mimeType = "video/webm;codecs=vp9";
-        } else if (MediaRecorder.isTypeSupported("video/webm")) {
-          mimeType = "video/webm";
-        }
+        const webmCandidates = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm",
+        ];
+        mimeType = webmCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || "video/webm";
+        actualExt = "webm";
       }
 
-      let videoBitsPerSecond = 20_000_000;
-      if (reqResolution === "4k") videoBitsPerSecond = 45_000_000;
-      else if (reqResolution === "2k") videoBitsPerSecond = 30_000_000;
-      else if (reqResolution === "1080p") videoBitsPerSecond = 18_000_000;
+      let videoBitsPerSecond = 18_000_000;
+      if (reqResolution === "4k") videoBitsPerSecond = 35_000_000;
+      else if (reqResolution === "2k") videoBitsPerSecond = 24_000_000;
+      else if (reqResolution === "1080p") videoBitsPerSecond = 16_000_000;
       else if (reqResolution === "720p") videoBitsPerSecond = 8_000_000;
-      else videoBitsPerSecond = 28_000_000;
+      else videoBitsPerSecond = 20_000_000;
 
       let recorder: MediaRecorder;
       try {
@@ -2852,6 +2892,9 @@ export default function AiVideoEditorPage() {
         if (exportVideo.parentNode) {
           exportVideo.parentNode.removeChild(exportVideo);
         }
+        if (renderMonitorBadge.parentNode) {
+          renderMonitorBadge.parentNode.removeChild(renderMonitorBadge);
+        }
         try { audioCtx.close(); } catch {}
       };
 
@@ -2863,7 +2906,7 @@ export default function AiVideoEditorPage() {
         }
 
         const exportedBlob = new Blob(chunks, { type: mimeType });
-        const ext = reqFormat === "mp4" ? "mp4" : (mimeType.includes("mp4") ? "mp4" : "webm");
+        const ext = actualExt;
         const safeName = videoName.replace(/\.[^/.]+$/, "") || "video";
         const partSlug = partTitle ? `_${partTitle.replace(/[\s\(\):]/g, "_")}` : (startSec > 0 || endSec < videoDurationTotal ? `_${formatSecToTime(startSec).replace(':', 'm')}_to_${formatSecToTime(endSec).replace(':', 'm')}` : "");
         const ratioSlug = reqAspectRatio !== "original" ? `_${reqAspectRatio.replace(':', 'x')}` : "";
@@ -2961,6 +3004,9 @@ export default function AiVideoEditorPage() {
 
         const currentProgress = Math.min(99, Math.round(((curTime - startSec) / targetDuration) * 100));
         setExportProgress(currentProgress);
+        if (renderMonitorBadge) {
+          renderMonitorBadge.innerHTML = `🔴 Render GPU: ${currentProgress}% (${formatSecToTime(curTime)})`;
+        }
 
         ctx.save();
         if (canvasFilterCss !== "none") {
@@ -3073,6 +3119,12 @@ export default function AiVideoEditorPage() {
       } catch (err: any) {
         console.error("Lỗi xuất video:", err);
         setIsExporting(false);
+        if (exportVideo.parentNode) {
+          exportVideo.parentNode.removeChild(exportVideo);
+        }
+        if (renderMonitorBadge.parentNode) {
+          renderMonitorBadge.parentNode.removeChild(renderMonitorBadge);
+        }
         alert("Lỗi xuất video: " + (err?.message || "Vui lòng thử lại"));
         resolvePromise(false);
       }
