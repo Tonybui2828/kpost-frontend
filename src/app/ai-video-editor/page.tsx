@@ -585,71 +585,104 @@ export default function AiVideoEditorPage() {
       return;
     }
     setIsTranslatingCues(true);
+    setTranscribeSuccessMsg("");
+
     try {
-      let translatedCues: SubtitleCue[] | null = null;
+      const sourceCues = [...subtitleCues];
+      const updatedCues = [...sourceCues];
+      const BATCH_SIZE = 120;
+      const totalBatches = Math.ceil(sourceCues.length / BATCH_SIZE);
 
-      // 1. Thử gọi API backend
-      try {
-        const resp = await axios.post("/api/translate-cues", {
-          cues: subtitleCues,
-        }, { timeout: 35000 });
+      for (let b = 0; b < totalBatches; b++) {
+        const startIdx = b * BATCH_SIZE;
+        const endIdx = Math.min(sourceCues.length, (b + 1) * BATCH_SIZE);
+        const batchSlice = sourceCues.slice(startIdx, endIdx);
 
-        if (resp.data?.success && Array.isArray(resp.data.cues)) {
-          translatedCues = resp.data.cues;
-        }
-      } catch (srvErr) {
-        console.warn("[Backend translate failed, switching to direct in-browser translation]:", srvErr);
-      }
-
-      // 2. Dự phòng trực tiếp trên trình duyệt (Nếu backend lỗi hoặc còn sót câu tiếng Trung)
-      if (!translatedCues || translatedCues.some((c) => /[\u4e00-\u9fa5]/.test(c.text))) {
-        const sourceCues = translatedCues || subtitleCues;
-        const updated = [...sourceCues];
-        const BATCH = 12;
-
-        for (let i = 0; i < updated.length; i += BATCH) {
-          const slice = updated.slice(i, i + BATCH);
-          await Promise.all(
-            slice.map(async (cue, idx) => {
-              if (/[\u4e00-\u9fa5]/.test(cue.text)) {
-                try {
-                  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cue.text.trim())}&langpair=zh|vi&de=tech28.vn@gmail.com`;
-                  const res = await fetch(url);
-                  if (res.ok) {
-                    const data = await res.json();
-                    const trans = data?.responseData?.translatedText;
-                    if (trans && typeof trans === "string" && !trans.includes("MYMEMORY WARNING")) {
-                      updated[i + idx] = {
-                        ...cue,
-                        text: trans.trim(),
-                        words: undefined,
-                      };
-                    }
-                  }
-                } catch {}
-              }
-            })
+        try {
+          const resp = await axios.post(
+            "/api/translate-cues",
+            { cues: batchSlice },
+            { timeout: 45000 }
           );
+
+          if (resp.data?.success && Array.isArray(resp.data.cues)) {
+            for (let j = 0; j < resp.data.cues.length; j++) {
+              updatedCues[startIdx + j] = {
+                ...batchSlice[j],
+                text: resp.data.cues[j].text,
+                words: undefined,
+              };
+            }
+          }
+        } catch (srvErr) {
+          console.warn(`[Batch ${b + 1} translate error]:`, srvErr);
         }
-        translatedCues = updated;
       }
 
-      if (translatedCues && translatedCues.length > 0) {
-        setSubtitleCues(translatedCues);
-        audioCacheRef.current.clear();
-        spokenTextsHistoryRef.current.clear();
-        currentSentenceSpokenRef.current = null;
-        lastSpokenCueIdRef.current = null;
-        
-        const vietnameseCount = translatedCues.filter((c) => !/[\u4e00-\u9fa5]/.test(c.text)).length;
-        setTranscribeSuccessMsg(`✅ Đã dịch thành công ${vietnameseCount}/${translatedCues.length} câu sang Tiếng Việt chuẩn xác!`);
-        
-        // Phát ngay câu đầu tiên để người dùng nghe thử giọng lồng tiếng Việt
-        if (translatedCues[0]?.text) {
-          speakSentence(translatedCues[0].text);
+      // Kiểm tra xem còn câu nào còn sót chữ Hán không, nếu còn thì dự phòng qua Google clients5 trực tiếp
+      const stillChineseIndices = updatedCues
+        .map((c, i) => (/[\u4e00-\u9fa5]/.test(c.text) ? i : -1))
+        .filter((i) => i !== -1);
+
+      if (stillChineseIndices.length > 0) {
+        console.log(`[Safety Net] Dịch bù ${stillChineseIndices.length} câu còn sót...`);
+        const BATCH = 30;
+        for (let i = 0; i < stillChineseIndices.length; i += BATCH) {
+          const chunkIndices = stillChineseIndices.slice(i, i + BATCH);
+          const chunkTexts = chunkIndices.map((idx) => updatedCues[idx].text);
+          const prefixed = chunkTexts.map((t, idx) => `${idx}:: ${t.replace(/\r?\n/g, " ")}`).join("\n");
+          try {
+            const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=vi&q=${encodeURIComponent(prefixed)}`;
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              const rawText = Array.isArray(data) && Array.isArray(data[0]) ? data[0][0] : (typeof data[0] === "string" ? data[0] : "");
+              if (rawText) {
+                const lines = rawText.split("\n");
+                const map = new Map<number, string>();
+                for (const l of lines) {
+                  const m = l.match(/^(\d+)::\s*(.+)$/);
+                  if (m) map.set(parseInt(m[1], 10), m[2].trim());
+                }
+                for (let k = 0; k < chunkIndices.length; k++) {
+                  const targetIdx = chunkIndices[k];
+                  const trans = map.get(k);
+                  if (trans) {
+                    updatedCues[targetIdx] = {
+                      ...updatedCues[targetIdx],
+                      text: trans,
+                      words: undefined,
+                    };
+                  }
+                }
+              }
+            }
+          } catch {}
         }
-      } else {
-        alert("Không thể dịch phụ đề. Vui lòng kiểm tra lại kết nối mạng!");
+      }
+
+      setSubtitleCues(updatedCues);
+      audioCacheRef.current.clear();
+      spokenTextsHistoryRef.current.clear();
+      currentSentenceSpokenRef.current = null;
+      lastSpokenCueIdRef.current = null;
+
+      // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG MC NGAY LẬP TỨC
+      setVoiceoverConfig((prev) => ({
+        ...prev,
+        enabled: true,
+        muteOriginal: false,
+        originalVolume: 10,
+      }));
+
+      const vietnameseCount = updatedCues.filter((c) => !/[\u4e00-\u9fa5]/.test(c.text)).length;
+      setTranscribeSuccessMsg(`✅ Đã dịch thành công ${vietnameseCount}/${updatedCues.length} câu sang Tiếng Việt chuẩn xác! MC AI đã sẵn sàng phát tiếng Việt.`);
+
+      // Phát ngay câu đầu tiên để người dùng nghe thấy giọng lồng tiếng Việt tức thì
+      if (updatedCues[0]?.text) {
+        setTimeout(() => {
+          speakSentence(updatedCues[0].text);
+        }, 300);
       }
     } catch (e: any) {
       alert("Lỗi dịch phụ đề: " + (e.message || "Vui lòng thử lại"));
