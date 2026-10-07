@@ -2078,6 +2078,156 @@ export default function AiVideoEditorPage() {
     }
   };
 
+  // 🚀 HÀM GỌI TRỰC TIẾP AI TỪ TRÌNH DUYỆT (CHẠY ĐỘC LẬP 100%, KHÔNG CẦN BACKEND, TRÁNH LỖI 520)
+  const callDirectAiReviewClient = async ({
+    geminiKey,
+    groqKey,
+    duration,
+    startOffset,
+    reviewStyle,
+    density,
+    customPrompt,
+    frameSnapshots,
+  }: {
+    geminiKey?: string;
+    groqKey?: string;
+    duration: number;
+    startOffset: number;
+    reviewStyle: string;
+    density: string;
+    customPrompt?: string;
+    frameSnapshots?: string[];
+  }): Promise<{ cues: any[]; storySummary?: string; hook?: string }> => {
+    const styleDescriptions: Record<string, string> = {
+      humorous_viral: `🎭 PHONG CÁCH: HÀI HƯỚC - CÀ KHỊA - LẦY LỘI - BẮT TREND TIKTOK / SHORTS:
+- Văn phong: Hóm hỉnh, tếu táo, châm biếm duyên dáng, dùng từ ngữ hot trend giới trẻ Việt Nam ("anh chàng số nhọ", "quay xe cực khét", "bật ngửa", "hết nước chấm", "đúng là hảo hán", "nhìn cái bản mặt là thấy uy tín rồi", "ai ngờ đâu vừa quay lưng đi thì toang", "cái kết đắng lòng cho thanh niên manh động", "đúng là cao nhân không bằng liều mạng"...).
+- Cách kể: Tóm tắt hành động của nhân vật, chọc cười bằng cách bình luận các tình huống ngớ ngẩn, hiểu lầm hoặc phản ứng bất ngờ.`,
+      dramatic_cinema: `🎬 PHONG CÁCH: TÓM TẮT PHIM ĐIỆN ẢNH - KỊCH TÍNH - CUỐN HÚT:
+- Văn phong: Hồi hộp, giật gân, cuốn hút như các kênh review phim chiếu rạp triệu view.
+- Cách kể: Đặt ra các câu hỏi kích thích tò mò, đẩy cao trào cảm xúc và biến cố bất ngờ.`,
+      philosophical_satire: `💡 PHONG CÁCH: CHÂM BIẾM THÂM THÚY - CƯỜI RA NƯỚC MẮT:
+- Văn phong: Vừa hài hước vừa triết lý, mỉa mai sâu cay những nghịch lý trong cuộc sống, rút ra bài học hài hước thâm sâu.`,
+      speed_recap: `⚡ PHONG CÁCH: REVIEW SIÊU TỐC 60S - DỒN DẬP - GÃY GỌN:
+- Văn phong: Dồn dập, gãy gọn, tốc độ cao, điểm danh các tình tiết gay cấn liên tục.`,
+    };
+
+    const chosenStyle = styleDescriptions[reviewStyle] || styleDescriptions.humorous_viral;
+    const densityInstruction =
+      density === 'high'
+        ? 'Mật độ lời bình: Dày đặc, các câu nối tiếp liên tục (khoảng 3.0s - 4.5s/câu) để giữ chân người xem.'
+        : 'Mật độ lời bình: Vừa phải, khoảng 4.0s - 5.5s/câu, chuyển tiếp mượt mà có khoảng thở tự nhiên.';
+
+    const systemPrompt = `BẠN LÀ MỘT REVIEWER PHIM VÀ VIDEO CHUYÊN NGHIỆP BẬC THẦY, NỔI TIẾNG VỚI HÀNG TRIỆU VIEW TRÊN TIKTOK VÀ YOUTUBE SHORTS.
+NHIỆM VỤ: Phân tích phân đoạn video dài ${duration}s (từ ${startOffset}s) qua các ảnh chụp khung hình thực tế.
+Viết kịch bản review / tóm tắt câu chuyện bằng TIẾNG VIỆT để lồng tiếng cho video.
+${chosenStyle}
+${densityInstruction}
+${customPrompt ? `YÊU CẦU: "${customPrompt}"` : ''}
+NGUYÊN TẮC:
+1. KHÔNG dịch thoại máy móc! Bạn là NGƯỜI DẪN CHUYỆN kể lại toàn bộ câu chuyện với phong cách review cuốn hút nhất.
+2. Bám sát hình ảnh quan sát được: nhân vật làm gì, cảm xúc thế nào, tình huống gì xảy ra.
+3. startSec và endSec phải trong khoảng 0.0s đến ${duration}.0s.
+ĐỊNH DẠNG JSON DUY NHẤT:
+{
+  "storySummary": "Tóm tắt ngắn nội dung phân đoạn",
+  "hook": "Câu mở đầu giật gân",
+  "cues": [
+    { "id": 1, "startSec": 0.5, "endSec": 4.5, "text": "Mở đầu video, anh chàng số nhọ của chúng ta đang tỏ ra hết sức nguy hiểm..." },
+    { "id": 2, "startSec": 4.8, "endSec": 9.2, "text": "Cứ tưởng phen này vớ được món bở, ai ngờ vừa quay lưng đi thì toang..." }
+  ]
+}`;
+
+    // 1. Thử gọi Google Gemini trực tiếp nếu có key
+    if (geminiKey) {
+      const parts: any[] = [];
+      if (frameSnapshots && frameSnapshots.length > 0) {
+        for (const img of frameSnapshots) {
+          const cleanImg = img.includes(',') ? img.split(',')[1] : img;
+          parts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: cleanImg,
+            },
+          });
+        }
+      }
+      parts.push({ text: systemPrompt });
+
+      const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+      for (const m of models) {
+        try {
+          const resp = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiKey}`,
+            {
+              contents: [{ parts }],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.7,
+              },
+            },
+            { timeout: 60000 }
+          );
+          const rawText = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const cleaned = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            const parsed = JSON.parse(cleaned);
+            if (parsed?.cues && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
+              return parsed;
+            }
+          }
+        } catch (e: any) {
+          console.warn(`Lỗi Gemini client trực tiếp (${m}):`, e?.response?.data || e?.message);
+        }
+      }
+    }
+
+    // 2. Thử gọi Groq Llama-3.3-70b trực tiếp nếu có key
+    if (groqKey) {
+      try {
+        const resp = await axios.post(
+          'https://api.groq.com/openai/v1/chat/completions',
+          {
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: 'You are an expert viral movie and video reviewer in Vietnamese. Always output valid JSON only.' },
+              { role: 'user', content: systemPrompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.7,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 60000,
+          }
+        );
+        const rawContent = resp.data?.choices?.[0]?.message?.content;
+        if (rawContent) {
+          const parsed = JSON.parse(rawContent);
+          const cues = parsed.cues || parsed.segments || parsed.subtitles;
+          if (Array.isArray(cues) && cues.length > 0) {
+            return {
+              cues: cues.map((c: any, idx: number) => ({
+                id: c.id || idx + 1,
+                startSec: Number(c.startSec || c.start || (idx * 4.0).toFixed(1)),
+                endSec: Number(c.endSec || c.end || ((idx + 1) * 4.0).toFixed(1)),
+                text: String(c.text || c.content || ''),
+              })),
+              storySummary: parsed.storySummary || '',
+              hook: parsed.hook || '',
+            };
+          }
+        }
+      } catch (e: any) {
+        console.warn('Lỗi Groq client trực tiếp:', e?.response?.data || e?.message);
+      }
+    }
+
+    throw new Error('Chưa cấu hình API Key. Vui lòng bấm "Cài đặt API Key" để nhập GEMINI_API_KEY hoặc GROQ_API_KEY!');
+  };
+
   // 🎬 AI REVIEW VIDEO & TÓM TẮT PHIM HÀI HƯỚC (TIKTOK / YOUTUBE SHORTS VIRAL)
   const handleStartAiVideoReview = async () => {
     if (!videoUrl && !selectedFile) {
@@ -2146,22 +2296,23 @@ export default function AiVideoEditorPage() {
           }
         }
 
-        // 📸 CHỤP CÁC KHUNG HÌNH TOÀN CẢNH (FULL FRAME) ĐỂ AI QUAN SÁT RÕ HÀNH ĐỘNG, BIỂU CẢM VÀ TÌNH TIẾT
+        // 📸 CHỤP CÁC KHUNG HÌNH (GỌN NHẸ 480px, 50% QUALITY) ĐỂ AI QUAN SÁT RÕ BỐI CẢNH MÀ KHÔNG GÂY QUÁ TẢI
         let frameSnapshots: string[] = [];
         if (videoRef.current) {
           try {
             const canvas = document.createElement("canvas");
             const vW = videoRef.current.videoWidth || 640;
             const vH = videoRef.current.videoHeight || 360;
-            canvas.width = Math.min(640, vW);
+            canvas.width = Math.min(480, vW);
             canvas.height = Math.round(canvas.width * (vH / vW));
             const ctx = canvas.getContext("2d");
             if (ctx) {
               const originalTime = videoRef.current.currentTime;
               const sampleTimes: number[] = [];
-              const step = Math.max(3.0, chunkDur / 8);
+              const step = Math.max(8.0, chunkDur / 4);
               for (let t = chunkStart + 1.0; t < chunkEnd - 0.5; t += step) {
                 sampleTimes.push(t);
+                if (sampleTimes.length >= 4) break;
               }
               for (const t of sampleTimes) {
                 try {
@@ -2172,7 +2323,7 @@ export default function AiVideoEditorPage() {
                     setTimeout(r, 120);
                   });
                   ctx.drawImage(videoRef.current, 0, 0, vW, vH, 0, 0, canvas.width, canvas.height);
-                  const img = canvas.toDataURL("image/jpeg", 0.65);
+                  const img = canvas.toDataURL("image/jpeg", 0.5);
                   if (img && img.length > 200) frameSnapshots.push(img);
                 } catch {}
               }
@@ -2184,14 +2335,8 @@ export default function AiVideoEditorPage() {
         }
 
         let res: any = null;
-        const reviewEndpoints = [
-          "/api/ai-video-review",
-          `${apiBase}/api/ai-video-review`,
-          `${apiBase}/ai-content/ai-video-review`,
-          "/ai-content/ai-video-review",
-          "https://api.kpost.vn/ai-content/ai-video-review",
-          "https://api.kpost.vn/api/ai-video-review",
-        ];
+        // Chỉ gọi route nội bộ Next.js, không gọi api.kpost.vn (để tránh 100% lỗi Cloudflare 520)
+        const reviewEndpoints = ["/api/ai-video-review"];
 
         for (const url of reviewEndpoints) {
           try {
@@ -2212,7 +2357,7 @@ export default function AiVideoEditorPage() {
                 geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
                 groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
               },
-              { timeout: 90000 }
+              { timeout: 60000 }
             );
             if (res?.data?.cues && res.data.cues.length > 0) {
               break;
@@ -2232,11 +2377,48 @@ export default function AiVideoEditorPage() {
               strErr.includes("429")
             ) {
               globalLastErrorMsg = "Tài khoản Google Gemini của bạn tạm thời chạm giới hạn quota. Vui lòng thử lại sau hoặc nhập thêm GROQ_API_KEY dự phòng!";
-            } else if (strErr && !strErr.includes("Cannot POST") && !strErr.includes("404")) {
-              globalLastErrorMsg = strErr;
-            } else if (!globalLastErrorMsg) {
+            } else if (strErr && !strErr.includes("Cannot POST") && !strErr.includes("404") && !strErr.includes("520")) {
               globalLastErrorMsg = strErr;
             }
+          }
+        }
+
+        // 🌟 NẾU ROUTE SERVER CHƯA ĐƯỢC DEPLOY HOẶC LỖI -> TỰ ĐỘNG GỌI TRỰC TIẾP AI TỪ TRÌNH DUYỆT (CLIENT-SIDE DIRECT FALLBACK)
+        if (!res?.data?.cues || res.data.cues.length === 0) {
+          const clientGemini = customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || "";
+          const clientGroq = customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || "";
+
+          if (clientGemini || clientGroq) {
+            try {
+              setReviewStatus(`Đang gọi trực tiếp AI từ trình duyệt để viết kịch bản review phân đoạn ${chunkIdx + 1}/${totalChunks}...`);
+              const directData = await callDirectAiReviewClient({
+                geminiKey: clientGemini,
+                groqKey: clientGroq,
+                duration: chunkDur,
+                startOffset: chunkStart,
+                reviewStyle: reviewConfig.style,
+                density: reviewConfig.density,
+                customPrompt: reviewConfig.customPrompt,
+                frameSnapshots: frameSnapshots,
+              });
+              if (directData?.cues && directData.cues.length > 0) {
+                res = { data: directData };
+              }
+            } catch (directErr: any) {
+              console.warn("Lỗi gọi trực tiếp AI từ client:", directErr);
+              const errMsg = directErr?.message || String(directErr);
+              if (errMsg.includes("402") || errMsg.includes("prepayment")) {
+                globalLastErrorMsg = "Google AI Studio báo: 'Your prepayment credits are depleted'. Hãy tạo API Key ở project Free Tier hoặc nạp credit nhé!";
+              } else if (errMsg.includes("429")) {
+                globalLastErrorMsg = "Tài khoản Google Gemini chạm giới hạn quota. Vui lòng nhập thêm GROQ_API_KEY dự phòng!";
+              } else if (!globalLastErrorMsg) {
+                globalLastErrorMsg = errMsg;
+              }
+            }
+          } else {
+            // Chưa có bất kỳ API Key nào
+            setShowApiKeyModal(true);
+            throw new Error("Bạn chưa cài đặt API Key! Vui lòng nhập GEMINI_API_KEY hoặc GROQ_API_KEY vào cửa sổ Cài đặt vừa hiện lên để AI tạo review tự động.");
           }
         }
 
