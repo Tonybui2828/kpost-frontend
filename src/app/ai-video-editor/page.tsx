@@ -469,6 +469,28 @@ export default function AiVideoEditorPage() {
     offsetSeconds: 0,
   });
 
+  // 🎬 AI Video Review State (Review & Tóm Tắt Phim Hài Hước)
+  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
+  const [reviewConfig, setReviewConfig] = useState<{
+    style: "humorous_viral" | "dramatic_cinema" | "philosophical_satire" | "speed_recap";
+    density: "high" | "medium" | "compact";
+    customPrompt: string;
+    selectedVoiceId: string;
+    muteOriginal: boolean;
+    originalVolume: number;
+  }>({
+    style: "humorous_viral",
+    density: "high",
+    customPrompt: "",
+    selectedVoiceId: "adult_male_reviewer",
+    muteOriginal: false,
+    originalVolume: 15,
+  });
+  const [isReviewing, setIsReviewing] = useState<boolean>(false);
+  const [reviewProgress, setReviewProgress] = useState<number>(0);
+  const [reviewStatus, setReviewStatus] = useState<string>("");
+  const [reviewSummary, setReviewSummary] = useState<string>("");
+
   // Lưu chỉnh sửa câu phụ đề
   const handleSaveCueEdit = (cueId: string) => {
     if (!editingCueText.trim()) {
@@ -2056,6 +2078,223 @@ export default function AiVideoEditorPage() {
     }
   };
 
+  // 🎬 AI REVIEW VIDEO & TÓM TẮT PHIM HÀI HƯỚC (TIKTOK / YOUTUBE SHORTS VIRAL)
+  const handleStartAiVideoReview = async () => {
+    if (!videoUrl && !selectedFile) {
+      alert("Vui lòng tải video lên trước khi tạo review!");
+      return;
+    }
+
+    setShowReviewModal(false);
+    setIsReviewing(true);
+    setReviewProgress(10);
+    setReviewStatus("Đang phân tích cốt truyện & các tình tiết nổi bật trong video...");
+
+    // Dọn dẹp cache âm thanh & phụ đề cũ
+    audioCacheRef.current.clear();
+    currentSentenceSpokenRef.current = null;
+    lastSpokenCueIdRef.current = null;
+    setSubtitleCues([]);
+    setTranscribeSuccessMsg("");
+
+    try {
+      const inputSource = selectedFile || videoUrl;
+      const { buffer: realAudioBuffer, duration: realDuration } = await extractFullVideoAudioBuffer(
+        inputSource,
+        videoDuration
+      );
+      const decodedBuffer: AudioBuffer | null = realAudioBuffer;
+      const fullDuration = realDuration;
+      setVideoDuration(realDuration);
+
+      // Phân đoạn thông minh 120 giây để AI nắm bao quát toàn diện câu chuyện
+      const CHUNK_LEN = 120;
+      const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
+      let allReviewCues: SubtitleCue[] = [];
+      let globalLastErrorMsg = "";
+      let capturedSummary = "";
+      const apiBase = getApiBaseUrl();
+
+      console.log(`[AI Review] Bắt đầu tổng hợp review video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn...`);
+
+      for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+        if (chunkIdx > 0) {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+
+        const chunkStart = chunkIdx * CHUNK_LEN;
+        const chunkEnd = Math.min(fullDuration, (chunkIdx + 1) * CHUNK_LEN);
+        const chunkDur = Number((chunkEnd - chunkStart).toFixed(1));
+
+        const pctStart = 15 + Math.round((chunkIdx / totalChunks) * 75);
+        setReviewProgress(pctStart);
+        setReviewStatus(
+          `Đang xem và viết kịch bản review phân đoạn ${chunkIdx + 1}/${totalChunks} (${Math.floor(chunkStart / 60)}p${Math.round(chunkStart % 60)}s - ${Math.floor(chunkEnd / 60)}p${Math.round(chunkEnd % 60)}s)...`
+        );
+
+        let chunkBase64: string | undefined = undefined;
+        if (decodedBuffer) {
+          try {
+            const chunkBlob = await extractAudioChunkBlob(decodedBuffer, chunkStart, chunkDur);
+            chunkBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(chunkBlob);
+            });
+          } catch (e) {
+            console.warn(`Lỗi tạo chunk audio review ${chunkIdx + 1}:`, e);
+          }
+        }
+
+        // 📸 CHỤP CÁC KHUNG HÌNH TOÀN CẢNH (FULL FRAME) ĐỂ AI QUAN SÁT RÕ HÀNH ĐỘNG, BIỂU CẢM VÀ TÌNH TIẾT
+        let frameSnapshots: string[] = [];
+        if (videoRef.current) {
+          try {
+            const canvas = document.createElement("canvas");
+            const vW = videoRef.current.videoWidth || 640;
+            const vH = videoRef.current.videoHeight || 360;
+            canvas.width = Math.min(640, vW);
+            canvas.height = Math.round(canvas.width * (vH / vW));
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              const originalTime = videoRef.current.currentTime;
+              const sampleTimes: number[] = [];
+              const step = Math.max(3.0, chunkDur / 8);
+              for (let t = chunkStart + 1.0; t < chunkEnd - 0.5; t += step) {
+                sampleTimes.push(t);
+              }
+              for (const t of sampleTimes) {
+                try {
+                  videoRef.current.currentTime = t;
+                  await new Promise<void>((r) => {
+                    const h = () => { videoRef.current?.removeEventListener("seeked", h); r(); };
+                    videoRef.current?.addEventListener("seeked", h, { once: true });
+                    setTimeout(r, 120);
+                  });
+                  ctx.drawImage(videoRef.current, 0, 0, vW, vH, 0, 0, canvas.width, canvas.height);
+                  const img = canvas.toDataURL("image/jpeg", 0.65);
+                  if (img && img.length > 200) frameSnapshots.push(img);
+                } catch {}
+              }
+              videoRef.current.currentTime = originalTime;
+            }
+          } catch (snapErr) {
+            console.warn("Lỗi trích xuất snapshot review:", snapErr);
+          }
+        }
+
+        let res: any = null;
+        const reviewEndpoints = [
+          "/api/ai-video-review",
+          `${apiBase}/api/ai-video-review`,
+          "https://api.kpost.vn/ai-content/ai-video-review",
+          "/ai-content/ai-video-review",
+        ];
+
+        for (const url of reviewEndpoints) {
+          try {
+            res = await axios.post(
+              url,
+              {
+                audioBase64: chunkBase64,
+                mimeType: "audio/wav",
+                duration: chunkDur,
+                startOffset: chunkStart,
+                chunkIndex: chunkIdx + 1,
+                totalChunks: totalChunks,
+                videoTitle: videoName || "Video Review Hài Hước",
+                reviewStyle: reviewConfig.style,
+                density: reviewConfig.density,
+                customPrompt: reviewConfig.customPrompt,
+                frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
+                geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
+              },
+              { timeout: 90000 }
+            );
+            if (res?.data?.cues && res.data.cues.length > 0) {
+              break;
+            }
+          } catch (err: any) {
+            const rawErr = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+            globalLastErrorMsg = String(rawErr || "");
+          }
+        }
+
+        if (res?.data?.cues && res.data.cues.length > 0) {
+          if (res.data.storySummary && !capturedSummary) {
+            capturedSummary = res.data.storySummary;
+          }
+          const rawCues = res.data.cues.map((c: any, i: number) => {
+            const s = Number(c.startSec);
+            const e = Number(c.endSec);
+            const finalS = s >= chunkStart ? s : Number((s + chunkStart).toFixed(1));
+            const finalE = e > finalS ? (e >= chunkStart ? e : Number((e + chunkStart).toFixed(1))) : Number((finalS + 4.0).toFixed(1));
+            return {
+              id: `review_cue_${chunkIdx + 1}_${i + 1}`,
+              startSec: finalS,
+              endSec: finalE,
+              text: String(c.text || "").trim(),
+              words: [],
+              parentSentenceId: `review_s_${chunkIdx + 1}_${i + 1}`,
+              parentSentenceText: String(c.text || "").trim(),
+            };
+          });
+          allReviewCues = [...allReviewCues, ...rawCues];
+        }
+      }
+
+      setReviewProgress(95);
+
+      if (allReviewCues.length > 0) {
+        allReviewCues.sort((a, b) => a.startSec - b.startSec);
+        setSubtitleCues(allReviewCues);
+        setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
+
+        // Tự động kích hoạt giọng đọc Reviewer
+        const selectedChar = VOICE_CHARACTERS.find((c) => c.id === reviewConfig.selectedVoiceId) || VOICE_CHARACTERS[4]; // Đức Anh Reviewer
+        setVoiceoverConfig((prev) => ({
+          ...prev,
+          enabled: true,
+          selectedVoiceId: selectedChar.id,
+          pitch: selectedChar.pitch,
+          rate: selectedChar.rate || 1.15,
+          muteOriginal: reviewConfig.muteOriginal,
+          originalVolume: reviewConfig.originalVolume,
+        }));
+
+        setReviewProgress(100);
+        setIsReviewing(false);
+        setReviewStatus("");
+
+        const successMsg = `🎉 Đã tạo kịch bản Review Hài Hước thành công (${allReviewCues.length} câu lời bình)! ${capturedSummary ? `Cốt truyện: "${capturedSummary}". ` : ""}Đã kích hoạt giọng Reviewer "${selectedChar.name}" (Nhạc nền ${reviewConfig.originalVolume}%).`;
+        setTranscribeSuccessMsg(successMsg);
+        setReviewSummary(capturedSummary);
+
+        // Phát video thử từ đầu
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().catch(() => {});
+          setIsPlaying(true);
+        }
+      } else {
+        setIsReviewing(false);
+        setReviewProgress(0);
+        setReviewStatus("");
+        alert(
+          `⚠️ Chưa thể tạo kịch bản review cho video này!\n\n` +
+          `Chi tiết lỗi: ${globalLastErrorMsg || "Mô hình AI chưa phản hồi kịch bản"}\n\n` +
+          `👉 Bạn hãy kiểm tra lại biến GEMINI_API_KEY trên Coolify hoặc nhập API Key trong phần Cài đặt nhé!`
+        );
+      }
+    } catch (err: any) {
+      console.error("Lỗi AI Video Review:", err);
+      alert("Lỗi khi xử lý review video: " + (err?.message || err));
+      setIsReviewing(false);
+      setReviewProgress(0);
+      setReviewStatus("");
+    }
+  };
+
   const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -3275,11 +3514,32 @@ export default function AiVideoEditorPage() {
             <button
               type="button"
               onClick={handleTranscribeRealAudio}
-              disabled={isTranscribing || isExporting}
+              disabled={isTranscribing || isReviewing || isExporting}
               className="px-3.5 py-2.5 bg-gradient-to-r from-amber-900/60 to-orange-900/60 hover:from-amber-800/80 hover:to-orange-800/80 text-amber-200 border border-amber-500/40 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-amber-950/40 disabled:opacity-50"
               title="Dành cho video Douyin / tiếng nước ngoài: Dịch lời thoại sang tiếng Việt & bật MC lồng tiếng"
             >
               <Sparkles size={16} className="text-amber-300" /> 🌐 Dịch & Lồng Tiếng
+            </button>
+
+            {/* 🎬 NÚT 3: REVIEW VIDEO HÀI HƯỚC & TÓM TẮT PHIM (TIKTOK / YOUTUBE) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!videoUrl && !selectedFile) {
+                  alert("Vui lòng tải video lên trước khi tạo review!");
+                  return;
+                }
+                setShowReviewModal(true);
+              }}
+              disabled={isTranscribing || isReviewing || isExporting}
+              className="px-3.5 py-2.5 bg-gradient-to-r from-purple-900/70 via-fuchsia-900/70 to-pink-900/70 hover:from-purple-800 hover:to-pink-800 text-pink-200 border border-fuchsia-500/50 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-purple-950/50 disabled:opacity-50 hover:scale-[1.02]"
+              title="Phân tích tình tiết video, viết lời bình review hài hước, hóm hỉnh và lồng tiếng chuẩn phong cách TikTok / YouTube"
+            >
+              <Film size={16} className="text-fuchsia-300 animate-pulse" />
+              <span>🎬 AI Review Hài Hước</span>
+              <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs">
+                HOT
+              </span>
             </button>
 
             {/* 🎙️ NÚT CÀI ĐẶT AI LỒNG TIẾNG & TẮT TIẾNG GỐC */}
@@ -3469,6 +3729,39 @@ export default function AiVideoEditorPage() {
               <div
                 className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
                 style={{ width: `${transcribeProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TIẾN TRÌNH REVIEW VIDEO HÀI HƯỚC */}
+        {isReviewing && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-slate-900 text-white rounded-3xl shadow-xl animate-in fade-in border border-fuchsia-500/40">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <Film size={24} className="text-fuchsia-400 animate-pulse" />
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>🎬 KpostAI Đang Tổng Hợp & Viết Lời Review Hài Hước...</span>
+                    <span className="px-2 py-0.5 rounded-full bg-fuchsia-500/30 text-fuchsia-300 border border-fuchsia-400/30 text-xs font-bold">
+                      {reviewConfig.style === "humorous_viral"
+                        ? "Hài Hước Bắt Trend"
+                        : reviewConfig.style === "dramatic_cinema"
+                        ? "Kịch Tính Cuốn Hút"
+                        : reviewConfig.style === "philosophical_satire"
+                        ? "Châm Biếm Thâm Thúy"
+                        : "Review Siêu Tốc 60s"}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-fuchsia-200 mt-0.5">{reviewStatus}</p>
+                </div>
+              </div>
+              <span className="text-lg font-mono font-black text-fuchsia-300">{reviewProgress}%</span>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${reviewProgress}%` }}
               />
             </div>
           </div>
@@ -4416,6 +4709,230 @@ export default function AiVideoEditorPage() {
                 className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
               >
                 Lưu & Áp Dụng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎬 MODAL: TÙY CHỌN AI REVIEW VIDEO & TÓM TẮT PHIM HÀI HƯỚC */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#0f172a] border border-fuchsia-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col shadow-fuchsia-950/50">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-fuchsia-500/20 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-gradient-to-tr from-purple-600 to-fuchsia-600 text-white rounded-2xl shadow-lg shadow-fuchsia-950/60">
+                  <Film size={22} className="animate-pulse" />
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    🎬 AI Review & Lồng Tiếng Video Hài Hước
+                    <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                      TRIỆU VIEW
+                    </span>
+                  </h3>
+                  <p className="text-xs text-fuchsia-200/80">
+                    AI tự động phân tích khung hình & cốt truyện, viết kịch bản review dí dỏm, lôi cuốn và lồng tiếng chuẩn TikTok / Shorts
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="text-fuchsia-300 hover:text-white p-1 rounded-lg hover:bg-fuchsia-950/50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
+              {/* PHONG CÁCH REVIEW */}
+              <div>
+                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-2">
+                  1. Chọn phong cách Review & Tóm tắt:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      id: "humorous_viral",
+                      icon: "🎭",
+                      title: "Hài Hước - Cà Khịa - Bắt Trend",
+                      desc: "Lầy lội, dùng meme & từ ngữ thịnh hành: 'chàng trai số nhọ', 'quay xe cực khét', 'bật ngửa'...",
+                      badge: "Phổ biến nhất",
+                    },
+                    {
+                      id: "dramatic_cinema",
+                      icon: "🎬",
+                      title: "Tóm Tắt Phim Kịch Tính",
+                      desc: "Hồi hộp, giật gân, cao trào điện ảnh, giữ chân người xem từng giây.",
+                      badge: "Điện ảnh",
+                    },
+                    {
+                      id: "philosophical_satire",
+                      icon: "💡",
+                      title: "Châm Biếm Thâm Thúy",
+                      desc: "Vừa hài vừa sâu sắc, mỉa mai hành động nhân vật, cười ra nước mắt.",
+                      badge: "Sâu cay",
+                    },
+                    {
+                      id: "speed_recap",
+                      icon: "⚡",
+                      title: "Review Siêu Tốc 60s",
+                      desc: "Dồn dập, gãy gọn, tốc độ cao, điểm mặt liên tục các tình tiết sốc.",
+                      badge: "TikTok/Shorts",
+                    },
+                  ].map((style) => {
+                    const isSelected = reviewConfig.style === style.id;
+                    return (
+                      <div
+                        key={style.id}
+                        onClick={() => setReviewConfig((p) => ({ ...p, style: style.id as any }))}
+                        className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "border-fuchsia-500 bg-fuchsia-950/40 shadow-lg shadow-fuchsia-950/60"
+                            : "border-slate-800 hover:border-fuchsia-500/40 bg-slate-900/60"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-1 mb-1">
+                          <span className="font-black text-sm text-white flex items-center gap-1.5">
+                            <span>{style.icon}</span> {style.title}
+                          </span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                            isSelected ? "bg-fuchsia-500 text-white" : "bg-slate-800 text-slate-400"
+                          }`}>
+                            {style.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">{style.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* MẬT ĐỘ LỜI BÌNH & ÂM LƯỢNG */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Mật độ */}
+                <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+                  <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-1.5">
+                    2. Mật độ lời bình Review:
+                  </label>
+                  <div className="flex gap-1.5">
+                    {[
+                      { id: "high", label: "🔊 Dày đặc" },
+                      { id: "medium", label: "🎵 Vừa phải" },
+                      { id: "compact", label: "⚡ Tinh gọn" },
+                    ].map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => setReviewConfig((p) => ({ ...p, density: d.id as any }))}
+                        className={`flex-1 py-1.5 px-2 rounded-xl text-center border font-bold transition-all cursor-pointer ${
+                          reviewConfig.density === d.id
+                            ? "bg-fuchsia-600 text-white border-fuchsia-400 shadow-sm"
+                            : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
+                        }`}
+                      >
+                        <div className="text-xs">{d.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Giảm âm lượng video gốc */}
+                <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-black uppercase text-fuchsia-300 tracking-wider">
+                      3. Âm lượng video gốc (Nhạc nền):
+                    </label>
+                    <span className="font-mono font-bold text-amber-300 text-xs">
+                      {reviewConfig.originalVolume}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={reviewConfig.originalVolume}
+                    onChange={(e) => setReviewConfig((p) => ({ ...p, originalVolume: Number(e.target.value) }))}
+                    className="w-full accent-fuchsia-500 cursor-pointer"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Khuyên dùng 10-20% để giữ nhạc nền nhẹ cho giọng Review nổi bật rõ nét.
+                  </p>
+                </div>
+              </div>
+
+              {/* CHỌN GIỌNG REVIEWER */}
+              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-2">
+                  4. Chọn giọng đọc Reviewer:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: "adult_male_reviewer", name: "Đức Anh", role: "Reviewer Bắt Trend", avatar: "👱‍♂️" },
+                    { id: "cartoon", name: "Pikachu Chibi", role: "Hài Hước Biến Hóa", avatar: "⚡" },
+                    { id: "adult_male_mc", name: "Minh Quân", role: "Nam MC Trầm Ấm", avatar: "🎙️" },
+                    { id: "adult_female_sweet", name: "Mai Anh", role: "Nữ Review Ngọt Ngào", avatar: "👩" },
+                    { id: "speed_mc", name: "MC Siêu Tốc", role: "Dồn Dập Douyin", avatar: "🚀" },
+                    { id: "senior", name: "Bác Năm", role: "Đôn Hậu Thâm Thúy", avatar: "👴" },
+                  ].map((v) => {
+                    const isSelected = reviewConfig.selectedVoiceId === v.id;
+                    return (
+                      <div
+                        key={v.id}
+                        onClick={() => setReviewConfig((p) => ({ ...p, selectedVoiceId: v.id }))}
+                        className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-fuchsia-600/30 border-fuchsia-500 text-white shadow-sm"
+                            : "bg-slate-800/60 border-slate-700/80 hover:border-slate-600 text-slate-300"
+                        }`}
+                      >
+                        <span className="text-xl shrink-0">{v.avatar}</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs truncate text-white">{v.name}</p>
+                          <p className="text-[10px] text-fuchsia-300 truncate">{v.role}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* GHI CHÚ BỔ SUNG */}
+              <div>
+                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-1.5">
+                  5. Gợi ý thêm cho AI (Tùy chọn):
+                </label>
+                <input
+                  type="text"
+                  value={reviewConfig.customPrompt}
+                  onChange={(e) => setReviewConfig((p) => ({ ...p, customPrompt: e.target.value }))}
+                  placeholder="Ví dụ: Đặt tên nhân vật là A Cường, nhấn mạnh cú ngã bất ngờ của anh ta..."
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-fuchsia-500"
+                />
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="mt-5 pt-3 border-t border-fuchsia-500/20 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+
+              <button
+                type="button"
+                onClick={handleStartAiVideoReview}
+                disabled={isReviewing}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-fuchsia-950 flex items-center gap-2 hover:scale-[1.02]"
+              >
+                <Film size={15} /> 🚀 Bắt Đầu Tạo Video Review Hài Hước
               </button>
             </div>
           </div>
