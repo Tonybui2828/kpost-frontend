@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
 
-// =========================================================================
-// 1. GỌI GOOGLE GEMINI QUA SDK HOẶC REST API DỰ PHÒNG
-// =========================================================================
-async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
-  const models = [
-    'gemini-3.8-flash',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
-  ];
+function extractJsonFromAiResponse(rawText: string): any {
+  if (!rawText) return null;
+  const cleaned = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+      } catch {}
+    }
+  }
+  return null;
+}
 
+// 1. Gọi Google Gemini qua SDK & REST
+async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
+  const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
   let lastErrorDetail = '';
 
-  // 1. Thử gọi qua SDK chính thức @google/genai
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
@@ -28,15 +35,15 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
           config: {
             responseMimeType: 'application/json',
             maxOutputTokens: 8192,
-            temperature: 0.7, // 0.7 để câu từ hóm hỉnh, sáng tạo, cuốn hút
+            temperature: 0.7,
           },
         });
         const rawText = response.text || '';
-        const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        if (cleaned) {
-          const parsed = JSON.parse(cleaned);
-          if (parsed && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
-            return { data: parsed, error: null };
+        const parsed = extractJsonFromAiResponse(rawText);
+        if (parsed) {
+          const cues = parsed.cues || parsed.items || parsed.subtitles || parsed.review || parsed.lines;
+          if (Array.isArray(cues) && cues.length > 0) {
+            return { data: { ...parsed, cues }, error: null };
           }
         }
       } catch (err: any) {
@@ -46,23 +53,15 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
     }
   } catch (sdkErr: any) {
     lastErrorDetail = sdkErr?.message || String(sdkErr);
-    console.warn('[@google/genai import error]:', sdkErr);
   }
 
-  // 2. Dự phòng qua REST API trực tiếp
+  // Dự phòng REST API
   for (const model of models) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const payload = {
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: parts,
-          },
-        ],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts }],
         generationConfig: {
           responseMimeType: 'application/json',
           maxOutputTokens: 8192,
@@ -79,30 +78,63 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
       if (!resp.ok) {
         const errText = await resp.text();
         lastErrorDetail = `[HTTP ${resp.status} ${model}]: ${errText}`;
-        console.warn(`[Gemini REST review ${model} HTTP ${resp.status}]:`, errText);
         continue;
       }
 
       const data = await resp.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      if (cleaned) {
-        const parsed = JSON.parse(cleaned);
-        if (parsed && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
-          return { data: parsed, error: null };
+      const parsed = extractJsonFromAiResponse(rawText);
+      if (parsed) {
+        const cues = parsed.cues || parsed.items || parsed.subtitles || parsed.review || parsed.lines;
+        if (Array.isArray(cues) && cues.length > 0) {
+          return { data: { ...parsed, cues }, error: null };
         }
       }
     } catch (e: any) {
       lastErrorDetail = e?.message || String(e);
-      console.warn(`[Gemini REST review ${model} exception]:`, e);
     }
   }
   return { data: null, error: lastErrorDetail };
 }
 
-// =========================================================================
-// 2. MAIN ROUTE HANDLER (POST) - AI REVIEW VIDEO HÀI HƯỚC CUỐN HÚT
-// =========================================================================
+// 2. Dự phòng qua Groq LLaMA 3.3 70B
+async function callGroqAi(apiKey: string, systemPrompt: string, userPrompt: string) {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || '';
+      const parsed = extractJsonFromAiResponse(content);
+      if (parsed) {
+        const cues = parsed.cues || parsed.items || parsed.subtitles || parsed.review || parsed.lines;
+        if (Array.isArray(cues) && cues.length > 0) {
+          return { data: { ...parsed, cues }, error: null };
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Groq Review Exception]:', err?.message || err);
+  }
+  return { data: null, error: 'Groq failed' };
+}
+
+// 3. Main POST Handler
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -135,12 +167,37 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
       '';
 
-    if (!apiKey) {
+    const groqKey = body.groqApiKey || process.env.GROQ_API_KEY || '';
+
+    // Dự phòng chuyển tiếp sang backend nếu chưa có key
+    if (!apiKey && !groqKey) {
+      try {
+        const backendEndpoints = [
+          'https://api.kpost.vn/ai-content/ai-video-review',
+          'https://api.kpost.vn/api/ai-video-review',
+        ];
+        for (const bUrl of backendEndpoints) {
+          try {
+            const bResp = await fetch(bUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            if (bResp.ok) {
+              const bData = await bResp.json();
+              if (bData && Array.isArray(bData.cues) && bData.cues.length > 0) {
+                return NextResponse.json(bData);
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+
       return NextResponse.json(
         {
           success: false,
           error: 'MISSING_API_KEY',
-          message: 'Chưa cấu hình GEMINI_API_KEY trên Coolify. Vui lòng thêm biến GEMINI_API_KEY vào Environment Variables!',
+          message: 'Máy chủ chưa được cấu hình GEMINI_API_KEY trên Coolify. Bạn hãy vào Environment Variables của kpost-frontend để thêm key nhé!',
           cues: [],
         },
         { status: 500 }
@@ -149,108 +206,97 @@ export async function POST(req: Request) {
 
     const styleDescriptions: Record<string, string> = {
       humorous_viral: `🎭 PHONG CÁCH: HÀI HƯỚC - CÀ KHỊA - LẦY LỘI - BẮT TREND TIKTOK / SHORTS:
-- Văn phong: Hóm hỉnh, tếu táo, châm biếm duyên dáng, dùng từ ngữ hot trend giới trẻ Việt Nam ("anh chàng số nhọ", "quay xe cực khét", "bật ngửa", "hết nước chấm", "đúng là hảo hán", "nhìn cái bản mặt là thấy uy tín rồi", "ai ngờ đâu vừa quay lưng đi thì toang", "cái kết đắng lòng cho thanh niên manh động", "đúng là cao nhân không bằng liều mạng"...).
-- Cách kể: Tóm tắt hành động của nhân vật, chọc cười bằng cách bình luận các tình huống ngớ ngẩn, hiểu lầm hoặc phản ứng bất ngờ.`,
-
-      dramatic_cinema: `🎬 PHONG CÁCH: TÓM TẮT PHIM ĐIỆN ẢNH - KỊCH TÍNH - CUỐN HÚT:
-- Văn phong: Hồi hộp, giật gân, cuốn hút như các kênh review phim chiếu rạp triệu view.
-- Cách kể: Đặt ra các câu hỏi kích thích tò mò ("Liệu điều gì đang chờ đón phía sau cánh cửa bí ẩn này?"), đẩy cao trào cảm xúc và biến cố bất ngờ.`,
-
-      philosophical_satire: `💡 PHONG CÁCH: CHÂM BIẾM THÂM THÚY - CƯỜI RA NƯỚC MẮT:
-- Văn phong: Vừa hài hước vừa triết lý, mỉa mai sâu cay những nghịch lý trong cuộc sống dựa trên hành động của nhân vật, rút ra bài học hài hước thâm sâu.`,
-
-      speed_recap: `⚡ PHONG CÁCH: REVIEW SIÊU TỐC 60S - DỒN DẬP - GÃY GỌN:
-- Văn phong: Dồn dập, gãy gọn, tốc độ cao, điểm danh các tình tiết gay cấn liên tục, không để người xem có 1 giây ngơi nghỉ.`,
+- Văn phong: Hóm hỉnh, tếu táo, châm biếm duyên dáng, từ ngữ viral ("anh chàng số nhọ", "quay xe cực khét", "bật ngửa", "hết nước chấm", "đúng là hảo hán", "nhìn bản mặt là thấy uy tín", "cái kết đắng lòng").
+- Kể chuyện: Tóm tắt hành động, chọc cười bằng cách bình luận các tình huống ngớ ngẩn, hiểu lầm hoặc phản ứng bất ngờ.`,
+      dramatic_cinema: `🎬 PHONG CÁCH: TÓM TẮT PHIM ĐIỆN ẢNH - KỊCH TÍNH - CUỐN HÚT: Hồi hộp, giật gân, đẩy cao trào cảm xúc.`,
+      philosophical_satire: `💡 PHONG CÁCH: CHÂM BIẾM THÂM THÚY - CƯỜI RA NƯỚC MẮT: Vừa hài vừa triết lý cuộc sống.`,
+      speed_recap: `⚡ PHONG CÁCH: REVIEW SIÊU TỐC 60S - DỒN DẬP - GÃY GỌN.`,
     };
 
     const chosenStyle = styleDescriptions[reviewStyle] || styleDescriptions.humorous_viral;
-
     const densityInstruction =
       density === 'high'
-        ? 'Mật độ lời bình: Dày đặc, các câu nối tiếp liên tục (khoảng 3.0s - 4.5s/câu) để giữ chân người xem từ đầu đến cuối.'
+        ? 'Mật độ lời bình: Dày đặc liên tục (3.0s - 4.5s/câu).'
         : density === 'compact'
-        ? 'Mật độ lời bình: Tinh gọn, chỉ bình luận vào những khoảnh khắc quan trọng nhất, chừa không gian cho âm thanh gốc.'
-        : 'Mật độ lời bình: Vừa phải, khoảng 4.0s - 5.5s/câu, chuyển tiếp mượt mà có khoảng thở tự nhiên.';
+        ? 'Mật độ lời bình: Tinh gọn vào các khoảnh khắc quan trọng.'
+        : 'Mật độ lời bình: Vừa phải (4.0s - 5.5s/câu).';
 
-    const systemPrompt = `BẠN LÀ MỘT REVIEWER PHIM VÀ VIDEO CHUYÊN NGHIỆP BẬC THẦY, NỔI TIẾNG VỚI HÀNG TRIỆU VIEW TRÊN TIKTOK VÀ YOUTUBE SHORTS.
-
-NHIỆM VỤ CỦA BẠN:
-Phân tích phân đoạn video dài ${totalDuration} giây (từ ${startOffset}.0s đến ${startOffset + totalDuration}.0s) qua các hình ảnh chụp khung hình thực tế và âm thanh:
-TỔNG HỢP, PHÂN TÍCH VÀ VIẾT KỊCH BẢN REVIEW / TÓM TẮT CÂU CHUYỆN BẰNG TIẾNG VIỆT ĐỂ LỒNG TIẾNG CHO VIDEO.
-
+    const systemPrompt = `BẠN LÀ MỘT REVIEWER PHIM VÀ VIDEO CHUYÊN NGHIỆP BẬC THẦY TRIỆU VIEW TIKTOK.
+NHIỆM VỤ: Phân tích phân đoạn video ${totalDuration}s qua ảnh chụp khung hình và âm thanh:
+VIẾT KỊCH BẢN REVIEW / TÓM TẮT CÂU CHUYỆN BẰNG TIẾNG VIỆT ĐỂ LỒNG TIẾNG.
 ${chosenStyle}
-
 ${densityInstruction}
+${customPrompt ? `YÊU CẦU ĐẶC BIỆT: "${customPrompt}"` : ''}
 
-${customPrompt ? `YÊU CẦU ĐẶC BIỆT TỪ NGƯỜI DÙNG: "${customPrompt}"` : ''}
+NGUYÊN TẮC:
+1. KHÔNG DỊCH THOẠI TỪNG TỪ CỦA NHÂN VẬT! Bạn là NGƯỜI DẪN CHUYỆN / REVIEWER.
+2. Bám sát diễn biến hình ảnh nhân vật làm gì để lời bình khớp màn hình.
+3. startSec và endSec tính từ 0.0s đến ${totalDuration}.0s.
 
-NGUYÊN TẮC BẮT BUỘC:
-1. KHÔNG DỊCH THOẠI MÁY MÓC TỪNG TỪ CỦA NHÂN VẬT! Bạn là NGƯỜI DẪN CHUYỆN / REVIEWER kể lại toàn bộ câu chuyện với phong cách review cuốn hút nhất.
-2. BÁM SÁT HÌNH ẢNH: Quan sát kỹ các khung hình để biết diễn biến thật sự: nhân vật làm gì, cảm xúc thế nào, tình huống gì đang xảy ra để lời bình khớp 100% với mắt người xem.
-3. PHÂN BỔ THỜI GIAN CHUẨN XÁC:
-   - startSec và endSec phải tính chính xác trong khoảng từ 0.0s đến ${totalDuration}.0s của phân đoạn này.
-   - Các câu review được trải đều, câu nọ tiếp câu kia tự nhiên không chồng lấn.
-   - Mỗi câu nói phải tự nhiên, tròn vành rõ chữ khi đọc thành tiếng Việt.
-
-ĐỊNH DẠNG JSON ĐẦU RA BẮT BUỘC:
+ĐỊNH DẠNG JSON:
 {
-  "detectedLanguage": "Ngôn ngữ gốc phát hiện được",
-  "storySummary": "Tóm tắt ngắn 1 câu nội dung phân đoạn",
-  "hook": "Câu mở đầu giật gân cuốn hút",
+  "detectedLanguage": "Ngôn ngữ gốc",
+  "storySummary": "Tóm tắt ngắn 1 câu",
+  "hook": "Câu mở đầu giật gân",
   "cues": [
-    { "id": 1, "startSec": 0.5, "endSec": 4.5, "text": "Mở đầu video, anh chàng số nhọ của chúng ta đang tỏ ra hết sức nguy hiểm..." },
-    { "id": 2, "startSec": 4.8, "endSec": 9.2, "text": "Cứ tưởng phen này vớ được món bở, ai ngờ vừa quay lưng đi thì biến cố ập đến..." }
+    { "id": 1, "startSec": 0.5, "endSec": 4.5, "text": "Mở đầu video, anh chàng số nhọ của chúng ta đang tỏ ra hết sức nguy hiểm..." }
   ]
 }`;
 
     const parts: any[] = [];
-
-    // Gửi các khung hình chụp toàn cảnh video để AI quan sát bối cảnh, hành động, nhân vật
     if (Array.isArray(frameSnapshots) && frameSnapshots.length > 0) {
       for (const img of frameSnapshots) {
         if (typeof img === 'string') {
           const cleanImg = img.includes(',') ? img.split(',')[1] : img;
-          parts.push({
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: cleanImg,
-            },
-          });
+          parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanImg } });
         }
       }
     }
 
-    // Gửi âm thanh video để AI lắng nghe thêm hội thoại gốc hoặc hiệu ứng
     if (audioBase64 && typeof audioBase64 === 'string') {
       const rawBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
-      parts.push({
-        inlineData: {
-          mimeType: mimeType || 'audio/wav',
-          data: rawBase64,
-        },
-      });
+      parts.push({ inlineData: { mimeType: mimeType || 'audio/wav', data: rawBase64 } });
     }
 
-    parts.push({
-      text: `Tiêu đề video: "${videoTitle || 'Video'}". Thời lượng phân đoạn: ${totalDuration} giây. Hãy xem các khung hình hành động và nghe âm thanh để viết kịch bản review tóm tắt hài hước cuốn hút nhất theo định dạng JSON!`,
-    });
+    const userTextPrompt = `Tiêu đề: "${videoTitle || 'Video'}". Thời lượng: ${totalDuration}s. Hãy xem các khung hình và nghe âm thanh để viết kịch bản review tóm tắt hài hước cuốn hút dạng JSON!`;
+    parts.push({ text: userTextPrompt });
 
-    const aiRes = await callGeminiAi(apiKey, systemPrompt, parts);
-    const resultJson = aiRes?.data;
+    let resultJson: any = null;
+    let lastError = '';
+
+    if (apiKey) {
+      const aiRes = await callGeminiAi(apiKey, systemPrompt, parts);
+      if (aiRes?.data) resultJson = aiRes.data;
+      else lastError = aiRes?.error || 'Gemini error';
+    }
+
+    // Dự phòng sang Groq nếu Gemini lỗi
+    if ((!resultJson || !Array.isArray(resultJson.cues) || resultJson.cues.length === 0) && groqKey) {
+      console.log('[AI Review] Chuyển tiếp sang Groq LLaMA 3.3...');
+      const groqRes = await callGroqAi(groqKey, systemPrompt, userTextPrompt);
+      if (groqRes?.data) resultJson = groqRes.data;
+    }
 
     if (!resultJson || !Array.isArray(resultJson.cues) || resultJson.cues.length === 0) {
+      let friendlyError = 'Mô hình AI chưa tạo được kịch bản review cho phân đoạn này.';
+      if (lastError.includes('prepayment credits are depleted') || lastError.includes('402')) {
+        friendlyError = 'Google AI Studio báo lỗi 402: Prepayment credits are depleted (Dự án đang bật Trả trước nhưng số dư 0$). Hãy nạp tiền hoặc tạo API Key ở project Free Tier.';
+      } else if (lastError.includes('RESOURCE_EXHAUSTED') || lastError.includes('429')) {
+        friendlyError = 'Tài khoản Google Gemini tạm thời chạm mốc quota. Hãy thử lại sau ít phút hoặc thêm GROQ_API_KEY dự phòng!';
+      }
+
       return NextResponse.json(
         {
           success: false,
           error: 'AI_REVIEW_FAILED',
-          message: aiRes?.error || 'Mô hình AI chưa tạo được kịch bản review cho phân đoạn này.',
+          message: friendlyError,
+          detail: lastError,
           cues: [],
         },
         { status: 502 }
       );
     }
 
-    // Điều chỉnh và cộng offset mốc thời gian
     const finalCues: any[] = [];
     const rawCuesList = resultJson.cues || [];
 
@@ -261,7 +307,6 @@ NGUYÊN TẮC BẮT BUỘC:
 
       const rawS = Number(c.startSec);
       const rawE = Number(c.endSec);
-
       const s = rawS >= startOffset ? rawS : Number((rawS + startOffset).toFixed(1));
       let e = rawE >= startOffset ? rawE : Number((rawE + startOffset).toFixed(1));
       if (e <= s) e = Number((s + 4.0).toFixed(1));
@@ -287,11 +332,7 @@ NGUYÊN TẮC BẮT BUỘC:
   } catch (err: any) {
     console.error('Error in /api/ai-video-review:', err);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'SERVER_ERROR',
-        message: err.message || 'Lỗi xử lý tạo review video',
-      },
+      { success: false, error: 'SERVER_ERROR', message: err.message || 'Lỗi xử lý tạo review' },
       { status: 500 }
     );
   }

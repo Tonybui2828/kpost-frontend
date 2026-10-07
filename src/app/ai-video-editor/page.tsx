@@ -2187,8 +2187,10 @@ export default function AiVideoEditorPage() {
         const reviewEndpoints = [
           "/api/ai-video-review",
           `${apiBase}/api/ai-video-review`,
-          "https://api.kpost.vn/ai-content/ai-video-review",
+          `${apiBase}/ai-content/ai-video-review`,
           "/ai-content/ai-video-review",
+          "https://api.kpost.vn/ai-content/ai-video-review",
+          "https://api.kpost.vn/api/ai-video-review",
         ];
 
         for (const url of reviewEndpoints) {
@@ -2208,15 +2210,33 @@ export default function AiVideoEditorPage() {
                 customPrompt: reviewConfig.customPrompt,
                 frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
                 geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
+                groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
               },
               { timeout: 90000 }
             );
             if (res?.data?.cues && res.data.cues.length > 0) {
               break;
+            } else if (res?.data?.message) {
+              globalLastErrorMsg = res.data.message;
             }
           } catch (err: any) {
-            const rawErr = err?.response?.data?.message || err?.response?.data?.error || err?.message;
-            globalLastErrorMsg = String(rawErr || "");
+            const rawErr = err?.response?.data?.message || err?.response?.data?.error || err?.response?.data?.detail || err?.message;
+            const strErr = typeof rawErr === "object" ? JSON.stringify(rawErr) : String(rawErr || "");
+            if (
+              strErr.includes("prepayment credits are depleted") ||
+              strErr.includes("402")
+            ) {
+              globalLastErrorMsg = "Google AI Studio báo: 'Your prepayment credits are depleted' (Dự án đang ở chế độ Trả trước nhưng số dư là 0$). Bạn hãy vào https://aistudio.google.com nạp credit hoặc tạo API Key ở project Free Tier nhé!";
+            } else if (
+              strErr.includes("RESOURCE_EXHAUSTED") ||
+              strErr.includes("429")
+            ) {
+              globalLastErrorMsg = "Tài khoản Google Gemini của bạn tạm thời chạm giới hạn quota. Vui lòng thử lại sau hoặc nhập thêm GROQ_API_KEY dự phòng!";
+            } else if (strErr && !strErr.includes("Cannot POST") && !strErr.includes("404")) {
+              globalLastErrorMsg = strErr;
+            } else if (!globalLastErrorMsg) {
+              globalLastErrorMsg = strErr;
+            }
           }
         }
 
