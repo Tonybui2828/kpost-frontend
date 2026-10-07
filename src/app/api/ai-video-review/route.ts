@@ -6,9 +6,13 @@ import { NextResponse } from 'next/server';
 async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
   const models = [
     'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
     'gemini-3.1-flash-lite',
     'gemini-flash-latest',
   ];
+
+  let lastErrorDetail = '';
 
   // 1. Thử gọi qua SDK chính thức @google/genai
   try {
@@ -24,7 +28,7 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
           config: {
             responseMimeType: 'application/json',
             maxOutputTokens: 8192,
-            temperature: 0.7, // Nhiệt độ 0.7 giúp câu từ hóm hỉnh, bắt trend, cuốn hút
+            temperature: 0.7, // 0.7 để câu từ hóm hỉnh, sáng tạo, cuốn hút
           },
         });
         const rawText = response.text || '';
@@ -32,26 +36,31 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
         if (cleaned) {
           const parsed = JSON.parse(cleaned);
           if (parsed && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
-            return parsed;
+            return { data: parsed, error: null };
           }
         }
       } catch (err: any) {
-        console.warn(`[@google/genai review ${model} error]:`, err?.message || err);
+        lastErrorDetail = err?.message || String(err);
+        console.warn(`[@google/genai review ${model} error]:`, lastErrorDetail);
       }
     }
-  } catch (sdkErr) {
+  } catch (sdkErr: any) {
+    lastErrorDetail = sdkErr?.message || String(sdkErr);
     console.warn('[@google/genai import error]:', sdkErr);
   }
 
-  // 2. Dự phòng trực tiếp qua REST API (đảm bảo không bao giờ lỗi dù thiếu thư viện)
+  // 2. Dự phòng qua REST API trực tiếp
   for (const model of models) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const payload = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
         contents: [
           {
             role: 'user',
-            parts: [...parts, { text: systemPrompt }],
+            parts: parts,
           },
         ],
         generationConfig: {
@@ -67,7 +76,12 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
         body: JSON.stringify(payload),
       });
 
-      if (!resp.ok) continue;
+      if (!resp.ok) {
+        const errText = await resp.text();
+        lastErrorDetail = `[HTTP ${resp.status} ${model}]: ${errText}`;
+        console.warn(`[Gemini REST review ${model} HTTP ${resp.status}]:`, errText);
+        continue;
+      }
 
       const data = await resp.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -75,18 +89,19 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
       if (cleaned) {
         const parsed = JSON.parse(cleaned);
         if (parsed && Array.isArray(parsed.cues) && parsed.cues.length > 0) {
-          return parsed;
+          return { data: parsed, error: null };
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      lastErrorDetail = e?.message || String(e);
       console.warn(`[Gemini REST review ${model} exception]:`, e);
     }
   }
-  return null;
+  return { data: null, error: lastErrorDetail };
 }
 
 // =========================================================================
-// 2. MAIN ROUTE HANDLER (POST) - AI TỔNG HỢP & REVIEW VIDEO HÀI HƯỚC
+// 2. MAIN ROUTE HANDLER (POST) - AI REVIEW VIDEO HÀI HƯỚC CUỐN HÚT
 // =========================================================================
 export async function POST(req: Request) {
   try {
@@ -125,7 +140,7 @@ export async function POST(req: Request) {
         {
           success: false,
           error: 'MISSING_API_KEY',
-          message: 'Chưa cấu hình GEMINI_API_KEY trên Coolify cho kpost-frontend.',
+          message: 'Chưa cấu hình GEMINI_API_KEY trên Coolify. Vui lòng thêm biến GEMINI_API_KEY vào Environment Variables!',
           cues: [],
         },
         { status: 500 }
@@ -190,7 +205,7 @@ NGUYÊN TẮC BẮT BUỘC:
 
     const parts: any[] = [];
 
-    // Gửi các khung hình chụp toàn cảnh video
+    // Gửi các khung hình chụp toàn cảnh video để AI quan sát bối cảnh, hành động, nhân vật
     if (Array.isArray(frameSnapshots) && frameSnapshots.length > 0) {
       for (const img of frameSnapshots) {
         if (typeof img === 'string') {
@@ -205,7 +220,7 @@ NGUYÊN TẮC BẮT BUỘC:
       }
     }
 
-    // Gửi âm thanh video
+    // Gửi âm thanh video để AI lắng nghe thêm hội thoại gốc hoặc hiệu ứng
     if (audioBase64 && typeof audioBase64 === 'string') {
       const rawBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
       parts.push({
@@ -220,14 +235,15 @@ NGUYÊN TẮC BẮT BUỘC:
       text: `Tiêu đề video: "${videoTitle || 'Video'}". Thời lượng phân đoạn: ${totalDuration} giây. Hãy xem các khung hình hành động và nghe âm thanh để viết kịch bản review tóm tắt hài hước cuốn hút nhất theo định dạng JSON!`,
     });
 
-    const resultJson = await callGeminiAi(apiKey, systemPrompt, parts);
+    const aiRes = await callGeminiAi(apiKey, systemPrompt, parts);
+    const resultJson = aiRes?.data;
 
     if (!resultJson || !Array.isArray(resultJson.cues) || resultJson.cues.length === 0) {
       return NextResponse.json(
         {
           success: false,
           error: 'AI_REVIEW_FAILED',
-          message: 'Mô hình AI chưa tạo được kịch bản review cho phân đoạn này.',
+          message: aiRes?.error || 'Mô hình AI chưa tạo được kịch bản review cho phân đoạn này.',
           cues: [],
         },
         { status: 502 }
