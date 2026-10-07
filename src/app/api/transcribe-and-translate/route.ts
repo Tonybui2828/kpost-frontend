@@ -1,11 +1,195 @@
 import { NextResponse } from 'next/server';
 
-// Gọi trực tiếp Google Gemini qua SDK chính thức @google/genai và REST API dự phòng
+// =========================================================================
+// 1. DỊCH BÙ TỰ ĐỘNG BẰNG GOOGLE TRANSLATE CLIENTS5 ENGINE (CHỐNG SÓT TIẾNG TRUNG 100%)
+// =========================================================================
+async function translateBatchWithGoogle(batch: string[]): Promise<string[]> {
+  if (!batch || batch.length === 0) return [];
+
+  // Gắn số thứ tự index `i:: ` vào từng dòng để chống lệch dòng hoặc nhập nhằng số lượng câu
+  const prefixed = batch.map((text, idx) => `${idx}:: ${text.replace(/\r?\n/g, ' ')}`).join('\n');
+
+  // Thử qua Google clients5 API (siêu tốc, không giới hạn, không cần API Key)
+  try {
+    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=vi&q=${encodeURIComponent(prefixed)}`;
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (r.ok) {
+      const json = await r.json();
+      const rawText = Array.isArray(json) && Array.isArray(json[0]) ? json[0][0] : (typeof json[0] === 'string' ? json[0] : '');
+      if (rawText) {
+        const lines = rawText.split('\n');
+        const map = new Map<number, string>();
+        for (const line of lines) {
+          const match = line.match(/^(\d+)::\s*(.+)$/);
+          if (match) {
+            map.set(parseInt(match[1], 10), match[2].trim());
+          }
+        }
+        if (map.size > 0) {
+          return batch.map((orig, idx) => map.get(idx) || orig);
+        }
+        if (lines.length === batch.length) {
+          return lines.map((l: string) => l.replace(/^\d+::\s*/, '').trim());
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Google clients5 translation failed, trying fallback]:', e);
+  }
+
+  // Dự phòng qua translate.google.com
+  try {
+    const url2 = `https://translate.google.com/translate_a/single?client=at&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(prefixed)}`;
+    const r2 = await fetch(url2, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r2.ok) {
+      const data = await r2.json();
+      if (Array.isArray(data[0])) {
+        const fullTranslated = data[0].map((item: any) => item[0]).join('');
+        const lines = fullTranslated.split('\n');
+        const map = new Map<number, string>();
+        for (const line of lines) {
+          const match = line.match(/^(\d+)::\s*(.+)$/);
+          if (match) {
+            map.set(parseInt(match[1], 10), match[2].trim());
+          }
+        }
+        if (map.size > 0) {
+          return batch.map((orig, idx) => map.get(idx) || orig);
+        }
+      }
+    }
+  } catch (e2) {
+    console.warn('[Google at translation failed]:', e2);
+  }
+
+  return batch;
+}
+
+// =========================================================================
+// 2. BÓC BĂNG SIÊU TỐC BẰNG GROQ WHISPER LARGE V3 (100% MIỄN PHÍ)
+// =========================================================================
+async function transcribeAndTranslateWithGroq(
+  groqKey: string,
+  audioBase64: string,
+  mimeType: string,
+  startOffset: number,
+  totalDuration: number,
+  videoTitle?: string
+) {
+  try {
+    const rawAudio = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
+    const audioBuffer = Buffer.from(rawAudio, 'base64');
+
+    const formData = new FormData();
+    const fileBlob = new Blob([audioBuffer], { type: mimeType || 'audio/wav' });
+    formData.append('file', fileBlob, 'audio.wav');
+    formData.append('model', 'whisper-large-v3');
+    formData.append('response_format', 'verbose_json');
+    formData.append('temperature', '0');
+
+    console.log('[Groq] Đang gửi âm thanh bóc băng tới Whisper Large v3 (startOffset:', startOffset, 's)...');
+    const groqResp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${groqKey}`,
+      },
+      body: formData,
+    });
+
+    if (!groqResp.ok) {
+      const errText = await groqResp.text();
+      console.warn('[Groq Whisper HTTP Error]:', groqResp.status, errText);
+      return null;
+    }
+
+    const whisperData = await groqResp.json();
+    const detectedLang = whisperData.language || 'auto';
+    const segments = whisperData.segments || [];
+
+    if (segments.length === 0 && !whisperData.text?.trim()) {
+      return { detectedLanguage: detectedLang, cues: [] };
+    }
+
+    const rawItems = segments.length > 0
+      ? segments.map((s: any, idx: number) => ({
+          id: idx + 1,
+          startSec: Number(Number(s.start || 0).toFixed(1)),
+          endSec: Number(Number(s.end || (s.start + 2.5)).toFixed(1)),
+          text: String(s.text || '').trim(),
+        }))
+      : [
+          {
+            id: 1,
+            startSec: 0.0,
+            endSec: Number(totalDuration.toFixed(1)),
+            text: String(whisperData.text || '').trim(),
+          },
+        ];
+
+    const validItems = rawItems.filter((it: any) => it.text.length > 0);
+    if (validItems.length === 0) {
+      return { detectedLanguage: detectedLang, cues: [] };
+    }
+
+    // Dịch các câu sang tiếng Việt bằng Google Translate Engine
+    const rawTexts = validItems.map((it: any) => it.text);
+    let translatedTexts: string[] = [];
+
+    const isAlreadyVietnamese = detectedLang.toLowerCase() === 'vi' || detectedLang.toLowerCase() === 'vietnamese';
+    if (isAlreadyVietnamese && !rawTexts.some((t: string) => /[\u4e00-\u9fa5]/.test(t))) {
+      translatedTexts = rawTexts;
+    } else {
+      // Dịch theo từng batch 30 câu
+      const BATCH_SIZE = 30;
+      for (let i = 0; i < rawTexts.length; i += BATCH_SIZE) {
+        const chunk = rawTexts.slice(i, i + BATCH_SIZE);
+        const transChunk = await translateBatchWithGoogle(chunk);
+        translatedTexts.push(...transChunk);
+      }
+    }
+
+    const finalCues = validItems.map((it: any, idx: number) => {
+      const vietnameseText = (translatedTexts[idx] || it.text).trim();
+      return {
+        id: `groq_cue_${startOffset}_${it.id}`,
+        startSec: Number((it.startSec + startOffset).toFixed(1)),
+        endSec: Number((Math.max(it.startSec + 0.8, it.endSec) + startOffset).toFixed(1)),
+        text: vietnameseText,
+      };
+    });
+
+    return {
+      detectedLanguage: detectedLang,
+      cues: finalCues,
+    };
+  } catch (err: any) {
+    console.error('[Groq Process Exception]:', err);
+    return null;
+  }
+}
+
+// =========================================================================
+// 3. GỌI TRỰC TIẾP GOOGLE GEMINI QUA SDK CHÍNH THỨC VÀ REST API DỰ PHÒNG
+// =========================================================================
 async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
+  // Ưu tiên các model hoạt động tốt nhất
   const models = [
     'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
     'gemini-3.1-flash-lite',
-    'gemini-flash-latest'
+    'gemini-flash-latest',
   ];
 
   // 1. Thử gọi qua SDK chính thức @google/genai
@@ -58,7 +242,7 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
         generationConfig: {
           responseMimeType: 'application/json',
           maxOutputTokens: 8192,
-          temperature: 0.2, // Nhiệt độ thấp để dịch chính xác nguyên văn, không bịa đặt
+          temperature: 0.2,
         },
       };
 
@@ -90,6 +274,9 @@ async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) 
   return null;
 }
 
+// =========================================================================
+// 4. MAIN ROUTE HANDLER (POST)
+// =========================================================================
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -110,8 +297,43 @@ export async function POST(req: Request) {
     const chunkIndex = Math.max(1, Number(rawChunk) || 1);
     const totalChunks = Math.max(1, Number(rawTotal) || 1);
 
-    // Lấy API Key từ biến môi trường của hệ thống
+    // 🌟 ƯU TIÊN 1: GROQ WHISPER LARGE V3 (100% MIỄN PHÍ, SIÊU TỐC, CHÍNH XÁC TUYỆT ĐỐI)
+    const groqApiKey = 
+      body.groqApiKey || 
+      process.env.GROQ_API_KEY || 
+      process.env.GROQ_KEY || 
+      process.env.NEXT_PUBLIC_GROQ_API_KEY || 
+      '';
+
+    if (groqApiKey && audioBase64) {
+      console.log(`[Transcribe] Đang bóc băng phân đoạn ${chunkIndex}/${totalChunks} bằng Groq Whisper Large v3...`);
+      const groqResult = await transcribeAndTranslateWithGroq(
+        groqApiKey,
+        audioBase64,
+        mimeType,
+        startOffset,
+        totalDuration,
+        videoTitle
+      );
+      if (groqResult && Array.isArray(groqResult.cues)) {
+        return NextResponse.json({
+          success: true,
+          chunkIndex,
+          totalChunks,
+          startOffset,
+          detectedLanguage: groqResult.detectedLanguage || 'Tự động nhận diện',
+          summary: '',
+          cues: groqResult.cues,
+          engine: 'groq-whisper-large-v3',
+        });
+      }
+      console.warn('[Groq Whisper failed, fallback to Gemini...]');
+    }
+
+    // Lấy API Key Gemini từ client gửi lên hoặc biến môi trường hệ thống
     const apiKey = 
+      body.geminiApiKey ||
+      body.apiKey ||
       process.env.GEMINI_API_KEY || 
       process.env.GOOGLE_API_KEY || 
       process.env.GEMINI_KEY || 
@@ -120,7 +342,7 @@ export async function POST(req: Request) {
       '';
 
     if (!apiKey) {
-      // Nếu server Next.js chưa cấu hình key, thử gọi tự động sang backend chính
+      // Nếu server chưa cấu hình key, thử gọi tự động sang backend chính api.kpost.vn
       try {
         const backendEndpoints = [
           "https://api.kpost.vn/ai-content/transcribe-and-translate",
@@ -147,15 +369,14 @@ export async function POST(req: Request) {
         {
           success: false,
           error: "MISSING_SERVER_API_KEY",
-          message: "Máy chủ kpost-frontend chưa được cấu hình biến môi trường GEMINI_API_KEY trên Coolify. Vui lòng thêm GEMINI_API_KEY vào mục Environment Variables của kpost-frontend.",
+          message: "Máy chủ kpost-frontend chưa được cấu hình biến môi trường GEMINI_API_KEY trên Coolify. Vui lòng thêm GEMINI_API_KEY hoặc GROQ_API_KEY vào mục Environment Variables của kpost-frontend.",
           cues: [],
         },
         { status: 500 }
       );
     }
 
-    // 🌟 SYSTEM PROMPT ĐA NĂNG 100% CHO MỌI THỂ LOẠI VIDEO (THƯƠNG MẠI HOÁ TOÀN DIỆN)
-    // Tự động nhận diện mọi ngôn ngữ (Trung, Anh, Hàn, Nhật, Pháp, Đức, Việt...) và mọi thể loại (Phim ảnh, Hoạt hình, Vlog, Hướng dẫn, Đánh giá, Tin tức, Phỏng vấn...)
+    // 🌟 SYSTEM PROMPT ĐA NĂNG 100% CHO MỌI THỂ LOẠI VIDEO
     const systemPrompt = `BẠN LÀ MỘT HỆ THỐNG AI ĐA PHƯƠNG THỨC CHUYÊN NGHIỆP VỀ BÓC BĂNG & DỊCH THUẬT PHỤ ĐỀ / LỒNG TIẾNG CHO MỌI LOẠI VIDEO.
 
 NHIỆM VỤ CỦA BẠN:
@@ -249,6 +470,21 @@ NGUYÊN TẮC XỬ LÝ (ÁP DỤNG ĐỘC LẬP CHO VIDEO NÀY):
           endSec: Math.max(adjustedStart + 0.8, adjustedEnd),
           text: textStr,
         });
+      }
+    }
+
+    // 🛡️ CHỐNG SÓT TIẾNG TRUNG/NGOẠI NGỮ: Tự động dịch bù 100% sang Tiếng Việt
+    const hasChineseOrForeign = finalCues.some((c) => /[\u4e00-\u9fa5]/.test(c.text));
+    if (hasChineseOrForeign && finalCues.length > 0) {
+      try {
+        console.log(`[Safety Net] Phát hiện ${finalCues.length} câu còn dính chữ Hán, đang tự động chuyển ngữ sang Tiếng Việt...`);
+        const textsToTrans = finalCues.map((c) => c.text);
+        const translatedBatch = await translateBatchWithGoogle(textsToTrans);
+        for (let i = 0; i < finalCues.length; i++) {
+          finalCues[i].text = translatedBatch[i] || finalCues[i].text;
+        }
+      } catch (safeErr) {
+        console.warn('[Safety Net translation error]:', safeErr);
       }
     }
 
