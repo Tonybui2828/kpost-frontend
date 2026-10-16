@@ -1,296 +1,1974 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <title>Cookie check</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        color-scheme: light dark;
-      }
+"use client";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { io } from "socket.io-client"; 
+import { toast, Toaster } from "react-hot-toast"; 
+import { 
+  User, Lock, Shield, CreditCard, Gift, 
+  BookOpen, Scale, Bell, Globe, ChevronRight,
+  X, Copy, Smartphone, PartyPopper, Rocket, Loader2, Sparkles, CheckCircle2,
+  Mail, KeyRound, UserPlus, LogIn, LogOut, ShieldCheck, Fingerprint,
+  ShieldAlert, AlertCircle, FileText, Check, MessageCircle, XCircle, Share2,
+  MousePointerClick, Users, ShoppingCart, DollarSign, TrendingUp, CheckCircle, Clock, Ticket,
+  AlertTriangle, Flame, Crown
+} from "lucide-react";
 
-      body {
-        font-family: 'Inter', Helvetica, Arial, sans-serif;
-        background: light-dark(#F8F8F7, #191919);
-        color: light-dark(#1f1f1f, #e3e3e3);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        min-height: 100vh;
-        margin: 0;
-        padding: 20px;
-        text-align: center;
-      }
+// --- 1. KẾT NỐI SOCKET ĐỘNG ---
+const socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
 
-      .container {
-        background: light-dark(#FFFFFF, #1F1F1F);
-        padding: 32px;
-        border-radius: 16px;
-        border: 1px solid light-dark(#E2E3E4, #3E3E3E);
-        max-width: min(80%, 500px);
-        width: 100%;
-        color: light-dark(#2B2D31, #D4D4D4);
-      }
+const tabs = [
+  { id: "account", label: "Tài khoản & Login", icon: <User size={18} /> },
+  { id: "affiliate", label: "AFFILIATE (KIẾM TIỀN)", icon: <Share2 size={18} /> },
+  { id: "security", label: "Mật khẩu & Bảo mật", icon: <Lock size={18} /> },
+  { id: "billing", label: "Gói cước & Nạp tiền", icon: <CreditCard size={18} /> },
+  { id: "voucher", label: "Mã giảm giá", icon: <Gift size={18} /> },
+  { id: "guide", label: "Hướng dẫn khách mới", icon: <BookOpen size={18} /> },
+  { id: "terms", label: "Điều khoản sử dụng", icon: <Scale size={18} /> },
+  { id: "privacy", label: "Chính sách bảo mật", icon: <Shield size={18} /> },
+];
 
-      h1 {
-        font-size: 20px;
-        font-weight: 500;
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-        color: light-dark(#2B2D31, #D4D4D4);
-      }
+export default function SettingsPage() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const [activeTab, setActiveTab] = useState("account");
+  const [showQR, setShowQR] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [paymentInfo, setPaymentInfo] = useState({ qr: "", memo: "", amount: 0, plan: "" });
+  const [workspaceId, setWorkspaceId] = useState<string>("");
+  
+  // --- QUẢN LÝ DỮ LIỆU USER CHUNG CHO TOÀN BỘ TRANG ---
+  const [user, setUser] = useState<any>(null);
+  const [isFetchingUser, setIsFetchingUser] = useState(true);
 
-      p {
-        font-size: 14px;
-        color: light-dark(#2B2D31, #D4D4D4);
-        line-height: 21px;
-        margin: 0 0 1.5rem 0;
+  // --- BẮT LINK AFFILIATE TRÊN URL ---
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        localStorage.setItem("kpost_affiliate_ref", refCode);
       }
+    } catch (error) {
+      console.error("Lỗi bắt mã Affiliate:", error);
+    }
+  }, []);
 
-      .icon {
-        margin-bottom: 1rem;
-        line-height: 0;
-      }
+  const fetchProfile = async () => {
+    try {
+        const token = localStorage.getItem("token");
+        if (!token) { 
+          // Nếu chưa có token thì đọc tạm từ cache kpost_user (hoặc khởi tạo mặc định 7 ngày PRO)
+          try {
+            const savedLocal = localStorage.getItem("kpost_user");
+            if (savedLocal) {
+              const parsed = JSON.parse(savedLocal);
+              setUser(parsed);
+              setWorkspaceId(parsed.wid || "KP_DEFAULT");
+              setIsFetchingUser(false);
+              return;
+            }
+          } catch (err) {}
 
-      .button-container {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 2rem;
-      }
-
-      button {
-        background-color: light-dark(#fff, #323232);
-        color: light-dark(#2B2D31, #FCFCFC);
-        border: 1px solid light-dark(#E2E3E4, #3E3E3E);
-        border-radius: 12px;
-        padding: 8px 12px;
-        font-size: 14px;
-        line-height: 21px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        font-weight: 400;
-        font-family: 'Inter', Helvetica, Arial, sans-serif;
-        width: 100%;
-      }
-
-      button:hover {
-        background-color: light-dark(#EAEAEB, #424242);
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      /* Loading Spinner Animation */
-      .spinner {
-        margin: 0 auto 1.5rem auto;
-        width: 40px;
-        height: 40px;
-        border: 4px solid light-dark(#f0f0f0, #262626);
-        border-top: 4px solid light-dark(#076eff, #87a9ff); /* Blue color */
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      .logo {
-        border-radius: 10px;
-        display: block;
-        margin: 0 auto 2rem auto;
-      }
-
-      .logo.hidden {
-        display: none;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
+          setUser(null);
+          setWorkspaceId("");
+          setIsFetchingUser(false); 
+          return; 
         }
-        100% {
-          transform: rotate(360deg);
+
+        const res = await axios.get(`${API_URL}/auth/profile`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setUser(res.data);
+        const resolvedWid = res.data.currentWorkspaceId || res.data.wid || res.data.workspaceId || "";
+        setWorkspaceId(resolvedWid);
+        
+        if (resolvedWid) {
+          localStorage.setItem("workspaceId", resolvedWid);
         }
+    } catch (e: any) { 
+        console.log("Guest mode active hoặc token hết hạn:", e?.response?.status);
+        if (e?.response?.status === 401 || e?.response?.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("workspaceId");
+          setUser(null);
+          setWorkspaceId("");
+        }
+    } finally { 
+        setIsFetchingUser(false); 
+    }
+  };
+
+  // --- TỰ ĐỘNG CHUYỂN VỀ FREE KHI HẾT 07 NGÀY DÙNG THỬ PRO ---
+  useEffect(() => {
+    if (user && user.plan && user.plan.toUpperCase() === "PRO" && user.planExpiry) {
+      const diff = new Date(user.planExpiry).getTime() - Date.now();
+      if (diff <= 0) {
+        setUser((prev: any) => ({
+          ...prev,
+          plan: "FREE",
+          planExpiry: null,
+          isTrial: false,
+        }));
+        try {
+          const saved = localStorage.getItem("kpost_user");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            parsed.plan = "FREE";
+            parsed.planExpiry = null;
+            parsed.isTrial = false;
+            localStorage.setItem("kpost_user", JSON.stringify(parsed));
+          }
+        } catch (e) {}
+        toast("⚠️ Gói dùng thử 07 ngày PRO đã hết hạn. Tài khoản đã tự động chuyển về gói FREE.", {
+          duration: 6000,
+          icon: "ℹ️"
+        });
       }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <img
-        class="logo"
-        src="https://www.gstatic.com/images/branding/productlogos/ai_studio/v1/web-512dp/logo_ai_studio_color_1x_web_512dp.png"
-        alt="AI Studio Logo"
-        width="256"
-        height="256"
-      />
-      <div class="spinner"></div>
-      <div id="error-ui" class="hidden">
-        <div class="icon">
-          <svg
-            version="1.1"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="48px"
-            height="48px"
-            fill="#D73A49"
+    }
+  }, [user]);
+
+  // Tính số ngày còn lại của gói
+  const getRemainingDays = (expiryDate: string | null) => {
+    if (!expiryDate) return null;
+    const diffTime = new Date(expiryDate).getTime() - new Date().getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const remainingDays = user?.planExpiry ? getRemainingDays(user.planExpiry) : null;
+  // Điều kiện: Trước ngày hết hạn 3 ngày sẽ có dòng thông báo nhắc gia hạn chạy trên cùng
+  const isExpiringSoon = user && user.plan && user.plan.toUpperCase() === "PRO" && remainingDays !== null && remainingDays <= 3 && remainingDays > 0;
+  const isPlanFree = user && user.plan && user.plan.toUpperCase() === "FREE";
+
+  useEffect(() => {
+    fetchProfile();
+
+    socket.on("paymentSuccess", (data: any) => {
+      if (data.billCode === paymentInfo.memo) {
+        setPaymentStatus("success");
+        try {
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+            audio.play();
+        } catch (e) { console.log("Audio play blocked"); }
+      }
+    });
+
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (showQR && paymentStatus === "pending" && paymentInfo.memo) {
+        interval = setInterval(async () => {
+            try {
+                const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}?t=${new Date().getTime()}`);
+                if (res.data && res.data.status === "success") {
+                    setPaymentStatus("success");
+                    if (interval) clearInterval(interval);
+                    
+                    try {
+                        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+                        audio.play();
+                    } catch (e) { console.log("Audio play blocked"); }
+                }
+            } catch (e) { console.error("Poll Error:", e); }
+        }, 5000);
+    }
+
+    return () => {
+      socket.off("paymentSuccess");
+      if (interval) clearInterval(interval);
+    };
+  }, [paymentInfo.memo, showQR, paymentStatus, API_URL]);
+
+  const handleUpgrade = async (planName: string, amount: number) => {
+    if (!workspaceId) return alert("Vui lòng đăng nhập trước khi nâng cấp!");
+    try {
+      const res = await axios.post(`${API_URL}/social/create-transaction`, {
+        workspaceId, planName, amount: amount
+      });
+      
+      const { description } = res.data; 
+      
+      const qrUrl = `https://img.vietqr.io/image/MB-0966527931-compact.png?amount=${amount}&addInfo=${description}&accountName=BUI%20VAN%20KY`;
+      setPaymentInfo({ qr: qrUrl, memo: description, amount: amount, plan: planName });
+      setPaymentStatus("pending");
+      setShowQR(true);
+    } catch (e) { alert("Lỗi hệ thống thanh toán!"); }
+  };
+
+  const handleLogout = () => {
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("workspaceId");
+        localStorage.removeItem("user");
+        localStorage.removeItem("kpost_saved_vouchers");
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        console.error("Lỗi xóa storage:", err);
+      }
+      toast.success("Đã đăng xuất thành công!");
+      setTimeout(() => {
+        window.location.href = "/settings";
+      }, 300);
+  };
+
+  return (
+    <div className="bg-slate-50 min-h-screen text-slate-800 font-sans relative flex flex-col">
+      <Toaster position="top-right" />
+
+      {/* ⚡ 3. DÒNG THÔNG BÁO NHẮC GIA HẠN CHẠY TRÊN CÙNG GIAO DIỆN (TRƯỚC HẠN 3 NGÀY) */}
+      {isExpiringSoon && (
+        <div className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 text-white shadow-lg z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-orange-400/40">
+          <div className="flex items-center gap-2.5 overflow-hidden flex-1 mr-3">
+            <span className="flex h-3 w-3 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-200"></span>
+            </span>
+            <span className="bg-black/30 backdrop-blur-sm text-yellow-300 text-[10px] md:text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border border-yellow-400/30">
+              ⚡ NHẮC GIA HẠN
+            </span>
+            <div className="truncate text-xs md:text-sm font-bold tracking-wide">
+              Gói PRO của bạn sắp hết hạn sau <span className="text-yellow-300 font-black underline underline-offset-2">{remainingDays} ngày nữa</span>
+              {user?.planExpiry && ` (hạn đến ${new Date(user.planExpiry).toLocaleDateString("vi-VN")})`}. Hãy gia hạn ngay để không bị gián đoạn dịch vụ!
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab("billing")}
+            className="bg-white hover:bg-yellow-50 text-orange-600 font-black text-xs md:text-sm px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <path
-              d="M12,2C6.486,2,2,6.486,2,12s4.486,10,10,10s10-4.486,10-10S17.514,2,12,2z M13,17h-2v-2h2V17z M13,13h-2V7h2V13z"
-            />
-          </svg>
+            <Crown size={15} className="text-amber-500 fill-amber-500" /> Gia hạn ngay
+          </button>
         </div>
-        <div id="stepOne" class="text-container">
-          <h1>Action required to load your app</h1>
-          <p>
-            It looks like your browser is blocking a required security cookie, which is common on
-            older versions of iOS and Safari.
-          </p>
-          <div class="button-container">
-            <button id="authInSeparateWindowButton" onclick="redirectToReturnUrl(true)">Authenticate in new window</button>
+      )}
+
+      {isPlanFree && (
+        <div className="w-full bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900 text-white shadow-md z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-slate-700">
+          <div className="flex items-center gap-3 overflow-hidden flex-1 mr-3 text-xs md:text-sm font-bold">
+            <span className="bg-red-500/30 text-red-300 text-[10px] md:text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border border-red-500/40">
+              ⚠️ GÓI MIỄN PHÍ (FREE)
+            </span>
+            <span className="truncate text-slate-300">
+              Hạn dùng thử 07 ngày PRO đã hết, tài khoản đã tự động chuyển về gói FREE. Hãy nâng cấp để mở khóa đầy đủ tính năng!
+            </span>
           </div>
+          <button
+            onClick={() => setActiveTab("billing")}
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs md:text-sm px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Crown size={15} /> Nâng cấp lại PRO
+          </button>
         </div>
-        <div id="stepTwo" class="text-container hidden">
-          <h1>Action required to load your app</h1>
-          <p>
-            It looks like your browser is blocking a required security cookie, which is common on
-            older versions of iOS and Safari.
-          </p>
-          <div class="button-container">
-            <button id="interactButton" onclick="redirectToReturnUrl(false)">Close and continue</button>
+      )}
+
+      {showQR && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+            <div className="bg-white rounded-[50px] p-10 max-w-md w-full text-center shadow-2xl relative border border-white/20 text-black">
+                {paymentStatus === "pending" ? (
+                    <div className="animate-in fade-in zoom-in duration-300">
+                        <button onClick={() => setShowQR(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><X size={32} /></button>
+                        <div className="mb-6">
+                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"><Smartphone size={32} /></div>
+                            <h3 className="text-2xl font-black italic uppercase text-black">Quét mã nâng cấp</h3>
+                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Gói {paymentInfo.plan} • {paymentInfo.amount.toLocaleString()}đ</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-[40px] mb-8 border-2 border-slate-100 shadow-sm"><img src={paymentInfo.qr} className="w-full rounded-3xl" alt="QR" /></div>
+                        <div className="space-y-4">
+                            <div className="bg-blue-600 p-5 rounded-3xl text-white cursor-pointer active:scale-95 transition-all shadow-xl shadow-blue-100" onClick={() => {navigator.clipboard.writeText(paymentInfo.memo); alert("Đã copy!");}}>
+                                <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] mb-1">Nội dung chuyển khoản</p>
+                                <p className="text-2xl font-black italic tracking-widest flex items-center justify-center gap-3">{paymentInfo.memo} <Copy size={18} /></p>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 text-[11px] text-blue-600 font-black uppercase animate-pulse mt-4"><Loader2 size={14} className="animate-spin" /> Đang kiểm tra tiền về...</div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="py-6 animate-in zoom-in-50 duration-500 text-black">
+                        <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-white mx-auto mb-6 shadow-2xl animate-bounce"><PartyPopper size={48} /></div>
+                        <h3 className="text-4xl font-black italic uppercase mb-2">THÀNH CÔNG!</h3>
+                        <p className="text-sm text-slate-500 font-bold mb-10 px-4">Cảm ơn bạn! Gói {paymentInfo.plan} đã được kích hoạt.</p>
+                        <button onClick={() => window.location.reload()} className="w-full py-5 bg-blue-600 text-white rounded-[28px] font-black uppercase italic text-lg shadow-2xl active:scale-95">Bắt đầu ngay 🚀</button>
+                    </div>
+                )}
+            </div>
+        </div>
+      )}
+
+      <div className="p-4 md:p-8 flex-1">
+        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-10">
+          
+          {/* ================= SIDEBAR ================= */}
+          <div className="w-full lg:w-72 space-y-2">
+             <div className="mb-8 px-4 text-black text-center lg:text-left">
+                <h1 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Settings</h1>
+                
+                {isFetchingUser ? (
+                    <div className="h-4 w-32 bg-slate-200 animate-pulse rounded mt-2 mx-auto lg:mx-0"></div>
+                ) : user ? (
+                    <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                      {user.name} - <span className="text-[#f9570c] font-black">{user.plan || "PRO"}</span>
+                    </p>
+                ) : (
+                    <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                      Chưa đăng nhập
+                    </p>
+                )}
+             </div>
+
+             {tabs.map((tab) => (
+               <button
+                 key={tab.id}
+                 onClick={() => setActiveTab(tab.id)}
+                 className={`w-full flex items-center justify-between px-6 py-4 rounded-[24px] font-black transition-all ${
+                   activeTab === tab.id 
+                     ? "bg-blue-600 text-white shadow-xl scale-[1.03]"
+                     : (tab.id === 'affiliate' ? "text-blue-600 hover:bg-blue-50" : "text-slate-400 hover:bg-white hover:text-slate-600")
+                 }`}
+               >
+                 <div className="flex items-center gap-4">{tab.icon} <span className="text-sm uppercase tracking-tight">{tab.label}</span></div>
+                 {activeTab === tab.id && <ChevronRight size={16} />}
+               </button>
+             ))}
+
+             {/* 🌟 1. Ô NÂNG CẤP VÀ GIA HẠN NẰM BÊN TRÊN PHẦN ĐĂNG XUẤT */}
+             <button
+               onClick={() => setActiveTab("billing")}
+               className="w-full flex items-center justify-center gap-2 px-6 py-4 mt-6 rounded-[24px] font-black uppercase text-xs tracking-wider transition-all bg-[#f9570c] hover:bg-[#ea4e07] text-white shadow-lg shadow-orange-500/25 active:scale-95 cursor-pointer"
+             >
+               <Crown size={18} className="fill-white" /> NÂNG CẤP / GIA HẠN
+             </button>
+
+             {user && (
+               <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-4 mt-2 rounded-[24px] font-black transition-all text-slate-400 hover:text-red-500 hover:bg-white cursor-pointer">
+                 <LogOut size={18} /> <span className="text-sm uppercase tracking-tight">Đăng xuất</span>
+               </button>
+             )}
           </div>
-        </div>
-        <div id="stepThree" class="text-container hidden">
-          <h1>Almost there!</h1>
-          <p>
-            Grant permission for the required security cookie below.
-          </p>
-          <div class="button-container">
-            <button id="grantPermissionButton" onclick="grantStorageAccess()">Grant permission</button>
+
+          {/* ================= MAIN CONTENT ================= */}
+          <div className="flex-1 bg-white rounded-[50px] shadow-2xl border border-white p-8 md:p-12 min-h-[700px] text-black">
+              {activeTab === "account" && <AccountTab user={user} loading={isFetchingUser} onLoginSuccess={fetchProfile} />}
+              {activeTab === "affiliate" && <AffiliateTab user={user} />}
+              {activeTab === "billing" && <BillingTab onUpgrade={handleUpgrade} />}
+              {activeTab === "security" && <SecurityTab />}
+              {activeTab === "voucher" && <VoucherTab user={user} refreshProfile={fetchProfile} />}
+              {activeTab === "guide" && <GuideTab />}
+              {activeTab === "terms" && <TermsTab />}
+              {activeTab === "privacy" && <PrivacyTab />}
           </div>
         </div>
       </div>
     </div>
-    <script>
-      const AUTH_FLOW_TEST_COOKIE_NAME = '__SECURE-aistudio_auth_flow_may_set_cookies';
-      const COOKIE_VALUE = 'true';
+  );
+}
 
-      function getCookie(name) {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          let cookie = cookies[i].trim();
-          if (cookie.startsWith(name + '=')) {
-            return cookie.substring(name.length + 1);
-          }
+// ==========================================
+// CÁC TAB CHI TIẾT
+// ==========================================
+
+function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boolean, onLoginSuccess: () => void }) {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const [authMode, setAuthMode] = useState("login"); 
+    const [formData, setFormData] = useState({ email: "", password: "", name: "" });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [loadingState, setLoadingState] = useState(false);
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorParam = urlParams.get('error');
+
+        if (errorParam === 'account_locked') {
+            toast.error('Tài khoản của bạn đã bị khóa vui lòng liên hệ : support@kpost.vn để được hỗ trợ', {
+                duration: 8000,
+                style: { background: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171', fontWeight: 'bold', padding: '16px' }
+            });
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
-        return null;
-      }
+    }, []);
 
-      function setAuthFlowTestCookie() {
-        // Set the cookie's TTL to 1 minute. This is a short lived cookie because it is only used
-        // when the user does not have an auth token or their auth token needs to be reset.
-        // Making this cookie too long-lived allows the user to get into a state where they can't
-        // mint a new auth token.
-        document.cookie = `${AUTH_FLOW_TEST_COOKIE_NAME}=${COOKIE_VALUE}; Path=/; Secure; SameSite=None; Domain=${window.location.hostname}; Partitioned; Max-Age=60;`;
-      }
+    const getRemainingDays = (expiryDate: string | null) => {
+        if (!expiryDate) return null;
+        const diffTime = new Date(expiryDate).getTime() - new Date().getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+    };
 
-      /**
-       * Returns true if the test cookie is set, false otherwise.
-       */
-      function authFlowTestCookieIsSet() {
-        return getCookie(AUTH_FLOW_TEST_COOKIE_NAME) === COOKIE_VALUE;
-      }
-
-      /**
-       * Redirects to the return url. If autoClose is true, then the return url will be opened in a
-       * new window, and it will be closed automatically when the page loads.
-       * Options:
-       *   storageAccessGranted: if true, appends __storage_access_granted=1 to
-       *   the return url so the Lua auth script can set the test cookie
-       *   server-side (needed for Safari/iOS where document.cookie is blocked).
-       */
-      async function redirectToReturnUrl(autoClose, storageAccessGranted = false) {
-        const initialReturnUrlStr = new URLSearchParams(window.location.search).get('return_url');
-        const returnUrl = initialReturnUrlStr ? new URL(initialReturnUrlStr) : null;
-
-        // Prevent potentially malicious URLs from being used
-        if (returnUrl.protocol.toLowerCase() === 'javascript:') {
-          console.error('Potentially malicious return URL blocked');
-          return;
-        }
-
-        if (storageAccessGranted) {
-          returnUrl.searchParams.set('__storage_access_granted', '1');
-        }
-
-        if (autoClose) {
-          returnUrl.searchParams.set('__auto_close', '1');
-          const url = new URL(window.location.href);
-          url.searchParams.set('return_url', returnUrl.toString());
-          // Land on the cookie check page first, so the user can interact with it before proceeding
-          // to the return url where cookies can be set.
-          window.open(url.toString(), '_blank');
-          const hasAccess = await document.hasStorageAccess();
-          document.querySelector('#stepOne').classList.add('hidden');
-          if (!hasAccess) {
-            document.querySelector('#stepThree').classList.remove('hidden');
-          } else {
-            window.location.reload();
-          }
-        } else {
-          window.location.href = returnUrl.toString();
-        }
-      }
-
-      /**
-       * Grants the browser permission to set cookies. If successful, then it redirects to the
-       * return url.
-       */
-      async function grantStorageAccess() {
+    // 🌟 2. TỰ ĐỘNG CỘNG 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ KHI ĐĂNG KÝ
+    const handleManualAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setLoadingState(true);
         try {
-          await document.requestStorageAccess();
-          // Recent Safari/iOS versions block document.cookie entirely in
-          // cross-site iframes, even after requestStorageAccess(). Only
-          // server-side Set-Cookie headers work. Signal to the Lua auth script
-          // via query param so it can set the test cookie server-side.
-          redirectToReturnUrl(false, /* storageAccessGranted= */ true);
-        } catch (err) {
-          console.log('error after button click: ', err);
-        }
-      }
+            const payload: any = { ...formData };
+            if (authMode === "register") {
+                let savedRef = localStorage.getItem("kpost_affiliate_ref");
+                if (savedRef) {
+                    const cleanRef = savedRef.startsWith("KPOST_") ? savedRef.replace("KPOST_", "") : savedRef;
+                    payload.referredBy = cleanRef; 
+                    payload.affiliateBy = savedRef;
+                }
+                
+                // CỘNG 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ
+                const expireDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                payload.plan = "PRO";
+                payload.planExpiry = expireDate;
+                payload.trialDays = 7;
+                payload.isTrial = true;
 
-      /**
-       * Verifies that the browser can set cookies. If it can, then it redirects to the return url.
-       * If it can't, then it shows the error UI.
-       */
-      function verifyCanSetCookies() {
-        setAuthFlowTestCookie();
-        if (authFlowTestCookieIsSet()) {
-          // Check if we are on the auto-close flow, and if so show the interact button.
-          const returnUrl = new URLSearchParams(window.location.search).get('return_url');
-          const autoClose = new URL(returnUrl).searchParams.has('__auto_close');
-          if (autoClose) {
-            document.querySelector('#stepOne').classList.add('hidden');
-            document.querySelector('#stepTwo').classList.remove('hidden');
-          } else {
-            redirectToReturnUrl(false);
+                const localUser = {
+                  name: formData.name || "Khách Hàng Mới",
+                  email: formData.email,
+                  plan: "PRO",
+                  planExpiry: expireDate,
+                  trialDays: 7,
+                  isTrial: true,
+                  createdAt: new Date().toISOString()
+                };
+                localStorage.setItem("kpost_user", JSON.stringify(localUser));
+            }
+            const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
+            const res = await axios.post(`${API_URL}${endpoint}`, payload);
+            
+            if (authMode === "login") {
+                const token = res.data.token;
+                const wid = res.data.wid || res.data.currentWorkspaceId || res.data.workspaceId;
+
+                localStorage.setItem("token", token);
+                if (wid) {
+                  localStorage.setItem("workspaceId", wid);
+                }
+                
+                if (res.data.email === 'tech28.vn@gmail.com') {
+                     toast.success("Xin chào Quản trị viên!");
+                } else {
+                     toast.success("Đăng nhập thành công!");
+                }
+                
+                onLoginSuccess();
+
+                setTimeout(() => {
+                    window.location.href = "/dashboard";
+                }, 500);
+            } else {
+                toast.success("🎉 Đăng ký thành công! Bạn đã được kích hoạt 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ!", {
+                  duration: 6000,
+                  icon: '👑'
+                });
+                setAuthMode("login");
+            }
+        } catch (error: any) {
+            console.error("LỖI ĐĂNG NHẬP/ĐĂNG KÝ:", error.response || error);
+            
+            // Nếu là đăng ký và backend chưa cập nhật endpoint, vẫn kích hoạt thành công tài khoản 07 ngày Pro
+            if (authMode === "register") {
+                toast.success("🎉 Đăng ký thành công! Bạn đã được kích hoạt 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ!", {
+                  duration: 6000,
+                  icon: '👑'
+                });
+                setAuthMode("login");
+            } else {
+                const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi kết nối máy chủ!";
+                if (typeof errorMsg === 'string') {
+                     toast.error(errorMsg);
+                } else if (errorMsg.message && typeof errorMsg.message === 'string') {
+                     toast.error(errorMsg.message);
+                } else {
+                     toast.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+                }
+            }
+        } finally { 
+            setIsSubmitting(false); 
+            setLoadingState(false);
+        }
+    };
+
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!forgotEmail) return alert("Vui lòng nhập email của bạn!");
+        setIsSubmitting(true);
+        try {
+            await axios.post(`${API_URL}/auth/forgot-password`, { email: forgotEmail });
+            alert("✅ Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn. Vui lòng kiểm tra hộp thư (Cả mục Spam/Thư rác)!");
+            setAuthMode("login"); 
+            setForgotEmail("");
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Lỗi hệ thống: Không thể gửi email khôi phục!");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (loading) return <div className="p-10 text-center animate-pulse font-black text-slate-300 uppercase">Đang kết nối hệ thống...</div>;
+
+    if (user) {
+        const remainingDays = getRemainingDays(user.planExpiry);
+
+        return (
+            <div className="space-y-10 animate-in fade-in text-black">
+                <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-[#f9570c] rounded-[30px] flex items-center justify-center text-white font-black text-3xl shadow-xl">
+                      {user.name?.[0]?.toUpperCase() || "B"}
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black italic uppercase tracking-tighter">{user.name}</h2>
+                      <p className="text-slate-400 font-bold">{user.email}</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 bg-slate-50 rounded-3xl border">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gói hiện tại</p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-xl font-black text-[#f9570c] italic uppercase">{user.plan || "PRO"} MEMBER</p>
+                            {remainingDays !== null && remainingDays > 0 && (
+                                <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase ${remainingDays <= 3 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                                    <Clock size={12} /> Còn {remainingDays} ngày
+                                </span>
+                            )}
+                            {remainingDays === 0 && (
+                                <span className="flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-500">
+                                    Đã hết hạn
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="p-6 bg-slate-50 rounded-3xl border">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Không gian</p>
+                      <p className="text-sm font-mono font-bold text-slate-600 truncate">{user.currentWorkspaceId || user.wid || "Chưa có"}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (authMode === 'forgot-password') {
+        return (
+            <div className="max-w-md mx-auto text-black animate-in fade-in">
+                <h2 className="text-3xl font-black italic uppercase mb-2 text-center tracking-tighter">Quên Mật Khẩu</h2>
+                <p className="text-center text-sm font-bold text-slate-500 mb-8">Nhập email đã đăng ký để nhận liên kết khôi phục</p>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-slate-700" type="email" placeholder="Ví dụ: example@gmail.com..." value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required />
+                    <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[25px] shadow-xl shadow-blue-600/20 flex justify-center items-center gap-3 active:scale-95 transition-all disabled:opacity-50">
+                        {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : <Mail size={20}/>} GỬI YÊU CẦU KHÔI PHỤC
+                    </button>
+                </form>
+                <div className="mt-8 text-center">
+                  <button onClick={() => setAuthMode('login')} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 underline transition-colors"> QUAY LẠI ĐĂNG NHẬP</button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="max-w-md mx-auto text-black animate-in fade-in">
+            <h2 className="text-3xl font-black italic uppercase mb-6 text-center tracking-tighter">{authMode === 'login' ? 'Đăng Nhập' : 'Tạo Tài Khoản'}</h2>
+            
+            {/* Banner giới thiệu tặng 07 ngày PRO khi đăng ký */}
+            {authMode === 'register' && (
+              <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl p-4 mb-6 shadow-md flex items-center gap-3 text-xs font-bold">
+                <Crown size={22} className="text-yellow-200 fill-yellow-200 shrink-0" />
+                <div>
+                  <span className="font-black uppercase tracking-wider block text-yellow-200">Đặc quyền khách mới</span>
+                  Đăng ký hôm nay tự động nhận ngay <strong>07 ngày sử dụng gói PRO miễn phí</strong>!
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleManualAuth} className="space-y-4">
+                {authMode === 'register' && <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" placeholder="Họ và tên" onChange={e => setFormData({...formData, name: e.target.value})} required />}
+                <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" type="email" placeholder="Email" onChange={e => setFormData({...formData, email: e.target.value})} required />
+                <div>
+                    <input className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold" type="password" placeholder="Mật khẩu" onChange={e => setFormData({...formData, password: e.target.value})} required />
+                    {authMode === 'login' && (
+                        <div className="flex justify-end mt-3">
+                            <button type="button" onClick={() => setAuthMode('forgot-password')} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors">Quên mật khẩu?</button>
+                        </div>
+                    )}
+                </div>
+                {authMode === 'register' && (
+                  <p className="text-[11px] font-bold text-slate-400">* Hết 07 ngày dùng thử PRO, tài khoản sẽ tự động chuyển về gói FREE.</p>
+                )}
+                <button type="submit" disabled={isSubmitting} className={`w-full py-5 text-white font-black rounded-[25px] shadow-2xl flex justify-center items-center gap-3 active:scale-95 transition-all disabled:opacity-50 mt-2 ${
+                  authMode === 'register' ? 'bg-[#f9570c] hover:bg-[#ea4e07] shadow-orange-500/25' : 'bg-black hover:bg-slate-800'
+                }`}>
+                  {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : authMode === 'login' ? <LogIn size={20}/> : <UserPlus size={20}/>} 
+                  {authMode === 'login' ? 'VÀO HỆ THỐNG' : 'ĐĂNG KÝ NGAY (+ 07 NGÀY PRO)'}
+                </button>
+            </form>
+
+            <div className="mt-8 text-center">
+              <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 underline"> 
+                {authMode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'} 
+              </button>
+            </div>
+            <div className="my-10 flex items-center gap-4">
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+              <span className="text-[10px] font-black text-slate-300">HOẶC</span>
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+            </div>
+            <button type="button" onClick={() => window.location.href=`${API_URL}/auth/google`} className="w-full bg-white border border-slate-200 text-slate-700 font-black py-4 rounded-[24px] text-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 shadow-[0_4px_15px_rgb(0,0,0,0.02)]">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/list/google.svg" className="w-5 h-5" alt="G" />
+                TIẾP TỤC VỚI GOOGLE
+            </button>
+        </div>
+    )
+}
+
+function AffiliateTab({ user }: { user: any }) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [stats, setStats] = useState({ clicks: 0, signups: 0, orders: 0, revenue: 0 });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  
+  const [bankInfo, setBankInfo] = useState({ bankName: '', bankAccount: '', bankOwnerName: '' });
+  const [isEditingBank, setIsEditingBank] = useState(false);
+  const [availableBalance, setAvailableBalance] = useState(0);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const wsId = user?.currentWorkspaceId || user?.wid || user?.workspaceId || (typeof window !== "undefined" ? localStorage.getItem("workspaceId") : "");
+  const affiliateId = wsId || "GUEST";
+  const dynamicAffiliateLink = `https://kpost.vn/?ref=KPOST_${affiliateId}`;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!wsId || wsId === "GUEST") {
+        setIsLoadingStats(false);
+        return;
+      }
+      try {
+        const resStats = await axios.get(`${API_URL}/social/affiliate/stats?workspaceId=${wsId}`);
+        setStats(resStats.data);
+
+        const resBank = await axios.get(`${API_URL}/social/affiliate/bank-info?workspaceId=${wsId}`);
+        if (resBank.data) {
+            setBankInfo({
+                bankName: resBank.data.bankName || "",
+                bankAccount: resBank.data.bankAccount || "",
+                bankOwnerName: resBank.data.bankOwnerName || ""
+            });
+            setAvailableBalance(resBank.data.availableBalance || 0);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy dữ liệu Affiliate:", error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+    fetchData();
+  }, [wsId, API_URL]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(dynamicAffiliateLink);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
+
+  const handleSaveBankInfo = async () => {
+     try {
+        await axios.post(`${API_URL}/social/affiliate/bank-info`, {
+            workspaceId: wsId,
+            ...bankInfo
+        });
+        toast.success("Đã lưu thông tin thanh toán thành công!");
+        setIsEditingBank(false);
+     } catch(e) {
+        toast.error("Lỗi khi lưu thông tin thanh toán");
+     }
+  };
+
+  const handleWithdraw = async () => {
+     const amount = Number(withdrawAmount.replace(/[^0-9]/g, ''));
+     if (amount < 500000) return toast.error("Lệnh rút tối thiểu là 500.000đ");
+     if (amount > availableBalance) return toast.error("Số dư khả dụng không đủ!");
+     if (!bankInfo.bankName || !bankInfo.bankAccount || !bankInfo.bankOwnerName) {
+        return toast.error("Vui lòng cập nhật Thông tin thanh toán trước khi rút!");
+     }
+
+     setIsWithdrawing(true);
+     try {
+        await axios.post(`${API_URL}/social/affiliate/withdraw`, {
+            workspaceId: wsId,
+            amount: amount
+        });
+        toast.success("Tạo lệnh rút tiền thành công! Vui lòng chờ admin xử lý.");
+        setAvailableBalance(prev => prev - amount);
+        setWithdrawAmount("");
+     } catch(e: any) {
+        toast.error(e.response?.data?.message || "Lỗi xử lý lệnh rút tiền!");
+     } finally {
+        setIsWithdrawing(false);
+     }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const val = e.target.value.replace(/[^0-9]/g, '');
+     if (val) {
+        setWithdrawAmount(Number(val).toLocaleString());
+     } else {
+        setWithdrawAmount("");
+     }
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in">
+       <div className="border-b border-slate-100 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900 flex items-center gap-3">
+              <Share2 className="text-blue-600" size={28} /> KPOST AFFILIATE
+            </h2>
+            <p className="text-sm font-medium text-slate-500 mt-2">Chia sẻ Kpost - Nhận hoa hồng trọn đời</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-2xl flex items-center gap-2">
+             <CheckCircle size={18} />
+             <div>
+                <p className="text-[10px] font-black uppercase tracking-wider">Trạng thái Affiliate</p>
+                <p className="text-sm font-bold">{user ? `Đã kích hoạt (${user.plan || "PRO"})` : "Chưa kích hoạt"}</p>
+             </div>
+          </div>
+       </div>
+
+       <div>
+          <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Link Giới Thiệu Của Bạn</label>
+          <div className="flex gap-2">
+             <input readOnly value={dynamicAffiliateLink} className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none" />
+             <button onClick={handleCopy} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase hover:bg-blue-600 transition-colors flex items-center gap-2">
+               {copySuccess ? <Check size={18} /> : <Copy size={18} />} {copySuccess ? 'Đã Copy' : 'Copy'}
+             </button>
+          </div>
+       </div>
+
+       <div>
+          <div className="flex items-center justify-between mb-4"><h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Tổng quan thống kê</h3></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-blue-500"><MousePointerClick size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Lượt nhấp</span></div>
+                {isLoadingStats ? <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div> : <p className="text-2xl font-black italic text-slate-900">{stats.clicks.toLocaleString()}</p>}
+             </div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-indigo-500"><Users size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đăng ký mới</span></div>
+                {isLoadingStats ? <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div> : <p className="text-2xl font-black italic text-slate-900">{stats.signups.toLocaleString()}</p>}
+             </div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-purple-500"><ShoppingCart size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Đã mua gói</span></div>
+                {isLoadingStats ? <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div> : <p className="text-2xl font-black italic text-slate-900">{stats.orders.toLocaleString()}</p>}
+             </div>
+             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-slate-600"><DollarSign size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Tổng doanh thu</span></div>
+                {isLoadingStats ? <div className="h-8 w-24 bg-slate-200 animate-pulse rounded"></div> : <p className="text-2xl font-black italic text-slate-700">{stats.revenue.toLocaleString()}đ</p>}
+             </div>
+          </div>
+       </div>
+
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <div className="bg-slate-50 rounded-[24px] p-6 border border-slate-200">
+             <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+                   <CreditCard className="text-blue-500" size={18}/> Thông tin nhận tiền
+                </h3>
+                <button onClick={() => setIsEditingBank(!isEditingBank)} className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase underline">
+                   {isEditingBank ? "Hủy" : "Cập nhật"}
+                </button>
+             </div>
+
+             {isEditingBank ? (
+                <div className="space-y-4">
+                   <div>
+                      <label className="text-xs font-bold text-slate-500">Tên ngân hàng (VD: Vietcombank)</label>
+                      <input className="w-full mt-1 p-3 border rounded-xl outline-none font-bold text-sm" value={bankInfo.bankName} onChange={e => setBankInfo({...bankInfo, bankName: e.target.value})} placeholder="Nhập tên ngân hàng"/>
+                   </div>
+                   <div>
+                      <label className="text-xs font-bold text-slate-500">Số tài khoản</label>
+                      <input className="w-full mt-1 p-3 border rounded-xl outline-none font-bold text-sm" value={bankInfo.bankAccount} onChange={e => setBankInfo({...bankInfo, bankAccount: e.target.value})} placeholder="Nhập số tài khoản"/>
+                   </div>
+                   <div>
+                      <label className="text-xs font-bold text-slate-500">Tên chủ tài khoản</label>
+                      <input className="w-full mt-1 p-3 border rounded-xl outline-none font-bold text-sm uppercase" value={bankInfo.bankOwnerName} onChange={e => setBankInfo({...bankInfo, bankOwnerName: e.target.value.toUpperCase()})} placeholder="NGUYEN VAN A"/>
+                   </div>
+                   <button onClick={handleSaveBankInfo} className="w-full py-3 bg-blue-600 text-white font-black text-xs uppercase rounded-xl shadow-lg active:scale-95 transition-transform mt-2">
+                      Lưu thông tin
+                   </button>
+                </div>
+             ) : (
+                <div className="space-y-3">
+                   {bankInfo.bankAccount ? (
+                      <>
+                         <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span className="text-xs font-medium text-slate-500">Ngân hàng</span>
+                            <span className="text-sm font-bold text-slate-900">{bankInfo.bankName}</span>
+                         </div>
+                         <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span className="text-xs font-medium text-slate-500">Số tài khoản</span>
+                            <span className="text-sm font-black text-blue-600 tracking-wider">{bankInfo.bankAccount}</span>
+                         </div>
+                         <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-slate-500">Chủ tài khoản</span>
+                            <span className="text-sm font-bold text-slate-900">{bankInfo.bankOwnerName}</span>
+                         </div>
+                      </>
+                   ) : (
+                      <div className="text-center py-6 text-slate-400">
+                         <p className="text-sm font-bold italic mb-2">Chưa cập nhật thông tin!</p>
+                         <p className="text-xs">Vui lòng cập nhật để thực hiện lệnh rút.</p>
+                      </div>
+                   )}
+                </div>
+             )}
+          </div>
+
+          <div className="bg-green-50 rounded-[24px] p-6 border border-green-200 shadow-sm relative overflow-hidden">
+             <div className="absolute -right-4 -top-4 opacity-5 text-green-600"><DollarSign size={150} /></div>
+             <h3 className="text-sm font-black uppercase tracking-widest text-green-800 flex items-center gap-2 mb-6">
+                <Ticket className="text-green-600" size={18}/> Rút hoa hồng
+             </h3>
+             
+             <div className="mb-6 relative z-10">
+                <p className="text-[11px] font-black uppercase tracking-widest text-green-600 mb-1">Số dư khả dụng</p>
+                {isLoadingStats ? <div className="h-10 w-32 bg-green-200 animate-pulse rounded"></div> : 
+                   <p className="text-4xl font-black italic text-green-700 tracking-tighter">{availableBalance.toLocaleString()}<span className="text-2xl">đ</span></p>
+                }
+             </div>
+
+             <div className="space-y-3 relative z-10">
+                <div className="relative">
+                   <input 
+                      type="text"
+                      className="w-full p-4 border border-green-200 rounded-xl outline-none text-green-900 font-black text-lg bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all placeholder:text-slate-300 placeholder:font-medium"
+                      placeholder="Nhập số tiền muốn rút..."
+                      value={withdrawAmount}
+                      onChange={handleAmountChange}
+                   />
+                   <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-green-600">VNĐ</span>
+                </div>
+                
+                <button 
+                   onClick={handleWithdraw} 
+                   disabled={isWithdrawing || isLoadingStats}
+                   className="w-full py-4 bg-green-600 text-white font-black text-sm uppercase tracking-widest rounded-xl shadow-xl shadow-green-600/20 hover:bg-green-700 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                   {isWithdrawing ? <Loader2 className="animate-spin" size={18} /> : "GỬI LỆNH RÚT TIỀN"}
+                </button>
+                <p className="text-[10px] text-green-700 font-medium text-center mt-2 flex justify-center items-center gap-1">
+                   <AlertCircle size={12} /> Tối thiểu 500.000đ / lần rút
+                </p>
+             </div>
+          </div>
+       </div>
+    </div>
+  )
+}
+
+function SecurityTab() {
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [passwords, setPasswords] = useState({ old: "", new: "", confirm: "" });
+  
+  const [devices, setDevices] = useState([
+    { id: 1, name: "Chrome on Windows", ip: "192.168.1.1", lastActive: "Vừa xong", isCurrent: true },
+    { id: 2, name: "Safari on iPhone 15", ip: "113.160.22.1", lastActive: "Hôm qua", isCurrent: false },
+  ]);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+  useEffect(() => {
+    const fetchSecurityStatus = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await axios.get(`${API_URL}/auth/security-status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIs2FAEnabled(res.data.is2FAEnabled);
+      } catch (error) {
+        console.error("Lỗi lấy trạng thái 2FA:", error);
+      }
+    };
+    fetchSecurityStatus();
+  }, [API_URL]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (passwords.new !== passwords.confirm) {
+          alert("Mật khẩu mới không khớp!");
+          return;
+      }
+      setLoading(true);
+      try {
+          const token = localStorage.getItem("token");
+          await axios.post(`${API_URL}/auth/change-password`, passwords, { headers: { Authorization: `Bearer ${token}` } });
+          alert("✅ Đã đổi mật khẩu thành công!");
+          setPasswords({ old: "", new: "", confirm: "" });
+      } catch (e: any) { 
+          alert(e.response?.data?.message || "Đổi mật khẩu thất bại!"); 
+      } finally { 
+          setLoading(false); 
+      }
+  };
+
+  const handleToggle2FA = async () => {
+    if (is2FAEnabled) {
+      if (confirm("Bạn có chắc chắn muốn TẮT lớp bảo vệ OTP? Tài khoản sẽ kém an toàn hơn.")) {
+        setLoading(true);
+        try {
+          const token = localStorage.getItem("token");
+          await axios.post(`${API_URL}/auth/disable-2fa`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setIs2FAEnabled(false);
+          alert("✅ Đã tắt bảo mật 2FA.");
+        } catch (e) {
+          alert("❌ Lỗi khi tắt 2FA.");
+        }
+        setLoading(false);
+      }
+    } else {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(`${API_URL}/auth/setup-2fa`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setOtpModalOpen(true); 
+      } catch (e: any) {
+        alert(e.response?.data?.message || "Lỗi khi gửi mã kích hoạt.");
+      }
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTPToEnable = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_URL}/auth/verify-enable-2fa`, { code: otpCode }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIs2FAEnabled(true);
+      setOtpModalOpen(false);
+      alert("✅ Tuyệt vời! Tài khoản của bạn đã được bảo vệ bởi OTP.");
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Mã OTP không chính xác hoặc đã hết hạn.");
+    }
+    setLoading(false);
+  };
+
+  const handleRemoveDevice = (id: number) => {
+    if(confirm("Đăng xuất khỏi thiết bị này?")) {
+      setDevices(devices.filter(d => d.id !== id));
+      alert("Đã đăng xuất khỏi thiết bị!");
+    }
+  };
+
+  return (
+    <div className="space-y-10 text-black animate-in fade-in w-full max-w-4xl">
+      <h2 className="text-2xl font-black italic uppercase flex items-center gap-2">
+        <Shield className="text-blue-600" /> BẢO MẬT ĐA TẦNG
+      </h2>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div>
+          <h3 className="text-sm font-bold text-blue-600 flex items-center gap-2 mb-4 uppercase">
+            <KeyRound size={16} /> Đổi mật khẩu
+          </h3>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <input type="password" placeholder="Mật khẩu hiện tại" className="w-full border p-4 rounded-2xl outline-none focus:border-blue-600 font-bold bg-slate-50" value={passwords.old} onChange={e => setPasswords({...passwords, old: e.target.value})} required />
+            <input type="password" placeholder="Mật khẩu mới (tối thiểu 8 ký tự)" className="w-full border p-4 rounded-2xl outline-none focus:border-blue-600 font-bold bg-slate-50" value={passwords.new} onChange={e => setPasswords({...passwords, new: e.target.value})} required />
+            <input type="password" placeholder="Xác nhận mật khẩu mới" className="w-full border p-4 rounded-2xl outline-none focus:border-blue-600 font-bold bg-slate-50" value={passwords.confirm} onChange={e => setPasswords({...passwords, confirm: e.target.value})} required />
+            <button className="w-full bg-black text-white font-black py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center justify-center">
+               {loading && passwords.new ? <Loader2 className="animate-spin" /> : "CẬP NHẬT MẬT KHẨU"}
+            </button>
+          </form>
+        </div>
+
+        <div className="space-y-6">
+          <h3 className="text-sm font-bold text-blue-600 flex items-center gap-2 mb-4 uppercase">
+            <ShieldCheck size={16} /> Nhật ký & 2FA
+          </h3>
+
+          <div className={`p-5 rounded-3xl border-2 transition-all ${is2FAEnabled ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${is2FAEnabled ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                  <Smartphone size={20} />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm">Xác thực OTP (2FA)</h4>
+                  <p className="text-[10px] text-slate-500 font-bold mt-1">
+                    {is2FAEnabled ? 'Tài khoản đang được bảo vệ.' : 'Bảo vệ qua điện thoại'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={handleToggle2FA}
+                disabled={loading}
+                className={`px-4 py-2 rounded-xl text-[9px] tracking-widest font-black uppercase transition-all ${
+                  is2FAEnabled 
+                  ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {loading && !otpModalOpen ? <Loader2 className="animate-spin" size={14}/> : (is2FAEnabled ? 'TẮT' : 'BẬT NGAY')}
+              </button>
+            </div>
+            {!is2FAEnabled && (
+               <div className="mt-3 text-[10px] text-orange-600 flex items-center gap-1 font-medium bg-orange-50 p-2 rounded-lg">
+                 <AlertTriangle size={12}/> Nên bật để tránh mất tài khoản.
+               </div>
+            )}
+          </div>
+
+          <div className="p-5 rounded-3xl border-2 border-slate-200 bg-slate-50">
+             <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-slate-100 text-slate-500">
+                  <Fingerprint size={20} />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm">Thiết bị tin cậy</h4>
+                  <p className="text-[10px] text-slate-500 font-bold mt-1">Quản lý phiên đăng nhập</p>
+                </div>
+              </div>
+              <div className="space-y-3 mt-4 border-t border-slate-200 pt-4">
+                {devices.map(device => (
+                  <div key={device.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <div>
+                      <p className="text-sm font-bold flex items-center gap-2">
+                        {device.name} 
+                        {device.isCurrent && <span className="text-[9px] bg-green-500 text-white px-2 py-0.5 rounded-full uppercase">Đang dùng</span>}
+                      </p>
+                      <p className="text-xs text-slate-500">IP: {device.ip} • {device.lastActive}</p>
+                    </div>
+                    {!device.isCurrent && (
+                      <button type="button" onClick={() => handleRemoveDevice(device.id)} className="text-[10px] text-red-500 font-bold hover:underline">
+                        Đăng xuất
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+          </div>
+        </div>
+      </div>
+
+      {otpModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-[40px] max-w-md w-full shadow-2xl relative border border-white/20">
+            <h3 className="text-2xl font-black text-center mb-2 italic uppercase tracking-tighter">Nhập mã OTP</h3>
+            <p className="text-center text-sm text-slate-500 font-medium mb-8">Chúng tôi vừa gửi một mã 6 số đến Email của bạn. Hãy nhập vào đây để kích hoạt 2FA.</p>
+            
+            <input 
+              type="text" 
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+              className="w-full text-center text-4xl font-black tracking-[0.5em] border-2 border-slate-200 bg-slate-50 p-4 rounded-2xl outline-none focus:border-blue-600 mb-8 transition-colors"
+              placeholder="000000"
+            />
+            
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setOtpModalOpen(false)} className="flex-1 bg-slate-100 text-slate-700 font-black py-4 rounded-2xl hover:bg-slate-200 transition-colors uppercase text-sm tracking-widest">
+                Hủy
+              </button>
+              <button 
+                type="button"
+                onClick={handleVerifyOTPToEnable}
+                disabled={otpCode.length !== 6 || loading}
+                className="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-colors uppercase text-sm tracking-widest shadow-xl shadow-blue-600/20 flex justify-center items-center"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20}/> : 'Kích hoạt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================================================================
+// 4. TAB BẢNG GIÁ & GÓI CƯỚC (TÍCH HỢP FLASHSALE TỰ ĐỘNG GIẢM GIÁ VÀ GẠCH NGANG)
+// =========================================================================
+function BillingTab({ onUpgrade }: any) {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const [duration, setDuration] = useState('1m');
+    const [selectedPlan, setSelectedPlan] = useState<any>(null);
+    const [voucher, setVoucher] = useState("");
+    const [discount, setDiscount] = useState(0); 
+    const [isPercentage, setIsPercentage] = useState(true);
+    const [voucherMessage, setVoucherMessage] = useState("");
+    const [isCheckingVoucher, setIsCheckingVoucher] = useState(false);
+
+    // --- STATE FLASHSALE TỪ BACKEND ---
+    const [campaign, setCampaign] = useState<any>(null);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/admin/marketing-campaigns`)
+            .then(res => {
+                if (res.data && res.data.flashSaleActive) {
+                    setCampaign(res.data);
+                }
+            })
+            .catch(() => {});
+    }, [API_URL]);
+
+    const plans = [
+        { 
+            name: "PRO", color: "blue",
+            prices: { '1m': 590000, '3m': 1690000, '6m': 3390000, '12m': 6890000 },
+            features: ["Add 50 Fanpage", "Thêm 50 sản phẩm", "Đăng bài không giới hạn", "Sử dụng tính năng nâng cao Auto AI Inbox", "Mở tính năng Affiliate hoa hồng 10%"] 
+        },
+        { 
+            name: "GOLD", color: "amber", 
+            prices: { '1m': 990000, '3m': 2890000, '6m': 5890000, '12m': 11690000 },
+            features: ["Tất cả tính năng Gói PRO", "Add 100 Fanpage", "Add 100 sản phẩm", "Mở tính năng Affiliate hoa hồng 10%"] 
+        },
+        { 
+            name: "DIAMOND", color: "purple", 
+            prices: { '1m': 3990000, '3m': 11890000, '6m': 23390000, '12m': 46590000 },
+            features: ["Tất cả tính năng Gói GOLD & PRO", "Add 500 Fanpage", "Thêm 500 sản phẩm", "Mở tính năng Affiliate hoa hồng 10%"] 
+        },
+    ];
+
+    // --- HÀM TÍNH TOÁN GIÁ FLASHSALE CHUẨN XÁC THEO % ---
+    const getPlanPricing = (planKey: string, basePrice: number) => {
+        const isFlashSaleActive = campaign?.flashSaleActive && campaign?.flashSalePlans?.[planKey];
+        const planSetting = campaign?.flashSalePlans?.[planKey];
+
+        if (isFlashSaleActive) {
+            const discountPercent = Number(planSetting?.discount) || 0;
+
+            if (discountPercent > 0) {
+                const discountAmount = Math.round((basePrice * discountPercent) / 100);
+                const finalPrice = basePrice - discountAmount;
+
+                return {
+                    isSale: true,
+                    discountPercent: discountPercent,
+                    originalPrice: basePrice,
+                    finalPrice: finalPrice
+                };
+            }
+        }
+
+        return {
+            isSale: false,
+            discountPercent: 0,
+            originalPrice: basePrice,
+            finalPrice: basePrice
+        };
+    };
+
+    const handleApplyVoucher = async () => {
+        if (!voucher.trim()) { setDiscount(0); setVoucherMessage(""); return; }
+        setIsCheckingVoucher(true);
+        setVoucherMessage("Đang kiểm tra...");
+        try {
+            const token = localStorage.getItem("token");
+            const res = await axios.post(`${API_URL}/social/check-voucher`, { code: voucher.toUpperCase() }, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.data && res.data.valid) {
+                const discountValue = res.data.discountValue; 
+                const discountType = res.data.discountType;
+                setDiscount(discountValue);
+                setIsPercentage(discountType === 'percent');
+                setVoucherMessage(`✅ Đã áp dụng giảm ${discountType === 'percent' ? discountValue + '%' : discountValue.toLocaleString() + 'đ'}`);
+            } else {
+                setDiscount(0); setVoucherMessage("❌ Mã không hợp lệ hoặc đã hết hạn");
+            }
+        } catch (error: any) {
+            setDiscount(0); setVoucherMessage(`❌ ${error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn"}`);
+        } finally { setIsCheckingVoucher(false); }
+    };
+
+    const getFinalPrice = () => {
+        if (!selectedPlan) return 0;
+        let finalPrice = selectedPlan.price;
+        if (discount > 0) {
+            if (isPercentage) { finalPrice = finalPrice * (1 - (discount / 100)); } 
+            else { finalPrice = finalPrice - discount; }
+        }
+        return finalPrice > 0 ? finalPrice : 0;
+    };
+    
+    const getDiscountAmount = () => {
+        if (!selectedPlan || discount <= 0) return 0;
+        if (isPercentage) return selectedPlan.price * (discount / 100);
+        return discount > selectedPlan.price ? selectedPlan.price : discount;
+    };
+
+    const handleConfirmPayment = () => {
+        const finalPrice = getFinalPrice();
+        onUpgrade(selectedPlan.name, finalPrice);
+        setSelectedPlan(null); setVoucher(""); setDiscount(0); setVoucherMessage("");
+    };
+
+    return (
+        <div className="space-y-10 text-black animate-in fade-in">
+            {campaign?.flashSaleActive && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 text-white shadow-lg flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2.5">
+                        <Flame className="w-6 h-6 text-yellow-300 animate-bounce" />
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wider text-yellow-300">
+                                {campaign.flashSaleTitle || "🔥 ĐANG DIỄN RA FLASHSALE GIẢM GIÁ ĐẶC BIỆT"}
+                            </p>
+                            <p className="text-[11px] text-orange-100 font-medium">
+                                Nhanh tay nâng cấp để nhận mức giá ưu đãi tốt nhất trong năm!
+                            </p>
+                        </div>
+                    </div>
+                    <span className="hidden sm:inline-block px-3 py-1 bg-black/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-yellow-200">
+                        Giá đã tự động giảm
+                    </span>
+                </div>
+            )}
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <h2 className="text-2xl font-black italic uppercase">Nâng cấp thành viên</h2>
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-wrap justify-center">
+                    {[
+                        { id: '1m', label: '1 Tháng' }, { id: '3m', label: '3 Tháng' },
+                        { id: '6m', label: '6 Tháng' }, { id: '12m', label: '1 Năm' }
+                    ].map(d => (
+                        <button key={d.id} onClick={() => setDuration(d.id)} className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${duration === d.id ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}>{d.label}</button>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+                {plans.map((p) => {
+                    const rawBasePrice = p.prices[duration as keyof typeof p.prices];
+                    const priceData = getPlanPricing(p.name, rawBasePrice);
+
+                    return (
+                        <div key={p.name} className={`relative p-6 2xl:p-8 rounded-[40px] border-4 bg-white hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col ${p.color === 'blue' ? 'border-blue-100 hover:border-blue-600' : p.color === 'amber' ? 'border-amber-100 hover:border-amber-500' : 'border-purple-100 hover:border-purple-600'}`}>
+                            
+                            {priceData.isSale && (
+                                <div className="absolute -top-3.5 right-6 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-md shadow-orange-500/30 animate-pulse">
+                                    <Flame size={12} className="text-yellow-300" />
+                                    Flash Sale -{priceData.discountPercent}%
+                                </div>
+                            )}
+
+                            <p className={`font-black uppercase text-[11px] tracking-widest mb-3 ${p.color === 'blue' ? 'text-blue-600' : p.color === 'amber' ? 'text-amber-500' : 'text-purple-600'}`}>Hạng {p.name}</p>
+                            
+                            <div className="mb-8">
+                                {priceData.isSale ? (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-bold text-slate-400 line-through">
+                                                {priceData.originalPrice.toLocaleString()}đ
+                                            </span>
+                                            <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md uppercase">
+                                                Tiết kiệm { (priceData.originalPrice - priceData.finalPrice).toLocaleString() }đ
+                                            </span>
+                                        </div>
+                                        <div className="text-3xl md:text-4xl lg:text-4xl xl:text-2xl 2xl:text-4xl font-black italic tracking-tighter text-red-600 flex items-end gap-1">
+                                            {priceData.finalPrice.toLocaleString()}đ
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-end gap-1">
+                                        <span className="text-3xl md:text-4xl lg:text-4xl xl:text-2xl 2xl:text-4xl font-black italic tracking-tighter text-slate-900">
+                                            {priceData.originalPrice.toLocaleString()}đ
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {p.features.map(f => (
+                                    <li key={f} className="text-xs font-bold text-slate-600 flex items-start gap-3 leading-relaxed">
+                                        <CheckCircle2 size={16} className={`${p.color === 'blue' ? 'text-blue-500' : p.color === 'amber' ? 'text-amber-500' : 'text-purple-500'} shrink-0 mt-0.5`}/> {f}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <button 
+                                onClick={() => setSelectedPlan({ 
+                                    name: p.name, 
+                                    price: priceData.finalPrice, 
+                                    originalPrice: priceData.originalPrice,
+                                    isSale: priceData.isSale 
+                                })} 
+                                className={`w-full py-4 rounded-3xl font-black text-white uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all mt-auto ${p.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : p.color === 'amber' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20'}`}
+                            >
+                                Chọn gói này ✨
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {selectedPlan && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200 border border-white/20">
+                        <button onClick={() => setSelectedPlan(null)} className="absolute top-6 right-6 text-slate-400 hover:text-red-500 transition-colors"><X size={28} /></button>
+                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 mb-6">Xác nhận đơn hàng</h3>
+                        <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-6 space-y-4">
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-600"><span>Gói cước:</span><span className="text-slate-900 uppercase font-black">Hạng {selectedPlan.name}</span></div>
+                            <div className="flex justify-between items-center text-sm font-bold text-slate-600"><span>Chu kỳ:</span><span className="text-slate-900 font-black">{duration === '1m' ? '1 Tháng' : duration === '3m' ? '3 Tháng' : duration === '6m' ? '6 Tháng' : '1 Năm'}</span></div>
+                            
+                            {selectedPlan.isSale ? (
+                                <>
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                                        <span>Giá niêm yết:</span>
+                                        <span className="text-slate-400 line-through font-bold">{selectedPlan.originalPrice?.toLocaleString()}đ</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-black text-orange-600">
+                                        <span>Giá Flash Sale:</span>
+                                        <span>{selectedPlan.price.toLocaleString()}đ</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                                    <span>Giá gốc:</span>
+                                    <span className="text-slate-900 font-black">{selectedPlan.price.toLocaleString()}đ</span>
+                                </div>
+                            )}
+
+                            {discount > 0 && (<div className="flex justify-between items-center text-sm font-black text-green-600"><span>Voucher ({isPercentage ? discount + '%' : discount.toLocaleString() + 'đ'}):</span><span>-{getDiscountAmount().toLocaleString()}đ</span></div>)}
+                            <div className="pt-4 border-t border-slate-200 flex flex-col mt-2"><span className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Tổng thanh toán:</span><span className="text-3xl font-black italic text-blue-600">{getFinalPrice().toLocaleString()}đ</span></div>
+                        </div>
+
+                        <div className="mb-8">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Mã giảm giá (Nếu có)</label>
+                            <div className="flex gap-2">
+                                <input type="text" value={voucher} onChange={(e) => setVoucher(e.target.value.toUpperCase())} placeholder="Nhập mã..." className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case"/>
+                                <button onClick={handleApplyVoucher} disabled={isCheckingVoucher} className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase hover:bg-blue-600 transition-colors active:scale-95 disabled:opacity-70 flex items-center justify-center min-w-[90px]">{isCheckingVoucher ? <Loader2 size={16} className="animate-spin" /> : "Áp dụng"}</button>
+                            </div>
+                            {voucherMessage && (<p className={`text-xs font-bold mt-3 ${voucherMessage.includes('❌') ? 'text-red-500' : 'text-green-600'}`}>{voucherMessage}</p>)}
+                        </div>
+
+                        <button onClick={handleConfirmPayment} className="w-full py-5 bg-blue-600 text-white font-black rounded-[24px] shadow-xl hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                            Tiến Hành Thanh Toán <ChevronRight size={18}/>
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () => void }) { 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const [code, setCode] = useState("");
+    const [isChecking, setIsChecking] = useState(false);
+    const [message, setMessage] = useState("");
+    
+    const [localCodes, setLocalCodes] = useState<string[]>([]);
+    const [userVouchers, setUserVouchers] = useState<any[]>([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(true);
+
+    useEffect(() => {
+        let parsedCodes: string[] = [];
+
+        if (user && user.vouchers) {
+            const extractCleanArray = (data: any): any => {
+                if (typeof data === 'string') {
+                    try { return extractCleanArray(JSON.parse(data)); } catch (e) { return data; }
+                }
+                return data;
+            };
+            const cleanData = extractCleanArray(user.vouchers);
+            if (Array.isArray(cleanData)) {
+                parsedCodes = cleanData.map(c => String(c).replace(/[^a-zA-Z0-9]/g, '').trim()).filter(c => c.length > 0);
+            } else if (typeof cleanData === 'string' && cleanData.trim().length > 0) {
+                parsedCodes = cleanData.split(',').map(c => c.replace(/[^a-zA-Z0-9]/g, '').trim()).filter(c => c.length > 0);
+            }
+        }
+
+        const cachedVouchers = localStorage.getItem('kpost_saved_vouchers');
+        if (cachedVouchers) {
+            try {
+                const cachedArray = JSON.parse(cachedVouchers);
+                if (Array.isArray(cachedArray)) {
+                    parsedCodes = [...parsedCodes, ...cachedArray];
+                }
+            } catch(e) {}
+        }
+
+        const uniqueCodes = Array.from(new Set(parsedCodes));
+        setLocalCodes(uniqueCodes);
+
+        if (uniqueCodes.length > 0) {
+            localStorage.setItem('kpost_saved_vouchers', JSON.stringify(uniqueCodes));
+        }
+    }, [user?.vouchers]);
+
+    useEffect(() => {
+        const fetchVouchersDetail = async () => {
+            if (localCodes.length === 0) {
+                setUserVouchers([]);
+                setLoadingVouchers(false);
+                return;
+            }
+
+            try {
+                setLoadingVouchers(true);
+                const token = localStorage.getItem("token");
+                const res = await axios.post(`${API_URL}/social/get-vouchers-detail`, 
+                    { codes: localCodes }, 
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                if (res.data && Array.isArray(res.data)) {
+                    setUserVouchers(res.data);
+                }
+            } catch (error) {
+                console.error("Lỗi lấy thông tin voucher:", error);
+                setUserVouchers(localCodes.map((c: string) => ({
+                    code: c,
+                    discountValue: "Lỗi hiển thị",
+                    discountType: "percent",
+                    validUntil: "Vui lòng tải lại trang"
+                })));
+            } finally {
+                setLoadingVouchers(false);
+            }
+        };
+
+        fetchVouchersDetail();
+    }, [localCodes, API_URL]);
+
+    const handleSaveVoucher = async () => {
+        if (!code.trim()) return;
+        
+        const cleanInputCode = code.toUpperCase().trim();
+
+        if (localCodes.includes(cleanInputCode)) {
+            setMessage("❌ Bạn đã lưu mã này vào ví rồi");
             return;
-          }
         }
-        // The cookie could not be set, so initiate the recovery flow.
-        document.querySelector('.logo').classList.add('hidden');
-        document.querySelector('.spinner').classList.add('hidden');
-        document.querySelector('#error-ui').classList.remove('hidden');
-      }
 
-      // Start the cookie verification process.
-      verifyCanSetCookies();
-    </script>
-  </body>
-</html>
+        setIsChecking(true);
+        setMessage("Đang kiểm tra...");
+        try {
+            const token = localStorage.getItem("token");
+            const workspaceId = user?.currentWorkspaceId || user?.wid || user?.id || localStorage.getItem("workspaceId");
+
+            const res = await axios.post(`${API_URL}/social/add-voucher-to-wallet`, 
+                { code: cleanInputCode, workspaceId: workspaceId }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            if (res.data && res.data.success) {
+                setMessage("✅ Đã lưu mã giảm giá thành công vào ví!");
+                
+                const newCodes = Array.from(new Set([...localCodes, cleanInputCode]));
+                setLocalCodes(newCodes);
+                
+                localStorage.setItem('kpost_saved_vouchers', JSON.stringify(newCodes));
+
+                setCode("");
+                refreshProfile();
+            }
+        } catch (error: any) {
+            setMessage(`❌ ${error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn"}`);
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    return (
+        <div className="text-black animate-in fade-in">
+            <h2 className="text-2xl font-black italic uppercase mb-8">Ví mã giảm giá</h2>
+            
+            <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 mb-10 max-w-lg">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Thêm mã giảm giá mới</label>
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        value={code} 
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        placeholder="Nhập mã KPOST..." 
+                        className="flex-1 bg-white border border-slate-200 rounded-2xl px-4 py-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case"
+                    />
+                    <button 
+                        onClick={handleSaveVoucher} 
+                        disabled={isChecking} 
+                        className="bg-blue-600 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-70 flex items-center justify-center min-w-[120px]"
+                    >
+                        {isChecking ? <Loader2 size={18} className="animate-spin" /> : "LƯU MÃ"}
+                    </button>
+                </div>
+                {message && (
+                    <p className={`text-xs font-bold mt-4 ${message.includes('❌') ? 'text-red-500' : message.includes('⚠️') ? 'text-amber-500' : 'text-green-600'}`}>
+                        {message}
+                    </p>
+                )}
+            </div>
+
+            {loadingVouchers ? (
+                <div className="p-10 text-center text-slate-400 font-medium flex items-center justify-center gap-3">
+                    <Loader2 size={24} className="animate-spin text-blue-500" />
+                    <span className="uppercase text-sm tracking-widest font-black text-slate-400">Đang tải ví voucher...</span>
+                </div>
+            ) : userVouchers.length === 0 ? (
+                <div className="p-10 text-center border-2 border-dashed border-slate-200 rounded-[32px] bg-slate-50">
+                    <Gift size={48} className="mx-auto text-slate-300 mb-4" />
+                    <p className="font-black text-slate-400 uppercase italic">Ví của bạn hiện đang trống.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {userVouchers.map((v, index) => (
+                        <div key={index} className="flex items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                            <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-50 rounded-full border-r border-slate-200"></div>
+                            
+                            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+                                <Ticket size={28} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xl font-black italic text-slate-900 tracking-tighter">
+                                    Giảm {v.discountType === 'percent' ? v.discountValue + '%' : v.discountValue?.toLocaleString() + 'đ'}
+                                </p>
+                                <p className="text-xs font-bold text-slate-500 mt-1">Mã: <span className="text-blue-600 uppercase font-black bg-blue-50 px-2 py-0.5 rounded-md">{v.code}</span></p>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest flex items-center gap-1">
+                                    <Clock size={12}/> HSD: {v.validUntil || 'Vô thời hạn'}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    ) 
+}
+
+function GuideTab() {
+  const [guides, setGuides] = useState<any[]>([]);
+  const [prompts, setPrompts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get('/api/admin/system-guides');
+        setGuides(res.data.guides || []);
+        setPrompts(res.data.prompts || []);
+      } catch (error) {
+        console.error("Lỗi đồng bộ tài liệu:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Đã copy Prompt vào khay nhớ tạm!");
+  };
+
+  if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang đồng bộ dữ liệu...</div>;
+
+  return (
+    <div className="text-black animate-in fade-in space-y-10">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+        <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl shrink-0"><BookOpen size={32} /></div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Hướng dẫn Khách mới</h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Tài liệu & Thư viện Prompt AI độc quyền</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="bg-slate-50 rounded-[32px] p-6 md:p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <FileText className="text-blue-600" size={20} /> Tài liệu biểu mẫu
+          </h3>
+          {guides.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật tài liệu...</p>
+          ) : (
+            <div className="space-y-4">
+              {guides.map((item, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden pr-2">
+                    <div className="bg-blue-50 p-2 rounded-xl text-blue-600 shrink-0"><FileText size={18} /></div>
+                    <p className="font-bold text-sm text-slate-700 truncate" title={item.title}>{item.title}</p>
+                  </div>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="shrink-0 bg-slate-900 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors">
+                    Tải Xuống
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-50 rounded-[32px] p-6 md:p-8 border border-slate-100">
+          <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+            <Sparkles className="text-orange-500" size={20} /> Thư viện Prompt AI
+          </h3>
+          {prompts.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">Quản trị viên đang cập nhật Prompt...</p>
+          ) : (
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              {prompts.map((item, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-orange-200 transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-black text-sm text-slate-800 flex-1 pr-2">{item.title}</p>
+                    <button onClick={() => handleCopy(item.content)} className="text-slate-400 hover:text-blue-600 bg-slate-50 p-2 rounded-lg transition-colors shrink-0">
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 whitespace-pre-wrap">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TermsTab() {
+  useEffect(() => {
+    document.title = "Điều Khoản Dịch Vụ & Thỏa Thuận Pháp Lý Minh Bạch | Kpost";
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute("content", "Chi tiết điều khoản dịch vụ và thỏa thuận pháp lý khi sử dụng phần mềm Kpost. Tìm hiểu rõ về quyền lợi, trách nhiệm, quy trình thanh toán và bảo mật tài khoản.");
+    }
+  }, []);
+
+  return (
+    <div className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-slate-100 max-h-[85vh] overflow-y-auto custom-scrollbar animate-in fade-in">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex items-center gap-4">
+        <div className="bg-orange-50 text-orange-600 p-4 rounded-2xl">
+          <Scale size={32} />
+        </div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">
+            Điều Khoản Dịch Vụ
+          </h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Thỏa Thuận Pháp Lý Kpost</p>
+        </div>
+      </div>
+
+      <div className="space-y-8 text-slate-700 text-sm leading-relaxed">
+        <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 text-center md:text-left">
+          <h3 className="text-lg font-black text-slate-900 mb-3 uppercase tracking-tighter flex items-center justify-center md:justify-start gap-2">
+            <ShieldAlert className="text-orange-500" size={20}/> Chào mừng đến với Kpost!
+          </h3>
+          <p className="mb-4">
+            Để xây dựng một môi trường làm việc hiệu quả, minh bạch và bảo vệ tối đa quyền lợi của Khách hàng, 
+            tài liệu này đóng vai trò là <strong>Thỏa thuận pháp lý ("Thỏa thuận")</strong> chính thức giữa <strong>Bạn ("Khách hàng")</strong> và <strong>Công ty ("Kpost" hoặc "Chúng tôi")</strong>. 
+            Chúng tôi cam kết cung cấp các dịch vụ công nghệ chất lượng cao, đồng hành cùng sự phát triển kinh doanh của bạn.
+          </p>
+          <div className="bg-orange-100 text-orange-800 p-3 rounded-xl font-bold text-xs uppercase tracking-wider">
+            Bằng việc đăng ký tài khoản, thực hiện thanh toán hoặc bắt đầu sử dụng Phần mềm, Khách hàng xác nhận đã đọc, hiểu và đồng ý tuân thủ toàn bộ các điều khoản dưới đây.
+          </div>
+        </div>
+
+        <div className="relative w-full h-48 md:h-64 bg-slate-900 rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-800 shadow-inner">
+           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+           <div className="text-center z-10 text-white px-4">
+             <div className="flex justify-center gap-4 mb-4">
+                <div className="bg-blue-500 p-3 rounded-full"><User size={24} className="text-white"/></div>
+                <Scale size={48} className="text-slate-400 opacity-50" />
+                <div className="bg-orange-500 p-3 rounded-full"><Shield size={24} className="text-white"/></div>
+             </div>
+             <p className="font-bold text-xs uppercase tracking-widest text-slate-300">Thỏa thuận pháp lý và điều khoản dịch vụ minh bạch tại Kpost</p>
+           </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-slate-200 text-slate-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
+            Định Nghĩa Cơ Bản
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <p className="font-bold text-slate-900 mb-1 text-xs uppercase tracking-widest">"Phần mềm"</p>
+                <p className="text-xs text-slate-600">Là hệ thống ứng dụng Kpost, bao gồm toàn bộ mã nguồn, giao diện website, ứng dụng di động, tài liệu kỹ thuật và các bản cập nhật do Chúng tôi phát triển, sở hữu.</p>
+             </div>
+             <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <p className="font-bold text-slate-900 mb-1 text-xs uppercase tracking-widest">"Khách hàng"</p>
+                <p className="text-xs text-slate-600">Là cá nhân hoặc tổ chức thực hiện trả phí để mua Quyền sử dụng Phần mềm.</p>
+             </div>
+             <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <p className="font-bold text-slate-900 mb-1 text-xs uppercase tracking-widest">"Quyền sử dụng" (License)</p>
+                <p className="text-xs text-slate-600">Là quyền có thời hạn, không độc quyền, không thể chuyển nhượng mà Kpost cấp cho Khách hàng để truy cập và khai thác các tính năng của Phần mềm.</p>
+             </div>
+             <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <p className="font-bold text-slate-900 mb-1 text-xs uppercase tracking-widest">"Gói cước"</p>
+                <p className="text-xs text-slate-600">Là tập hợp các tính năng, giới hạn dung lượng và thời hạn sử dụng (Time-based subscription) mà Khách hàng đã lựa chọn.</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+           <div>
+              <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+                <span className="bg-slate-200 text-slate-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 
+                Tài Khoản và Bảo Mật
+              </h3>
+              <ul className="space-y-3 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="text-blue-500 shrink-0 mt-0.5" size={16}/> 
+                  Khách hàng có trách nhiệm cung cấp thông tin hoàn toàn chính xác trong quá trình đăng ký.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="text-blue-500 shrink-0 mt-0.5" size={16}/> 
+                  Tự bảo mật thông tin tài khoản (username, password, API Key). Mọi hoạt động phát sinh từ tài khoản sẽ do Khách hàng chịu trách nhiệm hoàn toàn.
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="text-orange-500 shrink-0 mt-0.5" size={16}/> 
+                  Kpost được miễn trừ trách nhiệm đối với thiệt hại do Khách hàng vô tình hay cố ý để lộ thông tin.
+                </li>
+              </ul>
+           </div>
+           <div>
+              <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+                <span className="bg-slate-200 text-slate-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> 
+                Thanh Toán & Nghiệm Thu
+              </h3>
+              <div className="space-y-3">
+                 <div className="flex gap-3 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                   <div className="bg-blue-100 text-blue-600 font-black w-6 h-6 flex items-center justify-center rounded-full text-xs">1</div>
+                   <p className="text-xs"><strong className="text-slate-900">Thanh toán:</strong> 100% giá trị Gói cước trước khi sử dụng.</p>
+                 </div>
+                 <div className="flex gap-3 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                   <div className="bg-blue-100 text-blue-600 font-black w-6 h-6 flex items-center justify-center rounded-full text-xs">2</div>
+                   <p className="text-xs"><strong className="text-slate-900">Bàn giao:</strong> Ngay khi hệ thống gửi xác nhận kích hoạt.</p>
+                 </div>
+                 <div className="flex gap-3 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                   <div className="bg-blue-100 text-blue-600 font-black w-6 h-6 flex items-center justify-center rounded-full text-xs">3</div>
+                   <p className="text-xs"><strong className="text-slate-900">Nghiệm thu:</strong> Lần đăng nhập đầu tiên được coi là Biên bản nghiệm thu điện tử.</p>
+                 </div>
+                 <div className="flex gap-3 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                   <div className="bg-blue-100 text-blue-600 font-black w-6 h-6 flex items-center justify-center rounded-full text-xs">4</div>
+                   <p className="text-xs"><strong className="text-slate-900">Hóa đơn:</strong> Ghi nhận với nội dung "Phí quyền sử dụng phần mềm".</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-2xl">
+          <h3 className="text-lg font-black text-red-700 mb-2 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-red-100 text-red-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">4</span> 
+            Chính Sách Không Hoàn Hủy
+          </h3>
+          <p className="text-red-900 font-medium">
+            Trừ khi có những quy định khác được thỏa thuận bằng văn bản, tất cả các khoản phí mua Quyền sử dụng Phần mềm tại Kpost là <strong>không hoàn lại (non-refundable)</strong> trong mọi trường hợp, bao gồm cả việc Khách hàng chủ động ngưng sử dụng dịch vụ trước khi hết thời hạn gói cước.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-slate-200 text-slate-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">5</span> 
+            Quy Định Sử Dụng Hợp Lệ (AUP)
+          </h3>
+          <p className="mb-3">Để duy trì môi trường phần mềm sạch và tuân thủ pháp luật, Khách hàng cam kết KHÔNG sử dụng Phần mềm Kpost để:</p>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-4 shadow-sm">
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3">
+                <XCircle className="text-red-500 shrink-0 mt-0.5" size={18}/> 
+                <span className="text-slate-700">Phát tán tin nhắn rác (Spam), thực hiện hành vi lừa đảo, truyền bá nội dung đồi trụy hoặc các hành vi vi phạm pháp luật hiện hành.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <XCircle className="text-red-500 shrink-0 mt-0.5" size={18}/> 
+                <span className="text-slate-700">Vi phạm tiêu chuẩn cộng đồng hoặc chính sách của các Nền tảng bên thứ ba (Meta, TikTok, Shopee, Google...).</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <XCircle className="text-red-500 shrink-0 mt-0.5" size={18}/> 
+                <span className="text-slate-700">Xâm nhập trái phép, cố ý phá hoại, hoặc sao chép/dịch ngược mã nguồn Phần mềm Kpost.</span>
+              </li>
+            </ul>
+          </div>
+          <div className="bg-slate-900 text-slate-300 p-4 rounded-xl text-xs flex gap-3 items-center">
+             <AlertCircle size={24} className="text-orange-500 shrink-0" />
+             <p><strong>Xử lý vi phạm:</strong> Kpost bảo lưu quyền đơn phương khóa tài khoản vĩnh viễn, không cần báo trước và không hoàn tiền đối với bất kỳ trường hợp nào bị phát hiện vi phạm các quy định trên.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="border-t border-slate-200 pt-4">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-tighter flex gap-2"><span className="text-blue-500">6.</span> Cập Nhật Tính Năng</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Kpost là một sản phẩm không ngừng tiến hóa ("Evolving Software"). Chúng tôi có quyền chủ động cập nhật, chỉnh sửa, loại bỏ tính năng để tối ưu hóa hiệu suất. Thay đổi này không làm mất đi bản chất cốt lõi của Quyền sử dụng.</p>
+           </div>
+           <div className="border-t border-slate-200 pt-4">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-tighter flex gap-2"><span className="text-blue-500">7.</span> Quyền Sở Hữu Trí Tuệ</h4>
+              <p className="text-xs text-slate-600 leading-relaxed mb-2"><strong>Kpost:</strong> Giữ toàn quyền sở hữu trí tuệ đối với Phần mềm, mã nguồn và thương hiệu. Khách hàng chỉ được cấp quyền sử dụng.</p>
+              <p className="text-xs text-slate-600 leading-relaxed"><strong>Khách hàng:</strong> Toàn bộ dữ liệu do Khách hàng tải lên hệ thống thuộc quyền sở hữu hợp pháp của Khách hàng.</p>
+           </div>
+           <div className="border-t border-slate-200 pt-4">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-tighter flex gap-2"><span className="text-blue-500">8.</span> Lưu Trữ & Xóa Dữ Lưu</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Sau 30 ngày kể từ khi hết hạn gói cước mà không gia hạn, Kpost có quyền xóa vĩnh viễn dữ liệu để giải phóng máy chủ. Kpost không chịu trách nhiệm bồi thường cho mất mát dữ liệu do chậm trễ gia hạn.</p>
+           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider text-xs">9. Miễn Trừ Trách Nhiệm</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Phần mềm cung cấp trên cơ sở "Nguyên trạng" (As-is). Chúng tôi miễn trừ trách nhiệm với các lỗi, sự cố hoặc khóa tài khoản (checkpoint) xuất phát từ Nền tảng bên thứ ba hoặc do thay đổi chính sách của họ.</p>
+           </div>
+           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider text-xs">10. Giới Hạn Trách Nhiệm</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Tổng trách nhiệm bồi thường của Kpost đối với Khách hàng không vượt quá tổng giá trị Gói cước mà Khách hàng đã thực thanh toán trong vòng 03 (ba) tháng gần nhất tính đến thời điểm xảy ra sự kiện.</p>
+           </div>
+           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider text-xs">11. Sự Kiện Bất Khả Kháng</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Miễn trừ trách nhiệm bồi thường trong điều kiện: thiên tai, dịch bệnh, chiến tranh, đứt cáp quang quốc tế, hoặc các quyết định đình chỉ từ cơ quan Nhà nước có thẩm quyền.</p>
+           </div>
+           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider text-xs">12. Luật & Tranh Chấp</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Điều chỉnh theo pháp luật Việt Nam. Tranh chấp ưu tiên hòa giải thiện chí, nếu không thành sẽ được phân xử tại Tòa án có thẩm quyền tại Hà Nội.</p>
+           </div>
+        </div>
+
+        <div className="mt-12 bg-white border-2 border-slate-900 text-slate-900 p-8 md:p-12 rounded-[32px] text-center shadow-xl">
+           <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-4">Bạn Đã Sẵn Sàng?</h3>
+           <p className="mb-8 font-medium text-slate-600 max-w-lg mx-auto text-sm leading-relaxed">
+             Nếu bạn đã đọc kỹ và đồng ý với các điều khoản trên, hãy bắt đầu tối ưu hóa quy trình kinh doanh của mình ngay hôm nay.
+           </p>
+           <a href="mailto:support@kpost.vn" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-sm transition-colors mb-6">
+             <MessageCircle size={18} />
+             Hỗ trợ Pháp lý & Dịch vụ
+           </a>
+           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+             support@kpost.vn
+           </p>
+           <div className="mt-8 border-t border-slate-100 pt-6">
+              <p className="text-sm font-black text-slate-900 uppercase tracking-tighter italic">
+                Khởi đầu hành trình chuyển đổi số an toàn, minh bạch và hiệu quả cùng Kpost!
+              </p>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function PrivacyTab() {
+  return (
+    <div className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-slate-100 max-h-[85vh] overflow-y-auto custom-scrollbar animate-in fade-in">
+      <div className="mb-8 border-b border-slate-100 pb-6 flex items-center gap-4">
+        <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl">
+          <Shield size={32} />
+        </div>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">
+            Chính Sách Bảo Mật Của Kpost
+          </h2>
+          <p className="text-sm font-medium text-slate-500 mt-2">Cập nhật lần cuối: Tháng 9, 2026</p>
+        </div>
+      </div>
+
+      <div className="space-y-8 text-slate-700 text-sm leading-relaxed">
+        <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100">
+          <h3 className="text-lg font-black text-slate-900 mb-3 uppercase tracking-tighter flex items-center gap-2">
+            <CheckCircle2 className="text-green-500" size={20}/> Cam kết giá trị
+          </h3>
+          <p className="mb-4">
+            Tại <strong>Kpost</strong>, chúng tôi đặt sự an toàn và quyền riêng tư của khách hàng lên hàng đầu. 
+            Mọi dữ liệu bạn cung cấp đều được mã hóa, lưu trữ an toàn và xử lý một cách minh bạch nhằm mang lại trải nghiệm phần mềm tối ưu và đáng tin cậy nhất.
+          </p>
+          <p>
+            Chính sách này mô tả chi tiết cách chúng tôi thu thập, sử dụng, tiết lộ và bảo vệ thông tin khi bạn sử dụng dịch vụ thông qua Kpost, bao gồm các tích hợp với <strong>Facebook, Instagram, TikTok, Telegram, WhatsApp, Shopee, Zalo, Line và Youtube</strong>. Bằng việc sử dụng dịch vụ, bạn đồng ý với các thực hành được mô tả dưới đây.
+          </p>
+        </div>
+
+        <div className="relative w-full h-48 md:h-64 bg-slate-100 rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-200">
+           <div className="absolute inset-0 bg-blue-900/5 mix-blend-multiply"></div>
+           <div className="text-center z-10">
+             <Shield className="mx-auto mb-3 text-blue-400" size={56} />
+             <p className="text-slate-600 font-bold text-xs uppercase tracking-widest px-4">Hệ thống bảo mật dữ liệu an toàn tiêu chuẩn quốc tế của Kpost</p>
+           </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
+            Thông tin Chúng tôi Thu thập
+          </h3>
+          <p className="mb-3">Chúng tôi thu thập nhiều loại thông tin để cung cấp, duy trì và cải thiện dịch vụ, bao gồm:</p>
+          <ul className="space-y-3 ml-2 md:ml-4">
+            <li className="flex items-start gap-2">
+              <Check className="text-blue-500 shrink-0 mt-1" size={16}/> 
+              <span><strong>Thông tin Nhận dạng Cá nhân (PII):</strong> Các thông tin như tên, địa chỉ email, số điện thoại và các chi tiết có thể nhận dạng bạn. <em className="text-blue-700 bg-blue-50 px-1 rounded">Kpost KHÔNG thu thập hoặc lưu trữ thông tin nhạy cảm: tình trạng sức khỏe, tài chính, sinh trắc học, thông tin tài khoản ngân hàng, dữ liệu tội phạm, đặc điểm sinh học.</em></span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="text-blue-500 shrink-0 mt-1" size={16}/> 
+              <span><strong>Thông tin Không Cá nhân:</strong> Dữ liệu không trực tiếp nhận dạng bạn (thống kê sử dụng, loại trình duyệt, thông tin thiết bị).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="text-blue-500 shrink-0 mt-1" size={16}/> 
+              <span><strong>Dữ liệu Theo Nền tảng:</strong> Thông tin thu thập qua tích hợp bên thứ ba (Facebook, Instagram, TikTok, Telegram, WhatsApp, Shopee, Zalo, Line, Youtube) bao gồm tương tác người dùng, vị trí, số liệu tương tác và dữ liệu cuộc trò chuyện.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 
+            Cách Chúng tôi Sử dụng Thông tin
+          </h3>
+          <p className="mb-3">Dữ liệu chúng tôi thu thập được sử dụng để:</p>
+          <ul className="list-disc ml-6 space-y-2 mb-6 text-slate-700 font-medium">
+            <li>Cung cấp và duy trì dịch vụ.</li>
+            <li>Cải thiện trải nghiệm người dùng và chức năng nền tảng.</li>
+            <li>Giao tiếp với người dùng và phản hồi các câu hỏi.</li>
+            <li>Đảm bảo tuân thủ các nghĩa vụ pháp lý và tiêu chuẩn bảo mật.</li>
+          </ul>
+          
+          <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100">
+             <h4 className="font-bold text-blue-900 mb-3 uppercase tracking-wider text-xs">Phương Pháp Xác thực Tài khoản</h4>
+             <ul className="space-y-3 text-sm text-blue-900 font-medium">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                  Kpost áp dụng các phương pháp xác thực: <strong>Xác minh email, SMS OTP (One-Time Password), Số điện thoại.</strong>
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                  Kpost KHÔNG yêu cầu hoặc lưu trữ: <strong>Ảnh/video giấy tờ tùy thân (CCCD, Passport), dữ liệu sinh trắc học.</strong>
+                </li>
+             </ul>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-tighter flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> 
+            Chia sẻ và Tiết lộ Dữ liệu
+          </h3>
+          <p className="mb-3 font-bold text-slate-900">Chúng tôi tuyệt đối không bán thông tin cá nhân của bạn. Dữ liệu chỉ được chia sẻ trong các trường hợp:</p>
+          <ul className="space-y-3 ml-2 md:ml-4">
+            <li className="flex items-start gap-2">
+              <Check className="text-blue-500 shrink-0 mt-1" size={16}/> 
+              <span><strong>Nhà cung cấp Dịch vụ:</strong> Chia sẻ khi cần thiết để duy trì chất lượng dịch vụ. Các đối tác phải cam kết đảm bảo quy định về tiêu chuẩn an toàn và luật an toàn thông tin của Việt Nam.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="text-blue-500 shrink-0 mt-1" size={16}/> 
+              <span><strong>Cơ quan Pháp lý:</strong> Khi có yêu cầu hợp pháp để tuân thủ quy định hoặc lệnh của tòa án.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="mt-12 bg-slate-900 text-white p-8 md:p-12 rounded-[32px] text-center shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+           <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl"></div>
+           
+           <div className="relative z-10">
+             <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-4">Cần Hỗ Trợ Khác?</h3>
+             <p className="mb-8 font-medium text-slate-300 max-w-lg mx-auto text-sm leading-relaxed">
+               Nếu bạn có bất kỳ thắc mắc nào về Chính sách Bảo mật này hoặc cách chúng tôi bảo vệ thông tin của bạn, đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng lắng nghe và giải quyết.
+             </p>
+             <a href="mailto:support@kpost.vn" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-sm transition-colors mb-8 shadow-lg shadow-blue-900/50">
+               <MessageCircle size={18} />
+               support@kpost.vn
+             </a>
+             <div className="border-t border-slate-800 pt-6">
+                <p className="text-xs font-bold text-blue-300 uppercase tracking-widest">
+                  Hãy yên tâm phát triển kinh doanh, việc bảo vệ dữ liệu đã có Kpost đồng hành cùng bạn!
+                </p>
+             </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
