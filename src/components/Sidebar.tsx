@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenTool, Package, MessageSquare, 
   Settings, Share2, LogOut, LogIn, Clock, MessageCircle, 
   ShoppingBag, Truck, Sparkles, Menu, X, Target, Radio,
-  Flame, Users, ShieldCheck, Film, Wand2 // 👈 1. Đã thêm icon Wand2 cho tính năng AI Video Editor
+  Flame, Users, ShieldCheck, Film, Wand2
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,16 +68,18 @@ export default function Sidebar() {
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   const [plan, setPlan] = useState("GUEST");
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
   
   // STATE ĐIỀU KHIỂN MENU TRÊN MOBILE
   const [isOpen, setIsOpen] = useState(false);
 
-  // --- 2. HÀM LẤY THÔNG TIN NGƯỜI DÙNG & GÓI CƯỚC THẬT ---
+  // --- 2. HÀM LẤY THÔNG TIN NGƯỜI DÙNG & GÓI CƯỚC THẬT (TỰ ĐỘNG NHẬN PRO TRIAL) ---
   const fetchUserStatus = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       setUser(null);
       setPlan("GUEST");
+      setDaysLeft(null);
       return;
     }
 
@@ -85,14 +87,75 @@ export default function Sidebar() {
       const res = await axios.get(`${API_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUser(res.data);
-      setPlan(res.data.plan || "FREE");
+      const userData = res.data || {};
+      setUser(userData);
+
+      // 🌟 KIỂM TRA ĐẶC QUYỀN KHÁCH MỚI: 07 NGÀY DÙNG THỬ PRO TRIAL
+      const rawPlan = (userData.plan || "").toUpperCase().trim();
+      const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
+      
+      const createdAtTime = userData.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
+      const diffDaysFromCreated = (Date.now() - createdAtTime) / (1000 * 60 * 60 * 24);
+      const isWithin7Days = diffDaysFromCreated >= 0 && diffDaysFromCreated < 7;
+
+      // Kiểm tra thêm thông tin lưu ở localStorage (từ trang settings hoặc lúc đăng ký)
+      let isLocalTrial = false;
+      try {
+        const saved = localStorage.getItem("kpost_user") || localStorage.getItem("user");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.isTrial) isLocalTrial = true;
+        }
+      } catch (err) {}
+
+      // Tính số ngày còn lại
+      if (rawExpiry) {
+        const diffMs = new Date(rawExpiry).getTime() - Date.now();
+        const calcDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        setDaysLeft(calcDays);
+
+        if (diffMs <= 0) {
+          // Nếu đã hết hạn 07 ngày -> tự động về FREE
+          setPlan("FREE");
+          return;
+        }
+      } else {
+        const remaining = Math.max(1, 7 - Math.floor(diffDaysFromCreated));
+        setDaysLeft(remaining);
+      }
+
+      // Xác định gói cước hiển thị trên Sidebar
+      if (rawPlan === "PRO TRIAL" || userData.isTrial || isLocalTrial || (isWithin7Days && (rawPlan === "FREE" || rawPlan === "" || rawPlan === "PRO"))) {
+        setPlan("PRO TRIAL");
+      } else if (rawPlan === "DIAMOND") {
+        setPlan("DIAMOND");
+      } else if (rawPlan === "GOLD") {
+        setPlan("GOLD");
+      } else if (rawPlan === "PRO") {
+        setPlan("PRO");
+      } else {
+        setPlan(rawPlan || "FREE");
+      }
     } catch (e) {
-      console.error("Phiên đăng nhập hết hạn");
+      console.error("Phiên đăng nhập hết hạn hoặc offline");
+      // Đọc dự phòng từ localStorage nếu backend chưa phản hồi
+      try {
+        const saved = localStorage.getItem("kpost_user") || localStorage.getItem("user");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setUser(parsed);
+          if (parsed.isTrial || parsed.plan === "PRO TRIAL") {
+            setPlan("PRO TRIAL");
+            setDaysLeft(7);
+            return;
+          }
+        }
+      } catch (err) {}
       setUser(null);
       setPlan("GUEST");
+      setDaysLeft(null);
     }
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     fetchUserStatus();
@@ -102,8 +165,15 @@ export default function Sidebar() {
       fetchUserStatus(); 
     });
 
+    // Lắng nghe thay đổi từ trang /settings hoặc tab khác để cập nhật ngay
+    const handleStorageChange = () => {
+      fetchUserStatus();
+    };
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
       socket.off("paymentSuccess");
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, [fetchUserStatus, pathname]);
 
@@ -171,9 +241,10 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* HUY HIỆU GÓI CƯỚC THẬT */}
+        {/* 🌟 HUY HIỆU GÓI CƯỚC THẬT (TỰ ĐỘNG HIỆN PRO TRIAL KÈM SỐ NGÀY CHO KHÁCH MỚI) */}
         <div className="px-6 mb-4 mt-2">
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 font-black text-[10px] uppercase italic tracking-widest transition-all duration-700 shadow-sm ${
+              plan === 'PRO TRIAL' ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-300 shadow-orange-300/40 shadow-md' :
               plan === 'DIAMOND' ? 'bg-purple-600 text-white border-purple-400 shadow-purple-200' :
               plan === 'GOLD' ? 'bg-amber-500 text-white border-amber-300 shadow-amber-200' :
               plan === 'PRO' ? 'bg-blue-600 text-white border-blue-400 shadow-blue-200' :
@@ -184,7 +255,7 @@ export default function Sidebar() {
                 fill={plan === 'GUEST' ? 'none' : 'currentColor'} 
                 className={plan !== 'GUEST' ? 'animate-pulse text-white' : ''} 
               />
-              {plan} {plan === 'GUEST' ? '' : 'MEMBER'}
+              {plan === 'PRO TRIAL' ? `PRO TRIAL ${daysLeft ? `(${daysLeft}N)` : ''}` : `${plan} ${plan === 'GUEST' ? '' : 'MEMBER'}`}
           </div>
         </div>
 

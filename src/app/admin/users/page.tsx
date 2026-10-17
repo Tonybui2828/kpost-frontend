@@ -6,7 +6,7 @@ export default function AdminUsersPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.kpost.vn';
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ALL'); // ALL, FREE, PRO, GOLD, DIAMOND, DELETED
+  const [activeTab, setActiveTab] = useState('ALL'); // ALL, PRO TRIAL, FREE, PRO, GOLD, DIAMOND, DELETED
   
   // State cho thanh tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,8 +22,8 @@ export default function AdminUsersPage() {
     extraDays: number;
     customExpireDate: string;
   }>({
-    plan: 'PRO',
-    extraDays: 5,
+    plan: 'PRO TRIAL',
+    extraDays: 7,
     customExpireDate: ''
   });
 
@@ -49,15 +49,38 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
+  // 🌟 Hàm nhận diện khách hàng đang trong 07 ngày dùng thử PRO TRIAL
+  const isTrialUser = (user: any) => {
+    if (user.isTrial || user.plan === 'PRO TRIAL' || user.plan === 'protrial' || user.displayPlan === 'PRO TRIAL') return true;
+    if (user.createdAt) {
+      const createdTime = new Date(user.createdAt).getTime();
+      const diffDays = (Date.now() - createdTime) / (1000 * 60 * 60 * 24);
+      // Nếu khách đăng ký trong 7 ngày và chưa bị hạ gói
+      if (diffDays <= 7 && (!user.plan || user.plan.toUpperCase() === 'FREE' || user.plan.toUpperCase() === 'PRO')) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const getUserDisplayPlan = (user: any) => {
+    if (isTrialUser(user)) return 'PRO TRIAL';
+    return (user.plan || 'FREE').toUpperCase();
+  };
+
   // Lọc user theo Tab VÀ Từ khóa tìm kiếm
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.map(user => ({
+    ...user,
+    displayPlan: getUserDisplayPlan(user)
+  })).filter(user => {
     const matchSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchSearch) return false;
 
     if (activeTab === 'DELETED') return user.status === 'deleted';
     if (activeTab === 'ALL') return user.status === 'active';
-    return user.status === 'active' && user.plan?.toUpperCase() === activeTab;
+    if (activeTab === 'PRO TRIAL') return user.status === 'active' && user.displayPlan === 'PRO TRIAL';
+    return user.status === 'active' && user.displayPlan === activeTab;
   });
 
   // ----------------------------------------------------
@@ -95,8 +118,8 @@ export default function AdminUsersPage() {
     }
 
     setPlanForm({
-      plan: user.plan || 'PRO',
-      extraDays: 5,
+      plan: user.displayPlan || user.plan || 'PRO TRIAL',
+      extraDays: user.displayPlan === 'PRO TRIAL' ? 7 : 5,
       customExpireDate: formattedDate
     });
     setShowPlanModal(true);
@@ -244,19 +267,19 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* TABS PHÂN LOẠI */}
+      {/* 🌟 TABS PHÂN LOẠI (CÓ THÊM TAB PRO TRIAL ĐỂ QUẢN LÝ DỄ DÀNG) */}
       <div className="flex gap-2 mb-4 border-b border-gray-200 pb-2 overflow-x-auto">
-        {['ALL', 'FREE', 'PRO', 'GOLD', 'DIAMOND', 'DELETED'].map(tab => (
+        {['ALL', 'PRO TRIAL', 'FREE', 'PRO', 'GOLD', 'DIAMOND', 'DELETED'].map(tab => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); setSelectedUserIds([]); }}
             className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
               activeTab === tab 
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' 
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600 font-bold' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            {tab === 'ALL' ? 'Tất cả' : tab === 'DELETED' ? 'Đã khóa' : `Gói ${tab}`}
+            {tab === 'ALL' ? 'Tất cả' : tab === 'DELETED' ? 'Đã khóa' : tab === 'PRO TRIAL' ? '⚡ Gói PRO TRIAL' : `Gói ${tab}`}
           </button>
         ))}
       </div>
@@ -326,19 +349,38 @@ export default function AdminUsersPage() {
                         </div>
                     )}
                   </td>
+
+                  {/* 🌟 CỘT GÓI HIỆN TẠI: HIỂN THỊ PRO TRIAL NỔI BẬT */}
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold tracking-wide ${
-                      user.plan === 'DIAMOND' ? 'bg-purple-100 text-purple-700' :
-                      user.plan === 'GOLD' ? 'bg-yellow-100 text-yellow-700' :
-                      user.plan === 'PRO' ? 'bg-blue-100 text-blue-700' :
+                      user.displayPlan === 'PRO TRIAL' ? 'bg-orange-100 text-orange-700 border border-orange-200 shadow-sm' :
+                      user.displayPlan === 'DIAMOND' ? 'bg-purple-100 text-purple-700' :
+                      user.displayPlan === 'GOLD' ? 'bg-yellow-100 text-yellow-700' :
+                      user.displayPlan === 'PRO' ? 'bg-blue-100 text-blue-700' :
                       'bg-gray-100 text-gray-600'
                     }`}>
-                      {user.plan || 'FREE'}
+                      {user.displayPlan}
                     </span>
                   </td>
+
+                  {/* 🌟 CỘT NGÀY HẾT HẠN KÈM GHI CHÚ DÙNG THỬ */}
                   <td className="p-4 text-gray-600">
-                    {user.planExpire ? new Date(user.planExpire).toLocaleDateString('vi-VN') : 'Không giới hạn'}
+                    {user.planExpire ? (
+                      <div>
+                        <span className="font-medium">{new Date(user.planExpire).toLocaleDateString('vi-VN')}</span>
+                        {user.displayPlan === 'PRO TRIAL' && (
+                          <span className="ml-2 text-[10px] text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
+                            Dùng thử
+                          </span>
+                        )}
+                      </div>
+                    ) : user.displayPlan === 'PRO TRIAL' ? (
+                      <span className="text-[11px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                        07 ngày PRO TRIAL
+                      </span>
+                    ) : 'Không giới hạn'}
                   </td>
+
                   <td className="p-4 text-right">
                     {user.status === 'active' ? (
                       <div className="flex gap-2 justify-end">
@@ -373,7 +415,7 @@ export default function AdminUsersPage() {
         </table>
       </div>
 
-      {/* --- MODAL NÂNG CẤP & ĐIỀU CHỈNH HẠN DÙNG (CÓ TĂNG / GIẢM NGÀY) --- */}
+      {/* --- MODAL NÂNG CẤP & ĐIỀU CHỈNH HẠN DÙNG (CÓ TĂNG / GIẢM NGÀY & TÙY CHỌN PRO TRIAL) --- */}
       {showPlanModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form onSubmit={handleUpgradePlan} className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-4">
@@ -399,18 +441,22 @@ export default function AdminUsersPage() {
               </span>
             </div>
 
-            {/* Chọn gói */}
+            {/* 🌟 Chọn gói: Có thêm nút PRO TRIAL */}
             <div>
               <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Gói cước</label>
-              <div className="grid grid-cols-4 gap-2">
-                {['PRO', 'GOLD', 'DIAMOND', 'FREE'].map((p) => (
+              <div className="grid grid-cols-5 gap-2">
+                {['PRO TRIAL', 'PRO', 'GOLD', 'DIAMOND', 'FREE'].map((p) => (
                   <button
                     key={p}
                     type="button"
-                    onClick={() => setPlanForm({ ...planForm, plan: p })}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                    onClick={() => setPlanForm({ 
+                      ...planForm, 
+                      plan: p,
+                      extraDays: p === 'PRO TRIAL' ? 7 : (p === 'FREE' ? 0 : planForm.extraDays)
+                    })}
+                    className={`py-2 text-[11px] font-bold rounded-xl border transition-all ${
                       planForm.plan === p 
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                        ? (p === 'PRO TRIAL' ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-blue-600 text-white border-blue-600 shadow-sm')
                         : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -473,7 +519,7 @@ export default function AdminUsersPage() {
                 </button>
               </div>
 
-              {/* Ô tự gõ số ngày (Hỗ trợ cả số âm như -5, -10) */}
+              {/* Ô tự gõ số ngày */}
               <div className="relative">
                 <input 
                   type="number" 

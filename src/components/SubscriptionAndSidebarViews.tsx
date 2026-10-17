@@ -112,6 +112,23 @@ export function TopRenewalNoticeBanner({
 // SIDEBAR CHUẨN ĐẸP KHỚP 100% ẢNH MINH HỌA
 // CÓ Ô NÂNG CẤP / GIA HẠN NẰM BÊN TRÊN PHẦN ĐĂNG XUẤT
 // ----------------------------------------------------------------------
+export function isUserTrial(user: UserSubscription | any): boolean {
+  if (!user) return false;
+  if (user.isTrial === true || user.plan === 'PRO TRIAL' || user.displayPlan === 'PRO TRIAL') {
+    return true;
+  }
+  if (user.createdAt) {
+    const createdTime = new Date(user.createdAt).getTime();
+    const diffMs = Date.now() - createdTime;
+    if (diffMs >= 0 && diffMs < 7 * 24 * 60 * 60 * 1000) {
+      if (!user.planExpire || new Date(user.planExpire).getTime() > Date.now()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function MainAppSidebar({
   activeTab,
   setActiveTab,
@@ -127,6 +144,7 @@ export function MainAppSidebar({
   onOpenUpgrade: () => void;
   onLogout: () => void;
 }) {
+  const isTrial = isUserTrial(currentUser);
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 z-20 font-sans shadow-sm">
       {/* Brand Header */}
@@ -144,10 +162,14 @@ export function MainAppSidebar({
             </span>
           </div>
         </div>
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-          currentUser.plan === 'PRO' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-slate-100 text-slate-600'
+        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+          isTrial
+            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
+            : currentUser.plan === 'PRO' || currentUser.plan === 'GOLD' || currentUser.plan === 'DIAMOND'
+            ? 'bg-orange-50 text-orange-600 border border-orange-200'
+            : 'bg-slate-100 text-slate-600'
         }`}>
-          {currentUser.plan}
+          {isTrial ? 'PRO TRIAL' : (currentUser.plan || 'PRO TRIAL')}
         </span>
       </div>
 
@@ -290,13 +312,13 @@ export function MainAppSidebar({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className={`text-[10px] font-black uppercase tracking-wider ${
-                  currentUser.plan === 'PRO' ? 'text-[#f9570c]' : 'text-slate-400'
+                  isTrial || currentUser.plan === 'PRO' ? 'text-[#f9570c]' : 'text-slate-400'
                 }`}>
-                  {currentUser.plan}
+                  {isTrial ? 'PRO TRIAL' : currentUser.plan}
                 </span>
-                {currentUser.plan === 'PRO' && (
+                {(isTrial || currentUser.plan === 'PRO') && (
                   <span className="text-[10px] font-bold text-slate-400">
-                    • Còn {daysLeft} ngày
+                    • Còn {daysLeft || 7} ngày
                   </span>
                 )}
               </div>
