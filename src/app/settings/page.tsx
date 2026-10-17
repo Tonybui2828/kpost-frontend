@@ -52,17 +52,98 @@ export default function SettingsPage() {
     }
   }, []);
 
+  // =========================================================================
+  // 🌟 HÀM TÍNH TOÁN QUYỀN LỢI GÓI CƯỚC:
+  // KHÁCH ĐĂNG KÝ TỰ ĐỘNG CỘNG 07 NGÀY SỬ DỤNG GÓI PRO TRIAL MIỄN PHÍ.
+  // HẾT 07 NGÀY TỰ ĐỘNG VỀ FREE.
+  // TRƯỚC HẠN 3 NGÀY HIỆN BANNER NHẮC GIA HẠN TRÊN CÙNG WEBSITE.
+  // =========================================================================
+  const resolveUserSubscription = (userData: any) => {
+    if (!userData) return null;
+
+    const email = (userData.email || "").toLowerCase().trim();
+    const rawPlan = (userData.plan || "").toUpperCase().trim();
+    const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
+    const createdAt = userData.createdAt || userData.created_at || userData.createdDate || null;
+
+    // 1. Nếu là tài khoản trả phí đã có ngày hết hạn hợp lệ và còn hạn:
+    if (rawExpiry && new Date(rawExpiry).getTime() > Date.now()) {
+      const remaining = Math.max(1, Math.ceil((new Date(rawExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      const isExplicitTrial = userData.isTrial === true || rawPlan === "PRO TRIAL" || rawPlan === "TRIAL";
+      return {
+        ...userData,
+        plan: isExplicitTrial ? "PRO" : (rawPlan.replace(" MEMBER", "") || "PRO"),
+        displayPlan: isExplicitTrial ? "PRO TRIAL" : (rawPlan || "PRO"),
+        planExpiry: new Date(rawExpiry).toISOString(),
+        isTrial: isExplicitTrial,
+        remainingDays: remaining,
+      };
+    }
+
+    // 2. KHÁCH MỚI ĐĂNG KÝ: TỰ ĐỘNG CỘNG 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ
+    let trialStartTime: number;
+    if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+      trialStartTime = new Date(createdAt).getTime();
+    } else {
+      const cachedStart = typeof window !== 'undefined' ? localStorage.getItem(`kpost_trial_start_${email}`) : null;
+      if (cachedStart && !isNaN(new Date(cachedStart).getTime())) {
+        trialStartTime = new Date(cachedStart).getTime();
+      } else {
+        trialStartTime = Date.now();
+      }
+    }
+
+    // Luôn lưu cache để đồng bộ mốc dùng thử của tài khoản
+    try {
+      if (email && typeof window !== 'undefined') {
+        const existing = localStorage.getItem(`kpost_trial_start_${email}`);
+        if (!existing) {
+          localStorage.setItem(`kpost_trial_start_${email}`, new Date(trialStartTime).toISOString());
+        }
+      }
+    } catch (e) {}
+
+    const trialDurationMs = 7 * 24 * 60 * 60 * 1000; // 07 ngày dùng thử PRO
+    const trialEndTime = trialStartTime + trialDurationMs;
+    const diffMs = trialEndTime - Date.now();
+
+    if (diffMs > 0) {
+      // 🌟 VẪN TRONG THỜI HẠN 07 NGÀY PRO TRIAL
+      const daysLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      return {
+        ...userData,
+        plan: "PRO",
+        displayPlan: "PRO TRIAL",
+        planExpiry: new Date(trialEndTime).toISOString(),
+        isTrial: true,
+        trialDays: 7,
+        remainingDays: daysLeft,
+      };
+    } else {
+      // ⚠️ ĐÃ HẾT 07 NGÀY DÙNG THỬ -> TỰ ĐỘNG VỀ GÓI FREE
+      return {
+        ...userData,
+        plan: "FREE",
+        displayPlan: "FREE MEMBER",
+        planExpiry: null,
+        isTrial: false,
+        remainingDays: 0,
+        trialExpired: true,
+      };
+    }
+  };
+
   const fetchProfile = async () => {
     try {
         const token = localStorage.getItem("token");
         if (!token) { 
-          // Nếu chưa có token thì đọc tạm từ cache kpost_user (hoặc khởi tạo mặc định 7 ngày PRO)
           try {
             const savedLocal = localStorage.getItem("kpost_user");
             if (savedLocal) {
               const parsed = JSON.parse(savedLocal);
-              setUser(parsed);
-              setWorkspaceId(parsed.wid || "KP_DEFAULT");
+              const processed = resolveUserSubscription(parsed);
+              setUser(processed);
+              setWorkspaceId(processed?.wid || "KP_DEFAULT");
               setIsFetchingUser(false);
               return;
             }
@@ -78,13 +159,18 @@ export default function SettingsPage() {
             headers: { Authorization: `Bearer ${token}` }
         });
         
-        setUser(res.data);
+        const processedUser = resolveUserSubscription(res.data);
+        setUser(processedUser);
         const resolvedWid = res.data.currentWorkspaceId || res.data.wid || res.data.workspaceId || "";
         setWorkspaceId(resolvedWid);
         
         if (resolvedWid) {
           localStorage.setItem("workspaceId", resolvedWid);
         }
+        try {
+          localStorage.setItem("kpost_user", JSON.stringify(processedUser));
+          localStorage.setItem("user", JSON.stringify(processedUser));
+        } catch (e) {}
     } catch (e: any) { 
         console.log("Guest mode active hoặc token hết hạn:", e?.response?.status);
         if (e?.response?.status === 401 || e?.response?.status === 403) {
@@ -106,6 +192,7 @@ export default function SettingsPage() {
         setUser((prev: any) => ({
           ...prev,
           plan: "FREE",
+          displayPlan: "FREE MEMBER",
           planExpiry: null,
           isTrial: false,
         }));
@@ -114,6 +201,7 @@ export default function SettingsPage() {
           if (saved) {
             const parsed = JSON.parse(saved);
             parsed.plan = "FREE";
+            parsed.displayPlan = "FREE MEMBER";
             parsed.planExpiry = null;
             parsed.isTrial = false;
             localStorage.setItem("kpost_user", JSON.stringify(parsed));
@@ -135,10 +223,10 @@ export default function SettingsPage() {
     return diffDays;
   };
 
-  const remainingDays = user?.planExpiry ? getRemainingDays(user.planExpiry) : null;
+  const remainingDays = user?.remainingDays !== undefined ? user.remainingDays : (user?.planExpiry ? getRemainingDays(user.planExpiry) : null);
   // Điều kiện: Trước ngày hết hạn 3 ngày sẽ có dòng thông báo nhắc gia hạn chạy trên cùng
   const isExpiringSoon = user && user.plan && user.plan.toUpperCase() === "PRO" && remainingDays !== null && remainingDays <= 3 && remainingDays > 0;
-  const isPlanFree = user && user.plan && user.plan.toUpperCase() === "FREE";
+  const isPlanFree = user && user.plan && user.plan.toUpperCase() === "FREE" && !user.isTrial;
 
   useEffect(() => {
     fetchProfile();
@@ -215,9 +303,29 @@ export default function SettingsPage() {
     <div className="bg-slate-50 min-h-screen text-slate-800 font-sans relative flex flex-col">
       <Toaster position="top-right" />
 
-      {/* ⚡ 3. DÒNG THÔNG BÁO NHẮC GIA HẠN CHẠY TRÊN CÙNG GIAO DIỆN (TRƯỚC HẠN 3 NGÀY) */}
+      {/* 🌟 1. BANNER ĐẶC QUYỀN KHÁCH MỚI: 07 NGÀY PRO TRIAL MIỄN PHÍ (KHI CÒN TRÊN 3 NGÀY) */}
+      {user?.isTrial && remainingDays !== null && remainingDays > 3 && (
+        <div className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 text-white shadow-lg z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-orange-400/40 animate-in fade-in">
+          <div className="flex items-center gap-2.5 overflow-hidden flex-1 mr-3">
+            <span className="bg-white/20 backdrop-blur-sm text-yellow-200 text-[10px] md:text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border border-yellow-300/40 flex items-center gap-1">
+              <Sparkles size={12} /> ĐẶC QUYỀN KHÁCH MỚI
+            </span>
+            <div className="truncate text-xs md:text-sm font-bold tracking-wide">
+              🎉 Bạn đang được kích hoạt <strong className="text-yellow-200 uppercase font-black">07 ngày dùng thử PRO Miễn Phí</strong>! Còn <span className="text-yellow-200 font-black underline underline-offset-2">{remainingDays} ngày trải nghiệm</span> toàn bộ tính năng cao cấp.
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab("billing")}
+            className="bg-white hover:bg-yellow-50 text-orange-600 font-black text-xs md:text-sm px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Crown size={15} className="text-amber-500 fill-amber-500" /> Nâng cấp VIP
+          </button>
+        </div>
+      )}
+
+      {/* ⚡ 2. DÒNG THÔNG BÁO NHẮC GIA HẠN CHẠY TRÊN CÙNG GIAO DIỆN (TRƯỚC HẠN 3 NGÀY) */}
       {isExpiringSoon && (
-        <div className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 text-white shadow-lg z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-orange-400/40">
+        <div className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 text-white shadow-lg z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-orange-400/40 animate-in fade-in">
           <div className="flex items-center gap-2.5 overflow-hidden flex-1 mr-3">
             <span className="flex h-3 w-3 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-75"></span>
@@ -227,7 +335,7 @@ export default function SettingsPage() {
               ⚡ NHẮC GIA HẠN
             </span>
             <div className="truncate text-xs md:text-sm font-bold tracking-wide">
-              Gói PRO của bạn sắp hết hạn sau <span className="text-yellow-300 font-black underline underline-offset-2">{remainingDays} ngày nữa</span>
+              Gói {user?.isTrial ? "PRO TRIAL" : "PRO"} của bạn sắp hết hạn sau <span className="text-yellow-300 font-black underline underline-offset-2">{remainingDays} ngày nữa</span>
               {user?.planExpiry && ` (hạn đến ${new Date(user.planExpiry).toLocaleDateString("vi-VN")})`}. Hãy gia hạn ngay để không bị gián đoạn dịch vụ!
             </div>
           </div>
@@ -240,8 +348,9 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {isPlanFree && (
-        <div className="w-full bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900 text-white shadow-md z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-slate-700">
+      {/* ⚠️ 3. THÔNG BÁO GÓI FREE CHỈ HIỆN KHI ĐÃ HẾT 07 NGÀY DÙNG THỬ */}
+      {isPlanFree && !user?.isTrial && (
+        <div className="w-full bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900 text-white shadow-md z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-slate-700 animate-in fade-in">
           <div className="flex items-center gap-3 overflow-hidden flex-1 mr-3 text-xs md:text-sm font-bold">
             <span className="bg-red-500/30 text-red-300 text-[10px] md:text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border border-red-500/40">
               ⚠️ GÓI MIỄN PHÍ (FREE)
@@ -303,7 +412,10 @@ export default function SettingsPage() {
                     <div className="h-4 w-32 bg-slate-200 animate-pulse rounded mt-2 mx-auto lg:mx-0"></div>
                 ) : user ? (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
-                      {user.name} - <span className="text-[#f9570c] font-black">{user.plan || "PRO"}</span>
+                      {user.name} -{" "}
+                      <span className="text-[#f9570c] font-black">
+                        {user.isTrial ? `PRO TRIAL (${remainingDays || 7} NGÀY)` : (user.displayPlan || user.plan || "PRO")}
+                      </span>
                     </p>
                 ) : (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
@@ -423,6 +535,7 @@ function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boo
                   createdAt: new Date().toISOString()
                 };
                 localStorage.setItem("kpost_user", JSON.stringify(localUser));
+                localStorage.setItem("user", JSON.stringify(localUser));
             }
             const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
             const res = await axios.post(`${API_URL}${endpoint}`, payload);
@@ -499,7 +612,7 @@ function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boo
     if (loading) return <div className="p-10 text-center animate-pulse font-black text-slate-300 uppercase">Đang kết nối hệ thống...</div>;
 
     if (user) {
-        const remainingDays = getRemainingDays(user.planExpiry);
+        const remainingDays = user.remainingDays !== undefined ? user.remainingDays : getRemainingDays(user.planExpiry);
 
         return (
             <div className="space-y-10 animate-in fade-in text-black">
@@ -515,9 +628,16 @@ function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boo
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-6 bg-slate-50 rounded-3xl border">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gói hiện tại</p>
-                        <div className="flex items-center gap-3">
-                            <p className="text-xl font-black text-[#f9570c] italic uppercase">{user.plan || "PRO"} MEMBER</p>
-                            {remainingDays !== null && remainingDays > 0 && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-xl font-black text-[#f9570c] italic uppercase">
+                              {user.isTrial ? "PRO TRIAL" : (user.displayPlan || `${user.plan || "PRO"} MEMBER`)}
+                            </p>
+                            {user.isTrial && remainingDays !== null && remainingDays > 0 && (
+                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-gradient-to-r from-[#f9570c] to-amber-500 text-white shadow-sm">
+                                    <Crown size={12} className="fill-white" /> Dùng thử 07 ngày (Còn {remainingDays} ngày)
+                                </span>
+                            )}
+                            {!user.isTrial && remainingDays !== null && remainingDays > 0 && (
                                 <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase ${remainingDays <= 3 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                                     <Clock size={12} /> Còn {remainingDays} ngày
                                 </span>
