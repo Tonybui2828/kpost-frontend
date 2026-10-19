@@ -64,7 +64,8 @@ export default function SettingsPage() {
     // 1. Nếu là tài khoản trả phí đã có ngày hết hạn hợp lệ và còn hạn:
     if (rawExpiry && new Date(rawExpiry).getTime() > Date.now()) {
       const remaining = Math.max(1, Math.ceil((new Date(rawExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-      const isExplicitTrial = userData.isTrial === true || rawPlan === "PRO TRIAL" || rawPlan === "TRIAL";
+      const isPaid = userData.isTrial === false;
+      const isExplicitTrial = !isPaid && (userData.isTrial === true || rawPlan === "PRO TRIAL" || rawPlan === "TRIAL");
       return {
         ...userData,
         plan: isExplicitTrial ? "PRO" : (rawPlan.replace(" MEMBER", "") || "PRO"),
@@ -385,29 +386,53 @@ export default function SettingsPage() {
                             <button
                               onClick={() => {
                                 setPaymentStatus("success");
-                                const newExpire = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                                const currentExpireMs = user?.planExpiry && new Date(user.planExpiry).getTime() > Date.now()
+                                  ? new Date(user.planExpiry).getTime()
+                                  : Date.now();
+                                const extraDays = 30;
+                                const newExpireDate = new Date(currentExpireMs + extraDays * 24 * 60 * 60 * 1000);
+                                const newExpire = newExpireDate.toISOString();
+                                const totalRemaining = Math.max(1, Math.ceil((newExpireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                const activatedPlan = paymentInfo.plan || "PRO";
+
                                 setUser((prev: any) => ({
                                   ...prev,
-                                  plan: paymentInfo.plan || "PRO",
-                                  displayPlan: paymentInfo.plan || "PRO",
+                                  plan: activatedPlan,
+                                  displayPlan: activatedPlan,
                                   planExpiry: newExpire,
+                                  planExpire: newExpire,
                                   isTrial: false,
-                                  remainingDays: 30,
+                                  trialDays: 0,
+                                  remainingDays: totalRemaining,
+                                  daysLeft: totalRemaining,
                                 }));
+
                                 try {
                                   const saved = localStorage.getItem("kpost_user");
                                   let parsed = saved ? JSON.parse(saved) : {};
-                                  parsed.plan = paymentInfo.plan || "PRO";
-                                  parsed.displayPlan = paymentInfo.plan || "PRO";
+                                  parsed.plan = activatedPlan;
+                                  parsed.displayPlan = activatedPlan;
                                   parsed.planExpiry = newExpire;
                                   parsed.planExpire = newExpire;
                                   parsed.isTrial = false;
-                                  parsed.remainingDays = 30;
-                                  parsed.daysLeft = 30;
+                                  parsed.trialDays = 0;
+                                  parsed.remainingDays = totalRemaining;
+                                  parsed.daysLeft = totalRemaining;
                                   localStorage.setItem("kpost_user", JSON.stringify(parsed));
                                   localStorage.setItem("user", JSON.stringify(parsed));
                                   window.dispatchEvent(new Event("storage"));
                                 } catch (e) {}
+
+                                // Đồng bộ lên server
+                                try {
+                                  axios.post(`${API_URL}/user/renew-plan`, {
+                                    email: user?.email || 'tech28.vn@gmail.com',
+                                    plan: activatedPlan,
+                                    days: extraDays
+                                  }).catch(() => {});
+                                } catch (e) {}
+
+                                toast.success(`🎉 Đã kích hoạt thành công gói ${activatedPlan}! (Tổng còn ${totalRemaining} ngày)`);
                               }}
                               className="w-full py-3 bg-[#f9570c] hover:bg-[#ea4e07] text-white rounded-2xl font-black uppercase text-xs shadow-md transition-all active:scale-95 cursor-pointer mt-2"
                             >

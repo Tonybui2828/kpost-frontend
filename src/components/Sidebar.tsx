@@ -141,23 +141,41 @@ export default function Sidebar() {
       if (savedUserStr) {
         const parsed = JSON.parse(savedUserStr);
         setUser(parsed);
-        if (parsed.plan) setPlan(parsed.plan === "FREE" ? "PRO TRIAL" : parsed.plan);
-        if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
-          setDaysLeft(parsed.remainingDays);
-        } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
-          setDaysLeft(parsed.daysLeft);
-        } else if (parsed.isTrial) {
-          if (parsed.createdAt) {
-            const diffDays = (Date.now() - new Date(parsed.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-            setDaysLeft(Math.min(6, Math.max(1, 7 - Math.floor(diffDays))));
+        const isPaid = parsed.isTrial === false;
+
+        if (isPaid) {
+          setPlan(parsed.plan || "PRO");
+          if (parsed.planExpiry || parsed.planExpire) {
+            const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
+            setDaysLeft(Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
+          } else if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
+            setDaysLeft(parsed.remainingDays);
+          } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
+            setDaysLeft(parsed.daysLeft);
           } else {
-            setDaysLeft(6);
+            setDaysLeft(30);
           }
-        } else if (parsed.planExpiry || parsed.planExpire) {
-          const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
-          setDaysLeft(Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
         } else {
-          setDaysLeft(6);
+          // Trạng thái dùng thử (PRO TRIAL) hoặc FREE
+          if (parsed.plan === "FREE") {
+            setPlan("FREE");
+            setDaysLeft(0);
+          } else {
+            setPlan("PRO TRIAL");
+            if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
+              setDaysLeft(parsed.remainingDays);
+            } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
+              setDaysLeft(parsed.daysLeft);
+            } else if (parsed.createdAt) {
+              const diffDays = (Date.now() - new Date(parsed.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+              setDaysLeft(Math.min(6, Math.max(1, 7 - Math.floor(diffDays))));
+            } else if (parsed.planExpiry || parsed.planExpire) {
+              const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
+              setDaysLeft(Math.min(6, Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))));
+            } else {
+              setDaysLeft(6);
+            }
+          }
         }
       }
     } catch (e) {}
@@ -173,49 +191,47 @@ export default function Sidebar() {
       const userData = res.data || {};
       setUser(userData);
 
-      // 🌟 KIỂM TRA ĐẶC QUYỀN KHÁCH MỚI: 07 NGÀY DÙNG THỬ PRO TRIAL
       const rawPlan = (userData.plan || "").toUpperCase().trim();
       const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
       
-      const createdAtTime = userData.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
-      const diffDaysFromCreated = (Date.now() - createdAtTime) / (1000 * 60 * 60 * 24);
-      const isWithin7Days = diffDaysFromCreated >= 0 && diffDaysFromCreated < 7;
-
-      let isLocalTrial = false;
+      let isLocalPaid = false;
       try {
         const saved = localStorage.getItem("kpost_user") || localStorage.getItem("user");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed.isTrial) isLocalTrial = true;
+          if (parsed.isTrial === false) isLocalPaid = true;
         }
       } catch (err) {}
 
-      // Tính số ngày còn lại (đồng nhất với setting: thực tế còn 6 ngày)
+      const isPaid = userData.isTrial === false || isLocalPaid;
+
       if (rawExpiry) {
         const diffMs = new Date(rawExpiry).getTime() - Date.now();
         const calcDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        setDaysLeft(rawPlan.includes("TRIAL") || isLocalTrial || isWithin7Days ? Math.min(calcDays, 6) : calcDays);
-
         if (diffMs <= 0) {
           setPlan("FREE");
+          setDaysLeft(0);
           return;
         }
-      } else {
-        const remaining = Math.min(6, Math.max(1, 7 - Math.floor(diffDaysFromCreated)));
-        setDaysLeft(remaining);
-      }
 
-      // Xác định gói cước hiển thị
-      if (rawPlan === "PRO TRIAL" || userData.isTrial || isLocalTrial || (isWithin7Days && (rawPlan === "FREE" || rawPlan === "" || rawPlan === "PRO"))) {
-        setPlan("PRO TRIAL");
-      } else if (rawPlan === "DIAMOND") {
-        setPlan("DIAMOND");
-      } else if (rawPlan === "GOLD") {
-        setPlan("GOLD");
-      } else if (rawPlan === "PRO") {
-        setPlan("PRO");
+        if (isPaid) {
+          setPlan(rawPlan || "PRO");
+          setDaysLeft(calcDays);
+        } else {
+          setPlan("PRO TRIAL");
+          setDaysLeft(Math.min(calcDays, 6));
+        }
       } else {
-        setPlan(rawPlan || "PRO TRIAL");
+        if (isPaid) {
+          setPlan(rawPlan || "PRO");
+          setDaysLeft(30);
+        } else {
+          const createdAtTime = userData.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
+          const diffDaysFromCreated = (Date.now() - createdAtTime) / (1000 * 60 * 60 * 24);
+          const remaining = Math.min(6, Math.max(1, 7 - Math.floor(diffDaysFromCreated)));
+          setDaysLeft(remaining);
+          setPlan("PRO TRIAL");
+        }
       }
     } catch (e) {
       console.warn("Phiên kết nối máy chủ ngoại tuyến, sử dụng dữ liệu cục bộ");
@@ -490,7 +506,11 @@ export default function Sidebar() {
         }}
         onRenew={(newPlan, days) => {
           setPlan(newPlan);
-          setDaysLeft(days);
+          const currentExpireMs = user?.planExpiry && new Date(user.planExpiry).getTime() > Date.now()
+            ? new Date(user.planExpiry).getTime()
+            : Date.now();
+          const totalDays = Math.max(1, Math.ceil((currentExpireMs + days * 24 * 60 * 60 * 1000 - Date.now()) / (1000 * 60 * 60 * 24)));
+          setDaysLeft(totalDays);
           fetchUserStatus();
         }}
         onSetTestDays={(days) => {
@@ -541,6 +561,7 @@ export function UpgradeRenewModal({
   const [successDetails, setSuccessDetails] = useState<{
     plan: string;
     days: number;
+    totalDays?: number;
     expiry: string;
     memo: string;
     amount: number;
@@ -670,10 +691,12 @@ export function UpgradeRenewModal({
       : Date.now();
     const calculatedExpiry = new Date(currentExpireMs + days * 24 * 60 * 60 * 1000);
     const expiryStr = calculatedExpiry.toLocaleDateString('vi-VN');
+    const totalRemainingDays = Math.max(1, Math.ceil((calculatedExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
     setSuccessDetails({
       plan: planId,
       days: days,
+      totalDays: totalRemainingDays,
       expiry: expiryStr,
       memo: transactionMemo || displayMemo,
       amount: finalPrice,
@@ -696,14 +719,24 @@ export function UpgradeRenewModal({
       parsed.planExpiry = calculatedExpiry.toISOString();
       parsed.planExpire = calculatedExpiry.toISOString();
       parsed.isTrial = false;
-      parsed.remainingDays = days;
-      parsed.daysLeft = days;
+      parsed.trialDays = 0;
+      parsed.remainingDays = totalRemainingDays;
+      parsed.daysLeft = totalRemainingDays;
       localStorage.setItem('kpost_user', JSON.stringify(parsed));
       localStorage.setItem('user', JSON.stringify(parsed));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {}
 
-    toast.success(`🎉 Nạp tiền & Kích hoạt thành công gói ${planId}! (+${days} ngày)`, { duration: 6000 });
+    // Đồng bộ lên server
+    try {
+      axios.post(`${API_URL}/user/renew-plan`, {
+        email: currentUser.email || 'tech28.vn@gmail.com',
+        plan: planId,
+        days: days
+      }).catch(() => {});
+    } catch (e) {}
+
+    toast.success(`🎉 Nạp tiền & Kích hoạt thành công gói ${planId}! (Tổng còn ${totalRemainingDays} ngày)`, { duration: 6000 });
   };
 
   // Reset payment status khi mở lại modal
@@ -825,8 +858,8 @@ export function UpgradeRenewModal({
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Thời gian cộng thêm:</span>
-                <span className="font-black text-emerald-600 text-sm">+{successDetails.days} ngày</span>
+                <span className="font-bold text-slate-500">Thời hạn sử dụng:</span>
+                <span className="font-black text-emerald-600 text-sm">+{successDetails.days} ngày {successDetails.totalDays ? `(Tổng còn ${successDetails.totalDays} ngày)` : ''}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-slate-500">Hạn sử dụng mới đến:</span>
