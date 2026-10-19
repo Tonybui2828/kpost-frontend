@@ -61,18 +61,36 @@ export default function SettingsPage() {
     const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
     const createdAt = userData.createdAt || userData.created_at || userData.createdDate || null;
 
-    // 1. Nếu là tài khoản trả phí đã có ngày hết hạn hợp lệ và còn hạn:
-    if (rawExpiry && new Date(rawExpiry).getTime() > Date.now()) {
-      const remaining = Math.max(1, Math.ceil((new Date(rawExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-      const isPaid = userData.isTrial === false;
-      const isExplicitTrial = !isPaid && (userData.isTrial === true || rawPlan === "PRO TRIAL" || rawPlan === "TRIAL");
+    // 1. Kiểm tra cache nạp tiền trả phí kpost_paid_subscription (đảm bảo F5 không bị API đè về FREE hay PRO TRIAL)
+    let paidCache: any = null;
+    try {
+      const savedPaid = localStorage.getItem("kpost_paid_subscription");
+      if (savedPaid) {
+        paidCache = JSON.parse(savedPaid);
+      }
+    } catch (e) {}
+
+    const effectiveExpiry = (paidCache && paidCache.planExpiry && new Date(paidCache.planExpiry).getTime() > Date.now())
+      ? paidCache.planExpiry
+      : rawExpiry;
+
+    const hasValidFutureExpiry = effectiveExpiry && new Date(effectiveExpiry).getTime() > Date.now();
+    const isPaidPlan = rawPlan === "PRO" || rawPlan === "GOLD" || rawPlan === "DIAMOND";
+    const isExplicitPaid = (hasValidFutureExpiry && (isPaidPlan || paidCache?.isPaid === true)) && (userData.isTrial !== true);
+
+    if (isExplicitPaid) {
+      const remaining = Math.max(1, Math.ceil((new Date(effectiveExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      const activePlan = isPaidPlan ? rawPlan : (paidCache?.plan || "PRO");
       return {
         ...userData,
-        plan: isExplicitTrial ? "PRO" : (rawPlan.replace(" MEMBER", "") || "PRO"),
-        displayPlan: isExplicitTrial ? "PRO TRIAL" : (rawPlan || "PRO"),
-        planExpiry: new Date(rawExpiry).toISOString(),
-        isTrial: isExplicitTrial,
+        plan: activePlan,
+        displayPlan: activePlan,
+        daysLeft: remaining,
         remainingDays: remaining,
+        planExpiry: new Date(effectiveExpiry).toISOString(),
+        planExpire: new Date(effectiveExpiry).toISOString(),
+        isTrial: false,
+        isPaid: true,
       };
     }
 
@@ -105,16 +123,19 @@ export default function SettingsPage() {
     const diffMs = trialEndTime - Date.now();
 
     if (diffMs > 0) {
-      // 🌟 VẪN TRONG THỜI HẠN 07 NGÀY PRO TRIAL (đồng nhất thực tế 6 ngày)
-      const daysLeft = Math.min(6, Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
+      // 🌟 VẪN TRONG THỜI HẠN 07 NGÀY PRO TRIAL
+      const daysLeft = Math.min(7, Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
       return {
         ...userData,
-        plan: "PRO",
+        plan: "PRO TRIAL",
         displayPlan: "PRO TRIAL",
         planExpiry: new Date(trialEndTime).toISOString(),
+        planExpire: new Date(trialEndTime).toISOString(),
         isTrial: true,
+        isPaid: false,
         trialDays: 7,
         remainingDays: daysLeft,
+        daysLeft: daysLeft,
       };
     } else {
       // ⚠️ ĐÃ HẾT 07 NGÀY DÙNG THỬ -> TỰ ĐỘNG VỀ GÓI FREE
@@ -123,8 +144,11 @@ export default function SettingsPage() {
         plan: "FREE",
         displayPlan: "FREE MEMBER",
         planExpiry: null,
+        planExpire: null,
         isTrial: false,
+        isPaid: false,
         remainingDays: 0,
+        daysLeft: 0,
         trialExpired: true,
       };
     }
@@ -420,6 +444,13 @@ export default function SettingsPage() {
                                   parsed.daysLeft = totalRemaining;
                                   localStorage.setItem("kpost_user", JSON.stringify(parsed));
                                   localStorage.setItem("user", JSON.stringify(parsed));
+                                  localStorage.setItem("kpost_paid_subscription", JSON.stringify({
+                                    plan: activatedPlan,
+                                    displayPlan: activatedPlan,
+                                    planExpiry: newExpire,
+                                    isPaid: true,
+                                    daysLeft: totalRemaining,
+                                  }));
                                   window.dispatchEvent(new Event("storage"));
                                 } catch (e) {}
 

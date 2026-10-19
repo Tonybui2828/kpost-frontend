@@ -131,7 +131,105 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // --- 2. HÀM LẤY THÔNG TIN NGƯỜI DÙNG & GÓI CƯỚC THẬT ---
+  // --- 2. HÀM TÍNH TOÁN QUYỀN LỢI GÓI CƯỚC CHUẨN ĐỒNG NHẤT HỆ THỐNG ---
+  const resolveSubscription = useCallback((userData: any) => {
+    if (!userData) {
+      return { plan: 'PRO TRIAL', daysLeft: 6, isTrial: true, isPaid: false };
+    }
+
+    const email = (userData.email || '').toLowerCase().trim();
+    const rawPlan = (userData.plan || '').toUpperCase().trim();
+    const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
+    const createdAt = userData.createdAt || userData.created_at || userData.createdDate || null;
+
+    // 1. Kiểm tra cache nạp tiền trả phí kpost_paid_subscription (đảm bảo F5 không bị API đè về FREE)
+    let paidCache: any = null;
+    try {
+      const savedPaid = localStorage.getItem('kpost_paid_subscription');
+      if (savedPaid) {
+        paidCache = JSON.parse(savedPaid);
+      }
+    } catch (e) {}
+
+    const effectiveExpiry = (paidCache && paidCache.planExpiry && new Date(paidCache.planExpiry).getTime() > Date.now())
+      ? paidCache.planExpiry
+      : rawExpiry;
+
+    const hasValidFutureExpiry = effectiveExpiry && new Date(effectiveExpiry).getTime() > Date.now();
+    const isPaidPlan = rawPlan === 'PRO' || rawPlan === 'GOLD' || rawPlan === 'DIAMOND';
+    const isExplicitPaid = (hasValidFutureExpiry && (isPaidPlan || paidCache?.isPaid === true)) && (userData.isTrial !== true);
+
+    if (isExplicitPaid) {
+      const remaining = Math.max(1, Math.ceil((new Date(effectiveExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      const activePlan = isPaidPlan ? rawPlan : (paidCache?.plan || 'PRO');
+      return {
+        ...userData,
+        plan: activePlan,
+        displayPlan: activePlan,
+        daysLeft: remaining,
+        remainingDays: remaining,
+        planExpiry: new Date(effectiveExpiry).toISOString(),
+        isTrial: false,
+        isPaid: true,
+      };
+    }
+
+    // 2. KHÁCH MỚI ĐĂNG KÝ: TỰ ĐỘNG CỘNG 07 NGÀY DÙNG THỬ PRO TRIAL MIỄN PHÍ
+    let trialStartTime: number;
+    if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+      trialStartTime = new Date(createdAt).getTime();
+    } else {
+      const cachedStart = typeof window !== 'undefined' && email ? localStorage.getItem(`kpost_trial_start_${email}`) : null;
+      if (cachedStart && !isNaN(new Date(cachedStart).getTime())) {
+        trialStartTime = new Date(cachedStart).getTime();
+      } else {
+        trialStartTime = Date.now();
+      }
+    }
+
+    try {
+      if (email && typeof window !== 'undefined') {
+        const existing = localStorage.getItem(`kpost_trial_start_${email}`);
+        if (!existing) {
+          localStorage.setItem(`kpost_trial_start_${email}`, new Date(trialStartTime).toISOString());
+        }
+      }
+    } catch (e) {}
+
+    const trialDurationMs = 7 * 24 * 60 * 60 * 1000;
+    const trialEndTime = trialStartTime + trialDurationMs;
+    const diffMs = trialEndTime - Date.now();
+
+    if (diffMs > 0) {
+      // Vẫn trong 07 ngày dùng thử PRO TRIAL:
+      const days = Math.min(7, Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
+      return {
+        ...userData,
+        plan: 'PRO TRIAL',
+        displayPlan: 'PRO TRIAL',
+        daysLeft: days,
+        remainingDays: days,
+        planExpiry: new Date(trialEndTime).toISOString(),
+        isTrial: true,
+        isPaid: false,
+        trialDays: 7,
+      };
+    }
+
+    // 3. Đã hết 07 ngày dùng thử và chưa mua gói -> Gói FREE
+    return {
+      ...userData,
+      plan: 'FREE',
+      displayPlan: 'FREE MEMBER',
+      daysLeft: 0,
+      remainingDays: 0,
+      planExpiry: null,
+      isTrial: false,
+      isPaid: false,
+      trialExpired: true,
+    };
+  }, []);
+
   const fetchUserStatus = useCallback(async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -140,43 +238,10 @@ export default function Sidebar() {
       const savedUserStr = localStorage.getItem("kpost_user") || localStorage.getItem("user");
       if (savedUserStr) {
         const parsed = JSON.parse(savedUserStr);
-        setUser(parsed);
-        const isPaid = parsed.isTrial === false;
-
-        if (isPaid) {
-          setPlan(parsed.plan || "PRO");
-          if (parsed.planExpiry || parsed.planExpire) {
-            const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
-            setDaysLeft(Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
-          } else if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
-            setDaysLeft(parsed.remainingDays);
-          } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
-            setDaysLeft(parsed.daysLeft);
-          } else {
-            setDaysLeft(30);
-          }
-        } else {
-          // Trạng thái dùng thử (PRO TRIAL) hoặc FREE
-          if (parsed.plan === "FREE") {
-            setPlan("FREE");
-            setDaysLeft(0);
-          } else {
-            setPlan("PRO TRIAL");
-            if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
-              setDaysLeft(parsed.remainingDays);
-            } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
-              setDaysLeft(parsed.daysLeft);
-            } else if (parsed.createdAt) {
-              const diffDays = (Date.now() - new Date(parsed.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-              setDaysLeft(Math.min(6, Math.max(1, 7 - Math.floor(diffDays))));
-            } else if (parsed.planExpiry || parsed.planExpire) {
-              const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
-              setDaysLeft(Math.min(6, Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))));
-            } else {
-              setDaysLeft(6);
-            }
-          }
-        }
+        const resolved = resolveSubscription(parsed);
+        setUser(resolved);
+        setPlan(resolved.displayPlan || resolved.plan);
+        setDaysLeft(resolved.daysLeft);
       }
     } catch (e) {}
 
@@ -189,54 +254,20 @@ export default function Sidebar() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userData = res.data || {};
-      setUser(userData);
+      const resolved = resolveSubscription(userData);
+      setUser(resolved);
+      setPlan(resolved.displayPlan || resolved.plan);
+      setDaysLeft(resolved.daysLeft);
 
-      const rawPlan = (userData.plan || "").toUpperCase().trim();
-      const rawExpiry = userData.planExpiry || userData.planExpire || userData.expireDate || null;
-      
-      let isLocalPaid = false;
+      // Lưu ngược vào localStorage để đảm bảo dữ liệu đồng nhất
       try {
-        const saved = localStorage.getItem("kpost_user") || localStorage.getItem("user");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.isTrial === false) isLocalPaid = true;
-        }
+        localStorage.setItem("kpost_user", JSON.stringify(resolved));
+        localStorage.setItem("user", JSON.stringify(resolved));
       } catch (err) {}
-
-      const isPaid = userData.isTrial === false || isLocalPaid;
-
-      if (rawExpiry) {
-        const diffMs = new Date(rawExpiry).getTime() - Date.now();
-        const calcDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        if (diffMs <= 0) {
-          setPlan("FREE");
-          setDaysLeft(0);
-          return;
-        }
-
-        if (isPaid) {
-          setPlan(rawPlan || "PRO");
-          setDaysLeft(calcDays);
-        } else {
-          setPlan("PRO TRIAL");
-          setDaysLeft(Math.min(calcDays, 6));
-        }
-      } else {
-        if (isPaid) {
-          setPlan(rawPlan || "PRO");
-          setDaysLeft(30);
-        } else {
-          const createdAtTime = userData.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
-          const diffDaysFromCreated = (Date.now() - createdAtTime) / (1000 * 60 * 60 * 24);
-          const remaining = Math.min(6, Math.max(1, 7 - Math.floor(diffDaysFromCreated)));
-          setDaysLeft(remaining);
-          setPlan("PRO TRIAL");
-        }
-      }
     } catch (e) {
       console.warn("Phiên kết nối máy chủ ngoại tuyến, sử dụng dữ liệu cục bộ");
     }
-  }, []);
+  }, [resolveSubscription]);
 
   useEffect(() => {
     fetchUserStatus();
@@ -330,9 +361,14 @@ export default function Sidebar() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-1.5">
-            {/* Huy hiệu PRO TRIAL màu cam gradient */}
-            <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm shrink-0">
+            {/* Huy hiệu PRO TRIAL màu cam gradient hoặc PRO */}
+            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm shrink-0 ${
+              plan === "PRO TRIAL"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                : plan === "FREE"
+                ? "bg-slate-200 text-slate-700"
+                : "bg-[#f9570c] text-white"
+            }`}>
               {plan === "PRO TRIAL" ? "PRO TRIAL" : plan}
             </span>
             <button 
@@ -468,12 +504,20 @@ export default function Sidebar() {
                   {displayName}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#f9570c]">
+                  <span className={`text-[9px] font-black uppercase tracking-wider ${
+                    plan === "PRO TRIAL"
+                      ? "text-[#f9570c]"
+                      : plan === "FREE"
+                      ? "text-slate-400"
+                      : "text-blue-600 font-black"
+                  }`}>
                     {plan}
                   </span>
-                  <span className="text-[9px] font-bold text-slate-400">
-                    • Còn {daysLeft} ngày
-                  </span>
+                  {daysLeft > 0 && plan !== "FREE" && (
+                    <span className="text-[9px] font-bold text-slate-400">
+                      • Còn {daysLeft} ngày
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -686,12 +730,10 @@ export function UpgradeRenewModal({
 
   // Hàm xử lý kích hoạt và hiển thị màn hình thông báo thành công
   const handlePaymentSuccess = (planId: 'PRO' | 'GOLD' | 'DIAMOND', days: number) => {
-    const currentExpireMs = currentUser.planExpire && new Date(currentUser.planExpire).getTime() > Date.now()
-      ? new Date(currentUser.planExpire).getTime()
-      : Date.now();
-    const calculatedExpiry = new Date(currentExpireMs + days * 24 * 60 * 60 * 1000);
+    const currentRemaining = (daysLeft && daysLeft > 0) ? daysLeft : 5;
+    const totalRemainingDays = currentRemaining + days;
+    const calculatedExpiry = new Date(Date.now() + totalRemainingDays * 24 * 60 * 60 * 1000);
     const expiryStr = calculatedExpiry.toLocaleDateString('vi-VN');
-    const totalRemainingDays = Math.max(1, Math.ceil((calculatedExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
     setSuccessDetails({
       plan: planId,
@@ -719,13 +761,25 @@ export function UpgradeRenewModal({
       parsed.planExpiry = calculatedExpiry.toISOString();
       parsed.planExpire = calculatedExpiry.toISOString();
       parsed.isTrial = false;
+      parsed.isPaid = true;
       parsed.trialDays = 0;
       parsed.remainingDays = totalRemainingDays;
       parsed.daysLeft = totalRemainingDays;
       localStorage.setItem('kpost_user', JSON.stringify(parsed));
       localStorage.setItem('user', JSON.stringify(parsed));
+      localStorage.setItem('kpost_paid_subscription', JSON.stringify({
+        plan: planId,
+        displayPlan: planId,
+        planExpiry: calculatedExpiry.toISOString(),
+        isPaid: true,
+        daysLeft: totalRemainingDays,
+      }));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {}
+
+    // Cập nhật state Sidebar ngay lập tức
+    setPlan(planId);
+    setDaysLeft(totalRemainingDays);
 
     // Đồng bộ lên server
     try {
