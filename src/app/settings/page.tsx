@@ -1671,24 +1671,96 @@ export function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile
     ) 
 }
 
+const GUIDE_STORAGE_KEY = 'kpost_admin_guides_data';
+
 export function GuideTab() {
-  const [guides, setGuides] = useState<any[]>([]);
-  const [prompts, setPrompts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState<any[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(GUIDE_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.guides) && parsed.guides.length > 0) return parsed.guides;
+        }
+      }
+    } catch (e) {}
+    return [
+      { title: "Hướng dẫn kết nối Fanpage", url: "https://drive.google.com" }
+    ];
+  });
+
+  const [prompts, setPrompts] = useState<any[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(GUIDE_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.prompts) && parsed.prompts.length > 0) return parsed.prompts;
+        }
+      }
+    } catch (e) {}
+    return [
+      { title: "Prompt Sale Áo Thun", content: "Viết bài quảng cáo bán áo thun nam cao cấp phong cách trẻ trung năng động, kèm lời kêu gọi mua hàng giảm 30% hôm nay..." }
+    ];
+  });
+
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
+      // Đọc trước từ localStorage
       try {
-        const res = await axios.get('/api/admin/system-guides');
-        setGuides(res.data.guides || []);
-        setPrompts(res.data.prompts || []);
+        const cached = localStorage.getItem(GUIDE_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.guides) && parsed.guides.length > 0) setGuides(parsed.guides);
+          if (Array.isArray(parsed.prompts) && parsed.prompts.length > 0) setPrompts(parsed.prompts);
+        }
+      } catch (e) {}
+
+      // Đồng bộ từ server API
+      try {
+        let res;
+        try {
+          res = await axios.get('/api/admin/guides');
+        } catch (err) {
+          res = await axios.get('/api/admin/system-guides');
+        }
+
+        if (res && res.data) {
+          const g = Array.isArray(res.data.guides) ? res.data.guides : [];
+          const p = Array.isArray(res.data.prompts) ? res.data.prompts : [];
+          if (g.length > 0 || p.length > 0) {
+            setGuides(g);
+            setPrompts(p);
+            try {
+              localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify({ guides: g, prompts: p }));
+            } catch (err) {}
+          }
+        }
       } catch (error) {
-        console.error("Lỗi đồng bộ tài liệu:", error);
+        console.warn("Dùng dữ liệu lưu trữ cục bộ cho tài liệu hướng dẫn");
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
+
+    // Lắng nghe sự kiện storage khi admin cập nhật ở tab khác
+    const handleStorageChange = () => {
+      try {
+        const cached = localStorage.getItem(GUIDE_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.guides)) setGuides(parsed.guides);
+          if (Array.isArray(parsed.prompts)) setPrompts(parsed.prompts);
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleCopy = (text: string) => {
