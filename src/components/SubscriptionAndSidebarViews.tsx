@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { io } from 'socket.io-client';
 import { 
   Crown, 
   X, 
@@ -23,7 +25,15 @@ import {
   MessageSquare, 
   Settings,
   User as UserIcon,
-  Sparkles
+  Sparkles,
+  Scale,
+  Shield,
+  Share2,
+  Flame,
+  Ticket,
+  Loader2,
+  CreditCard,
+  QrCode
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -145,26 +155,29 @@ export function MainAppSidebar({
   onLogout: () => void;
 }) {
   const isTrial = isUserTrial(currentUser);
+  const userInitial = currentUser.name ? currentUser.name.trim()[0].toUpperCase() : 'B';
+  const displayName = currentUser.name || 'BÙI VĂN KỲ';
+
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 z-20 font-sans shadow-sm">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 z-20 font-sans shadow-sm select-none">
+      {/* 1. BRAND HEADER - GỌN GÀNG, ĐẸP MẮT */}
+      <div className="p-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black text-xl flex items-center justify-center shadow-md">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-sm shrink-0">
             K
           </div>
           <div>
-            <div className="font-black italic text-lg tracking-tight text-slate-900 leading-none">
-              KPOST<span className="text-orange-500">.VN</span>
+            <div className="font-black italic text-[15px] tracking-tight text-slate-900 leading-none">
+              KPOST<span className="text-[#f9570c]">.VN</span>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mt-0.5">
               AI Automator SaaS
             </span>
           </div>
         </div>
-        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
           isTrial
-            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
+            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs'
             : currentUser.plan === 'PRO' || currentUser.plan === 'GOLD' || currentUser.plan === 'DIAMOND'
             ? 'bg-orange-50 text-orange-600 border border-orange-200'
             : 'bg-slate-100 text-slate-600'
@@ -173,165 +186,191 @@ export function MainAppSidebar({
         </span>
       </div>
 
-      {/* Middle Scrollable Menu List */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1 custom-scrollbar">
-        {/* Core AI Tools */}
-        <SidebarNavItem
-          icon={<Wand2 size={19} className="text-amber-500" />}
-          label="AI Video Editor"
-          active={activeTab === 'ai-video-editor'}
-          onClick={() => setActiveTab('ai-video-editor')}
-          highlightBadge="Hot"
-        />
-        <SidebarNavItem
-          icon={<Film size={19} className="text-purple-500" />}
-          label="AI Video Spinner"
-          active={activeTab === 'video-spinner'}
-          onClick={() => setActiveTab('video-spinner')}
-        />
-        <SidebarNavItem
-          icon={<Bot size={19} className="text-blue-500" />}
-          label="AI Marketing"
-          active={activeTab === 'ai'}
-          onClick={() => setActiveTab('ai')}
-        />
-        <SidebarNavItem
-          icon={<Calendar size={19} />}
-          label="Lịch đăng bài"
-          active={activeTab === 'calendar'}
-          onClick={() => setActiveTab('calendar')}
-        />
-        <SidebarNavItem
-          icon={<MessageSquare size={19} />}
-          label="Hộp thư CSKH"
-          active={activeTab === 'inbox'}
-          onClick={() => setActiveTab('inbox')}
-        />
-
-        <div className="my-2 border-t border-slate-100"></div>
-
-        {/* Khớp với danh sách ảnh người dùng */}
-        <SidebarNavItem
-          icon={<ShoppingBag size={19} />}
-          label="Đơn hàng"
-          active={activeTab === 'orders'}
-          onClick={() => setActiveTab('orders')}
-        />
-        <SidebarNavItem
-          icon={<Users size={19} />}
-          label="Quản lý người dùng bot"
-          active={activeTab === 'bot-users'}
-          onClick={() => setActiveTab('bot-users')}
-        />
-        <SidebarNavItem
-          icon={<ShieldCheck size={19} />}
-          label="Bảo hành"
-          active={activeTab === 'warranty'}
-          onClick={() => setActiveTab('warranty')}
-        />
-
-        {/* Phân mục PHÂN TÍCH */}
-        <div className="pt-3 pb-1 px-3">
-          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-            PHÂN TÍCH
+      {/* 2. MENU LIST - PHÂN MỤC GỌN GÀNG, CHỮ VỪA VẶN TRANG NHÃ DỄ NHÌN */}
+      <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-3 custom-scrollbar">
+        {/* Nhóm 1: CÔNG CỤ AI */}
+        <div>
+          <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            CÔNG CỤ AI
           </p>
+          <div className="space-y-0.5">
+            <SidebarNavItem
+              icon={<Wand2 size={17} className="text-amber-500" />}
+              label="AI Video Editor"
+              active={activeTab === 'ai-video-editor'}
+              onClick={() => setActiveTab('ai-video-editor')}
+              highlightBadge="AI PRO"
+              badgeColor="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black"
+            />
+            <SidebarNavItem
+              icon={<Film size={17} className="text-purple-500" />}
+              label="AI Video Spinner"
+              active={activeTab === 'video-spinner'}
+              onClick={() => setActiveTab('video-spinner')}
+              highlightBadge="HOT"
+              badgeColor="bg-purple-600 text-white font-bold"
+            />
+            <SidebarNavItem
+              icon={<Bot size={17} className="text-blue-500" />}
+              label="AI Marketing"
+              active={activeTab === 'ai'}
+              onClick={() => setActiveTab('ai')}
+            />
+            <SidebarNavItem
+              icon={<Radio size={17} className="text-red-500" />}
+              label="AI Livestream"
+              active={activeTab === 'livestream'}
+              onClick={() => setActiveTab('livestream')}
+              highlightBadge="LIVE"
+              badgeColor="bg-red-500 text-white font-black"
+            />
+          </div>
         </div>
 
-        <SidebarNavItem
-          icon={<TrendingUp size={19} />}
-          label="Doanh thu"
-          active={activeTab === 'revenue' || activeTab === 'dashboard'}
-          onClick={() => setActiveTab('revenue')}
-        />
-        <SidebarNavItem
-          icon={<Sparkles size={19} className="text-orange-500" />}
-          label="Affiliate"
-          active={activeTab === 'affiliate'}
-          onClick={() => setActiveTab('affiliate')}
-        />
-        <SidebarNavItem
-          icon={<Bell size={19} />}
-          label="Thông báo bot"
-          active={activeTab === 'bot-notifications'}
-          onClick={() => setActiveTab('bot-notifications')}
-        />
-        <SidebarNavItem
-          icon={<Radio size={19} className="text-orange-500" />}
-          label="Tele Campaign"
-          active={activeTab === 'tele-campaign'}
-          onClick={() => setActiveTab('tele-campaign')}
-        />
-        <SidebarNavItem
-          icon={<UserIcon size={19} />}
-          label="Hồ sơ"
-          active={activeTab === 'profile'}
-          onClick={() => setActiveTab('profile')}
-        />
-        <SidebarNavItem
-          icon={<BookOpen size={19} />}
-          label="Hướng dẫn"
-          active={activeTab === 'guide'}
-          onClick={() => setActiveTab('guide')}
-        />
-        <SidebarNavItem
-          icon={<HelpCircle size={19} />}
-          label="Hỗ trợ"
-          active={activeTab === 'support'}
-          onClick={() => setActiveTab('support')}
-        />
-        <SidebarNavItem
-          icon={<Settings size={19} />}
-          label="Cài đặt hệ thống"
-          active={activeTab === 'settings'}
-          onClick={() => setActiveTab('settings')}
-        />
+        {/* Nhóm 2: QUẢN LÝ DỊCH VỤ */}
+        <div>
+          <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            QUẢN LÝ DỊCH VỤ
+          </p>
+          <div className="space-y-0.5">
+            <SidebarNavItem
+              icon={<Calendar size={17} />}
+              label="Lịch đăng bài"
+              active={activeTab === 'calendar'}
+              onClick={() => setActiveTab('calendar')}
+            />
+            <SidebarNavItem
+              icon={<MessageSquare size={17} />}
+              label="Hộp thư CSKH"
+              active={activeTab === 'inbox'}
+              onClick={() => setActiveTab('inbox')}
+            />
+            <SidebarNavItem
+              icon={<ShoppingBag size={17} />}
+              label="Quản lý Đơn hàng"
+              active={activeTab === 'orders'}
+              onClick={() => setActiveTab('orders')}
+            />
+            <SidebarNavItem
+              icon={<Users size={17} />}
+              label="Quản lý Bot Users"
+              active={activeTab === 'bot-users'}
+              onClick={() => setActiveTab('bot-users')}
+            />
+            <SidebarNavItem
+              icon={<ShieldCheck size={17} />}
+              label="Bảo hành & CSKH"
+              active={activeTab === 'warranty'}
+              onClick={() => setActiveTab('warranty')}
+            />
+          </div>
+        </div>
+
+        {/* Nhóm 3: PHÂN TÍCH & KẾT NỐI (ĐẨY AFFILIATE VÀO ĐÂY) */}
+        <div>
+          <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            PHÂN TÍCH & KẾT NỐI
+          </p>
+          <div className="space-y-0.5">
+            <SidebarNavItem
+              icon={<TrendingUp size={17} className="text-emerald-500" />}
+              label="Doanh thu"
+              active={activeTab === 'revenue' || activeTab === 'dashboard'}
+              onClick={() => setActiveTab('revenue')}
+            />
+            <SidebarNavItem
+              icon={<Sparkles size={17} className="text-orange-500" />}
+              label="Affiliate (Kiếm tiền)"
+              active={activeTab === 'affiliate'}
+              onClick={() => setActiveTab('affiliate')}
+              highlightBadge="10% HOA HỒNG"
+              badgeColor="bg-orange-500 text-white font-black"
+            />
+            <SidebarNavItem
+              icon={<Radio size={17} className="text-rose-500" />}
+              label="Tele Campaign"
+              active={activeTab === 'tele-campaign'}
+              onClick={() => setActiveTab('tele-campaign')}
+            />
+            <SidebarNavItem
+              icon={<Settings size={17} />}
+              label="Cài đặt hệ thống"
+              active={activeTab === 'settings' || activeTab === 'profile'}
+              onClick={() => setActiveTab('settings')}
+            />
+          </div>
+        </div>
+
+        {/* Nhóm 4: HỖ TRỢ & PHÁP LÝ (ĐẨY SANG CUỐI SIDEBAR, BỎ HẲN TRONG SETTING) */}
+        <div>
+          <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            HỖ TRỢ & PHÁP LÝ
+          </p>
+          <div className="space-y-0.5">
+            <SidebarNavItem
+              icon={<BookOpen size={17} className="text-blue-500" />}
+              label="Hướng dẫn khách mới"
+              active={activeTab === 'guide'}
+              onClick={() => setActiveTab('guide')}
+              highlightBadge="MỚI"
+              badgeColor="bg-blue-600 text-white font-bold"
+            />
+            <SidebarNavItem
+              icon={<Scale size={17} className="text-slate-500" />}
+              label="Điều khoản sử dụng"
+              active={activeTab === 'terms'}
+              onClick={() => setActiveTab('terms')}
+            />
+            <SidebarNavItem
+              icon={<Shield size={17} className="text-slate-500" />}
+              label="Chính sách bảo mật"
+              active={activeTab === 'privacy'}
+              onClick={() => setActiveTab('privacy')}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* 🌟 PHẦN DƯỚI CÙNG SIDEBAR: Ô NÂNG CẤP / GIA HẠN + USER PROFILE + NÚT ĐĂNG XUẤT */}
-      <div className="p-3 border-t border-slate-100 bg-white shrink-0">
-        {/* Nút NÂNG CẤP / GIA HẠN màu cam nổi bật */}
+      {/* 3. PHẦN DƯỚI CÙNG SIDEBAR: NÚT NÂNG CẤP / GIA HẠN + USER PROFILE CARD */}
+      <div className="p-2.5 border-t border-slate-100 bg-white shrink-0">
+        {/* Nút NÂNG CẤP / GIA HẠN ra phần nạp tiền luôn */}
         <button
           onClick={onOpenUpgrade}
-          className="w-full bg-[#f9570c] hover:bg-[#ea4e07] text-white font-black py-3 px-4 rounded-[18px] text-[13px] uppercase tracking-wider shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-98 cursor-pointer"
+          className="w-full bg-[#f9570c] hover:bg-[#ea4e07] text-white font-black py-2.5 px-3 rounded-[14px] text-[12px] uppercase tracking-wider shadow-md shadow-orange-500/20 flex items-center justify-center gap-1.5 transition-all transform active:scale-98 cursor-pointer"
         >
-          <Crown size={18} className="fill-white" />
+          <Crown size={16} className="fill-white" />
           NÂNG CẤP / GIA HẠN
         </button>
 
-        {/* Thẻ User Profile & Đăng xuất */}
-        <div className="flex items-center justify-between pt-3 pb-1 px-1 mt-1">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Avatar cam chữ B */}
-            <div className="w-10 h-10 rounded-[14px] bg-[#f9570c] text-white flex items-center justify-center font-black text-lg shadow-md shrink-0">
-              {currentUser.name?.[0]?.toUpperCase() || 'B'}
+        {/* Thẻ User Profile & Nút Đăng xuất */}
+        <div className="flex items-center justify-between pt-2.5 px-1 mt-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-[10px] bg-[#f9570c] text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+              {userInitial}
             </div>
-            {/* Thông tin tên & Hạng PRO */}
             <div className="flex flex-col min-w-0">
-              <span className="font-black italic uppercase text-slate-900 text-sm tracking-tight truncate">
-                {currentUser.name || 'BÙI VĂN KỲ'}
+              <span className="font-black italic uppercase text-slate-900 text-xs tracking-tight truncate">
+                {displayName}
               </span>
               <div className="flex items-center gap-1.5">
-                <span className={`text-[10px] font-black uppercase tracking-wider ${
+                <span className={`text-[9px] font-black uppercase tracking-wider ${
                   isTrial || currentUser.plan === 'PRO' ? 'text-[#f9570c]' : 'text-slate-400'
                 }`}>
                   {isTrial ? 'PRO TRIAL' : currentUser.plan}
                 </span>
-                {(isTrial || currentUser.plan === 'PRO') && (
-                  <span className="text-[10px] font-bold text-slate-400">
-                    • Còn {daysLeft || 7} ngày
-                  </span>
-                )}
+                <span className="text-[9px] font-bold text-slate-400">
+                  • Còn {daysLeft || 7} ngày
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Nút Đăng Xuất mũi tên đỏ/cam */}
           <button
             onClick={onLogout}
             title="Đăng xuất"
-            className="text-[#f9570c] hover:text-red-600 hover:bg-orange-50 p-2 rounded-xl transition-colors shrink-0 cursor-pointer"
+            className="text-[#f9570c] hover:text-red-600 hover:bg-orange-50 p-1.5 rounded-lg transition-colors shrink-0 cursor-pointer"
           >
-            <LogOut size={19} />
+            <LogOut size={16} />
           </button>
         </div>
       </div>
@@ -344,29 +383,35 @@ function SidebarNavItem({
   label,
   active,
   onClick,
-  highlightBadge
+  highlightBadge,
+  badgeColor
 }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
   onClick: () => void;
   highlightBadge?: string;
+  badgeColor?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-sm transition-all cursor-pointer ${
+      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] font-semibold transition-all cursor-pointer ${
         active
-          ? 'bg-orange-50 text-[#f9570c] font-black shadow-sm'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          ? 'bg-orange-50 text-[#f9570c] font-black shadow-xs'
+          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
       }`}
     >
-      <div className="flex items-center gap-3">
-        <span className={active ? 'text-[#f9570c]' : 'text-slate-500'}>{icon}</span>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className={`shrink-0 ${active ? 'text-[#f9570c]' : 'text-slate-500'}`}>
+          {icon}
+        </span>
         <span className="truncate">{label}</span>
       </div>
       {highlightBadge && (
-        <span className="bg-amber-400 text-slate-900 text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase">
+        <span className={`text-[9px] px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 font-black ${
+          badgeColor || 'bg-amber-400 text-slate-950 font-black'
+        }`}>
           {highlightBadge}
         </span>
       )}
@@ -375,7 +420,8 @@ function SidebarNavItem({
 }
 
 // ----------------------------------------------------------------------
-// MODAL NÂNG CẤP & GIA HẠN GÓI CƯỚC CHI TIẾT
+// 👑 MODAL NÂNG CẤP & GIA HẠN + NẠP TIỀN TỰ ĐỘNG (TÍCH HỢP TỪ SETTINGS)
+// BẬT RA PHẦN NẠP TIỀN LUÔN KHI BẤM NÂNG CẤP / GIA HẠN TRÊN SIDEBAR
 // ----------------------------------------------------------------------
 export function UpgradeRenewModal({
   isOpen,
@@ -390,99 +436,245 @@ export function UpgradeRenewModal({
   onRenew: (plan: 'PRO' | 'GOLD' | 'DIAMOND', days: number) => void;
   onSetTestDays: (days: number) => void;
 }) {
-  const [selectedPlan, setSelectedPlan] = useState<'PRO' | 'GOLD' | 'DIAMOND'>('PRO');
-  const [copiedAccount, setCopiedAccount] = useState(false);
+  const API_URL = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'https://api.kpost.vn') : 'https://api.kpost.vn';
+  const [selectedPlanId, setSelectedPlanId] = useState<'PRO' | 'GOLD' | 'DIAMOND'>('PRO');
+  const [duration, setDuration] = useState<'1m' | '3m' | '6m' | '12m'>('1m');
+  const [voucher, setVoucher] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [isPercentage, setIsPercentage] = useState(true);
+  const [voucherMessage, setVoucherMessage] = useState('');
+  const [isCheckingVoucher, setIsCheckingVoucher] = useState(false);
+  const [campaign, setCampaign] = useState<any>(null);
 
-  if (!isOpen) return null;
+  // Trạng thái thanh toán VietQR
+  const [showQRSection, setShowQRSection] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success'>('pending');
+  const [isCreatingTransaction, setIsCreatingTransaction] = useState(false);
+  const [transactionMemo, setTransactionMemo] = useState('');
+
+  // Lấy workspaceId hoặc email user
+  const wsId = (currentUser as any)?.currentWorkspaceId || (currentUser as any)?.wid || (currentUser as any)?.workspaceId || (typeof window !== 'undefined' ? localStorage.getItem('workspaceId') : '') || 'KP_USER';
+
+  // Lấy FlashSale marketing từ backend
+  useEffect(() => {
+    if (!isOpen) return;
+    axios.get(`${API_URL}/admin/marketing-campaigns`)
+      .then(res => {
+        if (res.data && res.data.flashSaleActive) {
+          setCampaign(res.data);
+        }
+      })
+      .catch(() => {});
+  }, [isOpen, API_URL]);
 
   const plans = [
     {
       id: 'PRO' as const,
       name: 'GÓI PRO',
-      price: '599.000',
-      period: 'tháng',
-      popular: true,
+      color: 'blue',
+      basePrice: 590000,
+      prices: { '1m': 590000, '3m': 1690000, '6m': 3390000, '12m': 6890000 },
+      badge: 'Bán chạy nhất',
       features: [
-        'Tất cả tính năng AI Video Editor & Lồng tiếng AI',
-        'AI Video Spinner nhân bản lách reup không giới hạn',
-        'AI Smart Inbox Facebook & Instagram',
-        'Quản lý tới 50 Fanpage đồng thời',
-        'Tự động bóc tách đơn hàng AI & Tele Campaign',
+        'Add 50 Fanpage & Đăng bài không giới hạn',
+        'AI Video Editor & Lồng tiếng AI đa ngôn ngữ',
+        'AI Video Spinner nhân bản lách bản quyền',
+        'Auto AI Inbox bóc tách đơn hàng thông minh',
+        'Mở tính năng Affiliate hoa hồng 10%',
         'Hỗ trợ kỹ thuật ưu tiên 24/7'
-      ],
-      badge: 'Bán chạy nhất'
+      ]
     },
     {
       id: 'GOLD' as const,
       name: 'GÓI GOLD',
-      price: '999.000',
-      period: 'tháng',
-      popular: false,
+      color: 'amber',
+      basePrice: 990000,
+      prices: { '1m': 990000, '3m': 2890000, '6m': 5890000, '12m': 11690000 },
+      badge: 'Doanh nghiệp',
       features: [
         'Toàn bộ quyền lợi gói PRO',
         'Quản lý tới 100 Fanpage & Đa kênh',
-        'Cào Douyin & TikTok không giới hạn luồng',
+        'Thêm tới 100 sản phẩm & Cào Douyin không giới hạn',
         'AI Voice Clone giọng người thật siêu thực',
         'Bảo hành hệ thống và chống khóa Fanpage'
-      ],
-      badge: 'Doanh nghiệp'
+      ]
     },
     {
       id: 'DIAMOND' as const,
       name: 'GÓI DIAMOND',
-      price: '3.999.000',
-      period: 'tháng',
-      popular: false,
+      color: 'purple',
+      basePrice: 3990000,
+      prices: { '1m': 3990000, '3m': 11890000, '6m': 23390000, '12m': 46590000 },
+      badge: 'VIP Agency',
       features: [
-        'Toàn bộ quyền lợi gói GOLD',
+        'Toàn bộ quyền lợi gói GOLD & PRO',
         'Quản lý 500+ Fanpage & Bot bán hàng tự động',
         'Server Dedicated riêng tốc độ x5 lần',
-        'Chuyên viên hỗ trợ 1 kèm 1 riêng qua Ultraview/Tele',
+        'Chuyên viên hỗ trợ 1 kèm 1 qua Ultraview/Tele',
         'Tùy chỉnh tính năng riêng theo yêu cầu'
-      ],
-      badge: 'VIP Agency'
+      ]
     }
   ];
 
-  const handleCopyAccount = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedAccount(true);
-    toast.success('Đã sao chép số tài khoản!', { duration: 2000 });
-    setTimeout(() => setCopiedAccount(false), 2000);
+  const currentPlanObj = plans.find(p => p.id === selectedPlanId) || plans[0];
+  const basePriceForDuration = currentPlanObj.prices[duration];
+
+  // Tính giá sau flash sale
+  const isFlashSaleActive = campaign?.flashSaleActive && campaign?.flashSalePlans?.[selectedPlanId];
+  const discountPercent = Number(campaign?.flashSalePlans?.[selectedPlanId]?.discount) || 0;
+  const priceAfterFlashSale = (isFlashSaleActive && discountPercent > 0)
+    ? Math.round(basePriceForDuration * (1 - discountPercent / 100))
+    : basePriceForDuration;
+
+  // Tính giá cuối sau Voucher
+  let finalPrice = priceAfterFlashSale;
+  if (discount > 0) {
+    if (isPercentage) {
+      finalPrice = Math.round(finalPrice * (1 - discount / 100));
+    } else {
+      finalPrice = Math.max(0, finalPrice - discount);
+    }
+  }
+
+  // Cú pháp nội dung chuyển khoản
+  const cleanUserName = currentUser.name ? currentUser.name.replace(/\s+/g, '').toUpperCase() : 'USER';
+  const displayMemo = transactionMemo || `KPOST ${cleanUserName} ${selectedPlanId}`;
+
+  // URL VietQR
+  const vietQrUrl = `https://img.vietqr.io/image/MB-0966527931-compact.png?amount=${finalPrice}&addInfo=${encodeURIComponent(displayMemo)}&accountName=BUI%20VAN%20KY`;
+
+  // Kiểm tra mã voucher
+  const handleApplyVoucher = async () => {
+    if (!voucher.trim()) {
+      setDiscount(0);
+      setVoucherMessage('');
+      return;
+    }
+    setIsCheckingVoucher(true);
+    setVoucherMessage('Đang kiểm tra...');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await axios.post(`${API_URL}/social/check-voucher`, { code: voucher.toUpperCase() }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (res.data && res.data.valid) {
+        const val = res.data.discountValue;
+        const type = res.data.discountType;
+        setDiscount(val);
+        setIsPercentage(type === 'percent');
+        setVoucherMessage(`✅ Đã áp dụng giảm ${type === 'percent' ? val + '%' : val.toLocaleString() + 'đ'}`);
+        toast.success(`Đã áp dụng mã giảm giá!`);
+      } else {
+        setDiscount(0);
+        setVoucherMessage('❌ Mã không hợp lệ hoặc đã hết hạn');
+      }
+    } catch (error: any) {
+      setDiscount(0);
+      setVoucherMessage(`❌ ${error.response?.data?.message || 'Mã không hợp lệ hoặc đã hết hạn'}`);
+    } finally {
+      setIsCheckingVoucher(false);
+    }
   };
 
+  // Tạo giao dịch trên hệ thống
+  const handleCreateTransaction = async () => {
+    setIsCreatingTransaction(true);
+    try {
+      const res = await axios.post(`${API_URL}/social/create-transaction`, {
+        workspaceId: wsId,
+        planName: selectedPlanId,
+        amount: finalPrice
+      });
+      if (res.data && res.data.description) {
+        setTransactionMemo(res.data.description);
+      }
+      toast.success('Đã tạo mã QR nạp tiền thành công!');
+    } catch (e) {
+      // Dùng cú pháp mặc định
+      setTransactionMemo(`KPOST ${cleanUserName} ${selectedPlanId}`);
+    } finally {
+      setIsCreatingTransaction(false);
+    }
+  };
+
+  // Lắng nghe socket và polling kiểm tra thanh toán thành công
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let socketInstance: any = null;
+    try {
+      socketInstance = io(API_URL);
+      socketInstance.on('paymentSuccess', () => {
+        setPaymentStatus('success');
+        const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
+        onRenew(selectedPlanId, days);
+        toast.success(`🎉 Thanh toán thành công! Gói ${selectedPlanId} đã được kích hoạt!`, { duration: 6000 });
+      });
+    } catch (e) {}
+
+    let pollInterval: NodeJS.Timeout | null = null;
+    if (transactionMemo && paymentStatus === 'pending') {
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API_URL}/social/check-transaction/${transactionMemo}?t=${Date.now()}`);
+          if (res.data && res.data.status === 'success') {
+            setPaymentStatus('success');
+            if (pollInterval) clearInterval(pollInterval);
+            const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
+            onRenew(selectedPlanId, days);
+            toast.success(`🎉 Thanh toán thành công! Gói ${selectedPlanId} đã được kích hoạt!`, { duration: 6000 });
+          }
+        } catch (e) {}
+      }, 5000);
+    }
+
+    return () => {
+      if (socketInstance) socketInstance.disconnect();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [isOpen, transactionMemo, paymentStatus, selectedPlanId, duration, onRenew, API_URL]);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`Đã chép ${label}!`, { duration: 2000 });
+  };
+
+  if (!isOpen) return null;
+
+  const durationDays = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white rounded-[32px] w-full max-w-4xl shadow-2xl border border-slate-100 overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-6 overflow-y-auto animate-in fade-in">
+      <div className="bg-white rounded-[28px] w-full max-w-5xl shadow-2xl border border-slate-100 overflow-hidden my-4 relative">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 p-6 md:p-8 text-white relative">
+        <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 p-5 md:p-6 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 w-9 h-9 rounded-full bg-black/20 hover:bg-black/30 flex items-center justify-center text-white transition-all cursor-pointer"
+            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 flex items-center justify-center text-white transition-all cursor-pointer"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
-          
-          <div className="flex items-center gap-3 mb-2">
+
+          <div className="flex items-center gap-3">
             <span className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-sm shadow-inner">
-              <Crown size={28} className="text-yellow-200 fill-yellow-200" />
+              <Crown size={24} className="text-yellow-200 fill-yellow-200" />
             </span>
             <div>
-              <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tight">
-                NÂNG CẤP & GIA HẠN GÓI CƯỚC
+              <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tight">
+                GÓI CƯỚC & NẠP TIỀN TỰ ĐỘNG
               </h2>
-              <p className="text-orange-100 text-xs md:text-sm font-medium">
-                Mở khóa tối đa tiềm năng sáng tạo video AI và tự động hóa bán hàng đa kênh
+              <p className="text-orange-100 text-xs font-medium mt-0.5">
+                Kích hoạt tức thì qua chuyển khoản VietQR tự động 24/7 (Được chuyển từ Settings ra Sidebar)
               </p>
             </div>
           </div>
 
           {/* Current User Status Chip */}
-          <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs md:text-sm">
+          <div className="mt-3 pt-3 border-t border-white/20 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-white/90">Tài khoản:</span>
-              <span className="bg-black/25 px-3 py-1 rounded-full font-black text-white">{currentUser.name || 'BÙI VĂN KỲ'}</span>
-              <span className="bg-white/25 px-3 py-1 rounded-full font-black uppercase text-yellow-200">
+              <span className="font-bold text-white/90">Khách hàng:</span>
+              <span className="bg-black/25 px-2.5 py-0.5 rounded-full font-black text-white">{currentUser.name || 'BÙI VĂN KỲ'}</span>
+              <span className="bg-white/25 px-2.5 py-0.5 rounded-full font-black uppercase text-yellow-200">
                 Gói hiện tại: {currentUser.plan}
               </span>
             </div>
@@ -495,87 +687,115 @@ export function UpgradeRenewModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 md:p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div className="p-5 md:p-6 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar text-slate-800">
           
-          {/* Quick Testing Bar (Tiện ích kiểm tra thông báo & hết hạn) */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
-              <Zap size={14} className="text-amber-500" />
-              Công cụ thử nghiệm tính năng thông báo & hết hạn gói:
+          {/* Flash Sale Banner if active */}
+          {campaign?.flashSaleActive && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 text-white shadow-md flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Flame className="w-5 h-5 text-yellow-300 animate-bounce shrink-0" />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-yellow-300">
+                    {campaign.flashSaleTitle || '🔥 FLASHSALE ĐANG DIỄN RA: GIÁ ĐÃ ĐƯỢC GIẢM TỰ ĐỘNG!'}
+                  </p>
+                  <p className="text-[11px] text-orange-100 font-medium">
+                    Nâng cấp ngay hôm nay để nhận mức giá ưu đãi đặc quyền!
+                  </p>
+                </div>
+              </div>
+              <span className="hidden sm:inline-block px-2.5 py-1 bg-black/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-yellow-200">
+                Giá đã giảm
+              </span>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs font-bold">
-              <button
-                onClick={() => {
-                  onSetTestDays(2);
-                  onClose();
-                }}
-                className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Đặt thời hạn còn 2 ngày để kích hoạt ngay dòng thông báo nhắc gia hạn chạy trên cùng website"
-              >
-                ⏱️ Đặt hạn còn 2 ngày (Xem dòng cảnh báo)
-              </button>
-              <button
-                onClick={() => {
-                  onSetTestDays(0);
-                  onClose();
-                }}
-                className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Mô phỏng hết 07 ngày dùng thử để tự động chuyển về gói FREE"
-              >
-                ⚠️ Đặt hết hạn ngay (Về FREE)
-              </button>
-              <button
-                onClick={() => {
-                  onSetTestDays(7);
-                  onClose();
-                }}
-                className="px-3 py-1.5 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Cấp lại 07 ngày dùng thử PRO như khách vừa mới đăng ký"
-              >
-                🔄 Đặt lại 07 ngày dùng thử PRO
-              </button>
+          )}
+
+          {/* 1. Chọn thời hạn thanh toán */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+            <span className="text-xs font-bold text-slate-600 px-2 flex items-center gap-1.5">
+              <Calendar size={14} className="text-orange-500" /> Chọn chu kỳ gia hạn:
+            </span>
+            <div className="grid grid-cols-4 gap-1.5 w-full sm:w-auto">
+              {[
+                { id: '1m', label: '1 Tháng', discountTag: '' },
+                { id: '3m', label: '3 Tháng', discountTag: '-5%' },
+                { id: '6m', label: '6 Tháng', discountTag: '-10%' },
+                { id: '12m', label: '12 Tháng', discountTag: '-15%' },
+              ].map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => setDuration(d.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    duration === d.id
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                  }`}
+                >
+                  {d.label} {d.discountTag && <span className="text-[9px] text-yellow-200 ml-0.5">{d.discountTag}</span>}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* 2. Danh sách 3 Gói cước (PRO, GOLD, DIAMOND) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map((p) => {
-              const isSelected = selectedPlan === p.id;
+              const isSelected = selectedPlanId === p.id;
+              const planPrice = p.prices[duration];
+              const isSale = campaign?.flashSaleActive && campaign?.flashSalePlans?.[p.id];
+              const pct = Number(campaign?.flashSalePlans?.[p.id]?.discount) || 0;
+              const salePrice = (isSale && pct > 0) ? Math.round(planPrice * (1 - pct / 100)) : planPrice;
+
               return (
                 <div
                   key={p.id}
-                  onClick={() => setSelectedPlan(p.id)}
-                  className={`rounded-[24px] p-5 border-2 transition-all cursor-pointer relative flex flex-col ${
+                  onClick={() => setSelectedPlanId(p.id)}
+                  className={`rounded-2xl p-4.5 border-2 transition-all cursor-pointer relative flex flex-col ${
                     isSelected
-                      ? 'border-orange-500 bg-orange-50/40 shadow-xl shadow-orange-500/10 scale-[1.02]'
+                      ? 'border-orange-500 bg-orange-50/40 shadow-lg shadow-orange-500/10 scale-[1.01]'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  {p.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full shadow-md">
+                  {p.badge && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-xs">
                       {p.badge}
                     </span>
                   )}
-                  
-                  <div className="flex justify-between items-start mb-3">
+
+                  <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-black italic text-lg text-slate-900 uppercase">{p.name}</h3>
-                      <p className="text-[11px] font-bold text-slate-400">Dành cho cá nhân & shop</p>
+                      <h3 className="font-black italic text-base text-slate-900 uppercase">{p.name}</h3>
+                      <p className="text-[10px] font-bold text-slate-400">
+                        {p.id === 'PRO' ? 'Cá nhân & Shop vừa' : p.id === 'GOLD' ? 'Doanh nghiệp đa kênh' : 'VIP Agency & Chuỗi'}
+                      </p>
                     </div>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-300'}`}>
-                      {isSelected && <Check size={14} className="stroke-[3]" />}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-300'}`}>
+                      {isSelected && <Check size={12} className="stroke-[3]" />}
                     </div>
                   </div>
 
-                  <div className="my-2">
-                    <span className="text-3xl font-black text-slate-900 tracking-tight">{p.price}đ</span>
-                    <span className="text-xs font-bold text-slate-400"> /{p.period}</span>
+                  {/* Giá hiển thị */}
+                  <div className="my-1.5">
+                    {isSale && pct > 0 ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-black text-red-600 tracking-tight">
+                          {salePrice.toLocaleString('vi-VN')}đ
+                        </span>
+                        <span className="text-xs line-through text-slate-400">
+                          {planPrice.toLocaleString('vi-VN')}đ
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xl font-black text-slate-900 tracking-tight">
+                        {planPrice.toLocaleString('vi-VN')}đ
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold text-slate-400"> /{duration === '12m' ? '12 tháng' : duration === '6m' ? '6 tháng' : duration === '3m' ? '3 tháng' : 'tháng'}</span>
                   </div>
 
-                  <ul className="space-y-2.5 my-4 flex-1 text-xs text-slate-600 font-medium">
+                  <ul className="space-y-1.5 my-3 flex-1 text-[11px] text-slate-600 font-medium">
                     {p.features.map((feat, i) => (
-                      <li key={i} className="flex items-start gap-2 leading-tight">
-                        <CheckCircle2 size={14} className="text-orange-500 shrink-0 mt-0.5" />
+                      <li key={i} className="flex items-start gap-1.5 leading-tight">
+                        <CheckCircle2 size={13} className="text-orange-500 shrink-0 mt-0.5" />
                         <span>{feat}</span>
                       </li>
                     ))}
@@ -584,77 +804,215 @@ export function UpgradeRenewModal({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRenew(p.id, 30);
-                      onClose();
+                      setSelectedPlanId(p.id);
+                      handleCreateTransaction();
                     }}
-                    className={`w-full py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all mt-auto cursor-pointer ${
+                    className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all mt-auto cursor-pointer ${
                       isSelected
-                        ? 'bg-[#f9570c] hover:bg-[#ea4e07] text-white shadow-lg shadow-orange-500/25'
+                        ? 'bg-[#f9570c] hover:bg-[#ea4e07] text-white shadow-md'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                     }`}
                   >
-                    Gia hạn 30 ngày ngay
+                    {isSelected ? 'Đang chọn gói này' : 'Chọn gói này'}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* Payment & Transfer Info */}
-          <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-6">
-            <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 mb-3 flex items-center gap-2">
-              <Landmark size={18} className="text-orange-500" />
-              Thông tin chuyển khoản & Kích hoạt tự động
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="space-y-2 bg-white p-4 rounded-xl border border-slate-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-bold">Ngân hàng:</span>
-                  <span className="font-black text-slate-800">MB BANK (Quân Đội)</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-bold">Số tài khoản:</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-black text-blue-600 text-sm">0988288288</span>
-                    <button
-                      onClick={() => handleCopyAccount('0988288288')}
-                      className="p-1 hover:bg-slate-100 rounded text-slate-500 cursor-pointer"
-                      title="Sao chép"
-                    >
-                      <Copy size={13} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-bold">Chủ tài khoản:</span>
-                  <span className="font-black text-slate-800">BÙI VĂN KỲ</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-bold">Cú pháp:</span>
-                  <span className="font-mono font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
-                    KPOST {currentUser.name ? currentUser.name.replace(/\s+/g, '').toUpperCase() : 'USER'} {selectedPlan}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <p className="font-bold text-slate-700 mb-1">Kích hoạt nhanh trong 10 giây</p>
-                  <p className="text-slate-500 text-[11px] leading-relaxed">
-                    Hệ thống sẽ tự động cộng thêm ngày sử dụng ngay khi nhận được biến động số dư. Hoặc bấm nút bên dưới để mô phỏng kích hoạt ngay lập tức!
-                  </p>
-                </div>
+          {/* 3. Ô nhập mã giảm giá & Tóm tắt nạp tiền */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            {/* Áp dụng Voucher */}
+            <div>
+              <label className="text-xs font-black uppercase text-slate-600 mb-1.5 flex items-center gap-1.5">
+                <Ticket size={14} className="text-orange-500" /> Mã giảm giá (Voucher):
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nhập mã giảm giá..."
+                  value={voucher}
+                  onChange={e => setVoucher(e.target.value)}
+                  className="flex-1 bg-white px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold uppercase focus:outline-none focus:border-orange-500"
+                />
                 <button
-                  onClick={() => {
-                    onRenew(selectedPlan, 30);
-                    onClose();
-                  }}
-                  className="w-full mt-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black uppercase text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  onClick={handleApplyVoucher}
+                  disabled={isCheckingVoucher}
+                  className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-xl text-xs font-black uppercase transition-colors shrink-0 cursor-pointer disabled:opacity-50"
                 >
-                  <Crown size={15} /> Xác nhận kích hoạt gói {selectedPlan} (+30 ngày)
+                  {isCheckingVoucher ? 'Đang ktra...' : 'Áp dụng'}
                 </button>
               </div>
+              {voucherMessage && (
+                <p className={`text-[11px] font-bold mt-1.5 ${discount > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {voucherMessage}
+                </p>
+              )}
+            </div>
+
+            {/* Tóm tắt thanh toán */}
+            <div className="flex flex-col justify-between bg-white p-3 rounded-xl border border-slate-200">
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-slate-500 font-medium">
+                  <span>Gói đã chọn:</span>
+                  <span className="font-bold text-slate-800">{currentPlanObj.name} ({duration})</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600 font-bold">
+                    <span>Giảm giá voucher:</span>
+                    <span>-{isPercentage ? `${discount}%` : `${discount.toLocaleString()}đ`}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-100">
+                  <span>Tổng thanh toán:</span>
+                  <span className="text-orange-600 text-base">{finalPrice.toLocaleString('vi-VN')}đ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. PHẦN NẠP TIỀN QUÉT MÃ VIETQR (RA TRỰC TIẾP KHI BẤM NÂNG CẤP / GIA HẠN) */}
+          <div className="bg-white border-2 border-orange-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h4 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                <QrCode size={18} className="text-orange-500" />
+                PHẦN NẠP TIỀN & QUÉT MÃ VIETQR TỰ ĐỘNG
+              </h4>
+              <span className="text-[10px] font-black uppercase bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                Tự động kiểm tra 24/7
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+              {/* Cột Trái: Ảnh QR VietQR */}
+              <div className="md:col-span-5 flex flex-col items-center justify-center p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                <img
+                  src={vietQrUrl}
+                  alt="VietQR MBBank"
+                  className="w-48 h-48 md:w-56 md:h-56 object-contain rounded-xl shadow-xs border border-white"
+                />
+                <p className="text-[10px] font-bold text-slate-500 mt-2">
+                  Quét bằng App Ngân Hàng hoặc Ví MoMo
+                </p>
+                <div className="flex items-center gap-1 text-[11px] font-black text-orange-600 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                  Đang chờ tín hiệu chuyển khoản...
+                </div>
+              </div>
+
+              {/* Cột Phải: Thông tin số tài khoản và copy */}
+              <div className="md:col-span-7 space-y-2.5 text-xs">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">Ngân hàng:</span>
+                    <span className="font-black text-slate-900">MB BANK (Quân Đội)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">Số tài khoản:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-blue-600 text-sm">0966527931</span>
+                      <button
+                        onClick={() => copyToClipboard('0966527931', 'Số tài khoản')}
+                        className="p-1 hover:bg-slate-200 rounded text-slate-500 cursor-pointer"
+                        title="Sao chép"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">Chủ tài khoản:</span>
+                    <span className="font-black text-slate-900 uppercase">BÙI VĂN KỲ</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">Số tiền:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-orange-600 text-sm">
+                        {finalPrice.toLocaleString('vi-VN')} đ
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(String(finalPrice), 'Số tiền')}
+                        className="p-1 hover:bg-slate-200 rounded text-slate-500 cursor-pointer"
+                        title="Sao chép"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-orange-100/70 p-2 rounded-lg border border-orange-200">
+                    <span className="text-slate-700 font-bold">Nội dung CK:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-orange-700 text-xs">
+                        {displayMemo}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(displayMemo, 'Nội dung chuyển khoản')}
+                        className="p-1 hover:bg-orange-200 rounded text-orange-700 cursor-pointer"
+                        title="Sao chép nội dung"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nút mô phỏng nạp tiền & kích hoạt ngay */}
+                <div className="space-y-2 pt-1">
+                  <button
+                    onClick={() => {
+                      onRenew(selectedPlanId, durationDays);
+                      onClose();
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black uppercase text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 transition-transform active:scale-98"
+                  >
+                    <Crown size={15} /> Xác nhận nạp tiền & Kích hoạt gói {selectedPlanId} (+{durationDays} ngày)
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center font-medium">
+                    * Hệ thống tích hợp SePay & Socket sẽ tự động nạp và kích hoạt ngay sau khi tiền vào tài khoản.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. CÔNG CỤ THỬ NGHIỆM ĐẶT HẠN (QUẢN TRỊ VIÊN) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+            <div className="flex items-center gap-1.5 mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+              <Zap size={13} className="text-amber-500" />
+              Công cụ thử nghiệm thông báo & thời hạn:
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs font-bold">
+              <button
+                onClick={() => {
+                  onSetTestDays(2);
+                  onClose();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-[11px] cursor-pointer"
+                title="Kích hoạt banner nhắc nhở gia hạn trước 3 ngày"
+              >
+                ⏱️ Đặt còn 2 ngày (Xem dòng cảnh báo)
+              </button>
+              <button
+                onClick={() => {
+                  onSetTestDays(0);
+                  onClose();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-[11px] cursor-pointer"
+                title="Chuyển ngay tài khoản về gói FREE"
+              >
+                ⚠️ Đặt hết hạn (Về FREE)
+              </button>
+              <button
+                onClick={() => {
+                  onSetTestDays(7);
+                  onClose();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 text-[11px] cursor-pointer"
+                title="Cấp lại 07 ngày dùng thử PRO như khách vừa đăng ký"
+              >
+                🔄 Đặt lại 07 ngày PRO TRIAL
+              </button>
             </div>
           </div>
 

@@ -16,15 +16,10 @@ import {
 // --- 1. KẾT NỐI SOCKET ĐỘNG ---
 const socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
 
-const tabs = [
+export const tabs = [
   { id: "account", label: "Tài khoản & Login", icon: <User size={18} /> },
-  { id: "affiliate", label: "AFFILIATE (KIẾM TIỀN)", icon: <Share2 size={18} /> },
   { id: "security", label: "Mật khẩu & Bảo mật", icon: <Lock size={18} /> },
-  { id: "billing", label: "Gói cước & Nạp tiền", icon: <CreditCard size={18} /> },
-  { id: "voucher", label: "Mã giảm giá", icon: <Gift size={18} /> },
-  { id: "guide", label: "Hướng dẫn khách mới", icon: <BookOpen size={18} /> },
-  { id: "terms", label: "Điều khoản sử dụng", icon: <Scale size={18} /> },
-  { id: "privacy", label: "Chính sách bảo mật", icon: <Shield size={18} /> },
+  { id: "voucher", label: "Mã giảm giá & Voucher", icon: <Gift size={18} /> },
 ];
 
 export default function SettingsPage() {
@@ -81,6 +76,7 @@ export default function SettingsPage() {
     }
 
     // 2. KHÁCH MỚI ĐĂNG KÝ: TỰ ĐỘNG CỘNG 07 NGÀY SỬ DỤNG GÓI PRO MIỄN PHÍ
+    // Xác định thời điểm bắt đầu dùng thử:
     let trialStartTime: number;
     if (createdAt && !isNaN(new Date(createdAt).getTime())) {
       trialStartTime = new Date(createdAt).getTime();
@@ -93,7 +89,7 @@ export default function SettingsPage() {
       }
     }
 
-    // Luôn lưu cache để đồng bộ mốc dùng thử của tài khoản
+    // Lưu cache để luôn giữ đúng mốc bắt đầu dùng thử của tài khoản
     try {
       if (email && typeof window !== 'undefined') {
         const existing = localStorage.getItem(`kpost_trial_start_${email}`);
@@ -315,7 +311,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={() => setActiveTab("billing")}
+            onClick={() => handleUpgrade("PRO", 590000)}
             className="bg-white hover:bg-yellow-50 text-orange-600 font-black text-xs md:text-sm px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Crown size={15} className="text-amber-500 fill-amber-500" /> Nâng cấp VIP
@@ -348,7 +344,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ⚠️ 3. THÔNG BÁO GÓI FREE CHỈ HIỆN KHI ĐÃ HẾT 07 NGÀY DÙNG THỬ */}
+      {/* ⚠️ 3. THÔNG BÁO GÓI FREE KHI ĐÃ HẾT 07 NGÀY DÙNG THỬ */}
       {isPlanFree && !user?.isTrial && (
         <div className="w-full bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900 text-white shadow-md z-50 flex items-center justify-between px-4 md:px-8 py-2.5 border-b border-slate-700 animate-in fade-in">
           <div className="flex items-center gap-3 overflow-hidden flex-1 mr-3 text-xs md:text-sm font-bold">
@@ -412,10 +408,7 @@ export default function SettingsPage() {
                     <div className="h-4 w-32 bg-slate-200 animate-pulse rounded mt-2 mx-auto lg:mx-0"></div>
                 ) : user ? (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
-                      {user.name} -{" "}
-                      <span className="text-[#f9570c] font-black">
-                        {user.isTrial ? `PRO TRIAL (${remainingDays || 7} NGÀY)` : (user.displayPlan || user.plan || "PRO")}
-                      </span>
+                      {user.name} - <span className="text-[#f9570c] font-black">{user.isTrial ? `PRO TRIAL (${remainingDays || 7} NGÀY)` : (user.displayPlan || user.plan || "PRO")}</span>
                     </p>
                 ) : (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
@@ -441,7 +434,7 @@ export default function SettingsPage() {
 
              {/* 🌟 1. Ô NÂNG CẤP VÀ GIA HẠN NẰM BÊN TRÊN PHẦN ĐĂNG XUẤT */}
              <button
-               onClick={() => setActiveTab("billing")}
+               onClick={() => handleUpgrade("PRO", 590000)}
                className="w-full flex items-center justify-center gap-2 px-6 py-4 mt-6 rounded-[24px] font-black uppercase text-xs tracking-wider transition-all bg-[#f9570c] hover:bg-[#ea4e07] text-white shadow-lg shadow-orange-500/25 active:scale-95 cursor-pointer"
              >
                <Crown size={18} className="fill-white" /> NÂNG CẤP / GIA HẠN
@@ -457,13 +450,8 @@ export default function SettingsPage() {
           {/* ================= MAIN CONTENT ================= */}
           <div className="flex-1 bg-white rounded-[50px] shadow-2xl border border-white p-8 md:p-12 min-h-[700px] text-black">
               {activeTab === "account" && <AccountTab user={user} loading={isFetchingUser} onLoginSuccess={fetchProfile} />}
-              {activeTab === "affiliate" && <AffiliateTab user={user} />}
-              {activeTab === "billing" && <BillingTab onUpgrade={handleUpgrade} />}
               {activeTab === "security" && <SecurityTab />}
               {activeTab === "voucher" && <VoucherTab user={user} refreshProfile={fetchProfile} />}
-              {activeTab === "guide" && <GuideTab />}
-              {activeTab === "terms" && <TermsTab />}
-              {activeTab === "privacy" && <PrivacyTab />}
           </div>
         </div>
       </div>
@@ -475,7 +463,7 @@ export default function SettingsPage() {
 // CÁC TAB CHI TIẾT
 // ==========================================
 
-function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boolean, onLoginSuccess: () => void }) {
+export function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boolean, onLoginSuccess: () => void }) {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
     const [authMode, setAuthMode] = useState("login"); 
     const [formData, setFormData] = useState({ email: "", password: "", name: "" });
@@ -535,7 +523,6 @@ function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boo
                   createdAt: new Date().toISOString()
                 };
                 localStorage.setItem("kpost_user", JSON.stringify(localUser));
-                localStorage.setItem("user", JSON.stringify(localUser));
             }
             const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
             const res = await axios.post(`${API_URL}${endpoint}`, payload);
@@ -731,7 +718,7 @@ function AccountTab({ user, loading, onLoginSuccess }: { user: any, loading: boo
     )
 }
 
-function AffiliateTab({ user }: { user: any }) {
+export function AffiliateTab({ user }: { user: any }) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   const [copySuccess, setCopySuccess] = useState(false);
   const [stats, setStats] = useState({ clicks: 0, signups: 0, orders: 0, revenue: 0 });
@@ -975,7 +962,7 @@ function AffiliateTab({ user }: { user: any }) {
   )
 }
 
-function SecurityTab() {
+export function SecurityTab() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpModalOpen, setOtpModalOpen] = useState(false);
@@ -1207,7 +1194,7 @@ function SecurityTab() {
 // =========================================================================
 // 4. TAB BẢNG GIÁ & GÓI CƯỚC (TÍCH HỢP FLASHSALE TỰ ĐỘNG GIẢM GIÁ VÀ GẠCH NGANG)
 // =========================================================================
-function BillingTab({ onUpgrade }: any) {
+export function BillingTab({ onUpgrade }: any) {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
     const [duration, setDuration] = useState('1m');
     const [selectedPlan, setSelectedPlan] = useState<any>(null);
@@ -1468,7 +1455,7 @@ function BillingTab({ onUpgrade }: any) {
     )
 }
 
-function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () => void }) { 
+export function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () => void }) { 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
     const [code, setCode] = useState("");
     const [isChecking, setIsChecking] = useState(false);
@@ -1653,7 +1640,7 @@ function VoucherTab({ user, refreshProfile }: { user: any, refreshProfile: () =>
     ) 
 }
 
-function GuideTab() {
+export function GuideTab() {
   const [guides, setGuides] = useState<any[]>([]);
   const [prompts, setPrompts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1743,7 +1730,7 @@ function GuideTab() {
   );
 }
 
-function TermsTab() {
+export function TermsTab() {
   useEffect(() => {
     document.title = "Điều Khoản Dịch Vụ & Thỏa Thuận Pháp Lý Minh Bạch | Kpost";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -1962,7 +1949,7 @@ function TermsTab() {
   );
 }
 
-function PrivacyTab() {
+export function PrivacyTab() {
   return (
     <div className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-slate-100 max-h-[85vh] overflow-y-auto custom-scrollbar animate-in fade-in">
       <div className="mb-8 border-b border-slate-100 pb-6 flex items-center gap-4">
