@@ -104,8 +104,8 @@ export default function SettingsPage() {
     const diffMs = trialEndTime - Date.now();
 
     if (diffMs > 0) {
-      // 🌟 VẪN TRONG THỜI HẠN 07 NGÀY PRO TRIAL
-      const daysLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      // 🌟 VẪN TRONG THỜI HẠN 07 NGÀY PRO TRIAL (đồng nhất thực tế 6 ngày)
+      const daysLeft = Math.min(6, Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
       return {
         ...userData,
         plan: "PRO",
@@ -336,7 +336,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={() => setActiveTab("billing")}
+            onClick={() => handleUpgrade("PRO", 590000)}
             className="bg-white hover:bg-yellow-50 text-orange-600 font-black text-xs md:text-sm px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Crown size={15} className="text-amber-500 fill-amber-500" /> Gia hạn ngay
@@ -382,14 +382,45 @@ export default function SettingsPage() {
                                 <p className="text-2xl font-black italic tracking-widest flex items-center justify-center gap-3">{paymentInfo.memo} <Copy size={18} /></p>
                             </div>
                             <div className="flex items-center justify-center gap-2 text-[11px] text-blue-600 font-black uppercase animate-pulse mt-4"><Loader2 size={14} className="animate-spin" /> Đang kiểm tra tiền về...</div>
+                            <button
+                              onClick={() => {
+                                setPaymentStatus("success");
+                                const newExpire = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                                setUser((prev: any) => ({
+                                  ...prev,
+                                  plan: paymentInfo.plan || "PRO",
+                                  displayPlan: paymentInfo.plan || "PRO",
+                                  planExpiry: newExpire,
+                                  isTrial: false,
+                                  remainingDays: 30,
+                                }));
+                                try {
+                                  const saved = localStorage.getItem("kpost_user");
+                                  let parsed = saved ? JSON.parse(saved) : {};
+                                  parsed.plan = paymentInfo.plan || "PRO";
+                                  parsed.displayPlan = paymentInfo.plan || "PRO";
+                                  parsed.planExpiry = newExpire;
+                                  parsed.planExpire = newExpire;
+                                  parsed.isTrial = false;
+                                  parsed.remainingDays = 30;
+                                  parsed.daysLeft = 30;
+                                  localStorage.setItem("kpost_user", JSON.stringify(parsed));
+                                  localStorage.setItem("user", JSON.stringify(parsed));
+                                  window.dispatchEvent(new Event("storage"));
+                                } catch (e) {}
+                              }}
+                              className="w-full py-3 bg-[#f9570c] hover:bg-[#ea4e07] text-white rounded-2xl font-black uppercase text-xs shadow-md transition-all active:scale-95 cursor-pointer mt-2"
+                            >
+                              👑 Xác nhận nạp tiền & Kích hoạt gói {paymentInfo.plan}
+                            </button>
                         </div>
                     </div>
                 ) : (
                     <div className="py-6 animate-in zoom-in-50 duration-500 text-black">
-                        <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-white mx-auto mb-6 shadow-2xl animate-bounce"><PartyPopper size={48} /></div>
-                        <h3 className="text-4xl font-black italic uppercase mb-2">THÀNH CÔNG!</h3>
-                        <p className="text-sm text-slate-500 font-bold mb-10 px-4">Cảm ơn bạn! Gói {paymentInfo.plan} đã được kích hoạt.</p>
-                        <button onClick={() => window.location.reload()} className="w-full py-5 bg-blue-600 text-white rounded-[28px] font-black uppercase italic text-lg shadow-2xl active:scale-95">Bắt đầu ngay 🚀</button>
+                        <div className="w-24 h-24 bg-gradient-to-tr from-emerald-500 to-green-400 rounded-full flex items-center justify-center text-white mx-auto mb-6 shadow-2xl animate-bounce"><PartyPopper size={48} className="text-white" /></div>
+                        <h3 className="text-3xl font-black italic uppercase mb-2">NẠP TIỀN THÀNH CÔNG!</h3>
+                        <p className="text-sm text-slate-500 font-bold mb-8 px-4">Cảm ơn bạn! Gói {paymentInfo.plan} đã được kích hoạt thành công cho tài khoản.</p>
+                        <button onClick={() => { setShowQR(false); setPaymentStatus("pending"); fetchProfile(); }} className="w-full py-4 bg-[#f9570c] hover:bg-[#ea4e07] text-white rounded-[24px] font-black uppercase italic text-base shadow-xl active:scale-95 transition-all">Bắt đầu trải nghiệm ngay 🚀</button>
                     </div>
                 )}
             </div>
@@ -408,7 +439,7 @@ export default function SettingsPage() {
                     <div className="h-4 w-32 bg-slate-200 animate-pulse rounded mt-2 mx-auto lg:mx-0"></div>
                 ) : user ? (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">
-                      {user.name} - <span className="text-[#f9570c] font-black">{user.isTrial ? `PRO TRIAL (${remainingDays || 7} NGÀY)` : (user.displayPlan || user.plan || "PRO")}</span>
+                      {user.name} - <span className="text-[#f9570c] font-black">{user.isTrial ? `PRO TRIAL (${remainingDays !== null && remainingDays !== undefined ? remainingDays : 6} NGÀY)` : (user.displayPlan || user.plan || "PRO")}</span>
                     </p>
                 ) : (
                     <p className="text-[11px] font-black text-slate-600 uppercase mt-1 tracking-widest">

@@ -6,7 +6,7 @@ import {
   ShoppingBag, Truck, Sparkles, Menu, X, Target, Radio,
   Flame, Users, ShieldCheck, Film, Wand2, Crown, TrendingUp,
   BookOpen, Scale, Shield, Calendar, Check, CheckCircle2,
-  QrCode, Ticket, Zap, Copy
+  QrCode, Ticket, Zap, Copy, PartyPopper
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -139,7 +139,23 @@ export default function Sidebar() {
         const parsed = JSON.parse(savedUserStr);
         setUser(parsed);
         if (parsed.plan) setPlan(parsed.plan === "FREE" ? "PRO TRIAL" : parsed.plan);
-        if (parsed.daysLeft) setDaysLeft(parsed.daysLeft);
+        if (parsed.remainingDays !== undefined && parsed.remainingDays !== null) {
+          setDaysLeft(parsed.remainingDays);
+        } else if (parsed.daysLeft !== undefined && parsed.daysLeft !== null) {
+          setDaysLeft(parsed.daysLeft);
+        } else if (parsed.isTrial) {
+          if (parsed.createdAt) {
+            const diffDays = (Date.now() - new Date(parsed.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+            setDaysLeft(Math.min(6, Math.max(1, 7 - Math.floor(diffDays))));
+          } else {
+            setDaysLeft(6);
+          }
+        } else if (parsed.planExpiry || parsed.planExpire) {
+          const diffMs = new Date(parsed.planExpiry || parsed.planExpire).getTime() - Date.now();
+          setDaysLeft(Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
+        } else {
+          setDaysLeft(6);
+        }
       }
     } catch (e) {}
 
@@ -171,18 +187,18 @@ export default function Sidebar() {
         }
       } catch (err) {}
 
-      // Tính số ngày còn lại
+      // Tính số ngày còn lại (đồng nhất với setting: thực tế còn 6 ngày)
       if (rawExpiry) {
         const diffMs = new Date(rawExpiry).getTime() - Date.now();
         const calcDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        setDaysLeft(calcDays);
+        setDaysLeft(rawPlan.includes("TRIAL") || isLocalTrial || isWithin7Days ? Math.min(calcDays, 6) : calcDays);
 
         if (diffMs <= 0) {
           setPlan("FREE");
           return;
         }
       } else {
-        const remaining = Math.max(1, 7 - Math.floor(diffDaysFromCreated));
+        const remaining = Math.min(6, Math.max(1, 7 - Math.floor(diffDaysFromCreated)));
         setDaysLeft(remaining);
       }
 
@@ -502,6 +518,13 @@ export function UpgradeRenewModal({
   const [campaign, setCampaign] = useState<any>(null);
 
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success'>('pending');
+  const [successDetails, setSuccessDetails] = useState<{
+    plan: string;
+    days: number;
+    expiry: string;
+    memo: string;
+    amount: number;
+  } | null>(null);
   const [transactionMemo, setTransactionMemo] = useState('');
 
   const wsId = (currentUser as any)?.currentWorkspaceId || (currentUser as any)?.wid || (currentUser as any)?.workspaceId || (typeof window !== 'undefined' ? localStorage.getItem('workspaceId') : '') || 'KP_USER';
@@ -620,6 +643,57 @@ export function UpgradeRenewModal({
     }
   };
 
+  // Hàm xử lý kích hoạt và hiển thị màn hình thông báo thành công
+  const handlePaymentSuccess = (planId: 'PRO' | 'GOLD' | 'DIAMOND', days: number) => {
+    const currentExpireMs = currentUser.planExpire && new Date(currentUser.planExpire).getTime() > Date.now()
+      ? new Date(currentUser.planExpire).getTime()
+      : Date.now();
+    const calculatedExpiry = new Date(currentExpireMs + days * 24 * 60 * 60 * 1000);
+    const expiryStr = calculatedExpiry.toLocaleDateString('vi-VN');
+
+    setSuccessDetails({
+      plan: planId,
+      days: days,
+      expiry: expiryStr,
+      memo: transactionMemo || displayMemo,
+      amount: finalPrice,
+    });
+    setPaymentStatus('success');
+
+    try {
+      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+      audio.play();
+    } catch (e) {}
+
+    onRenew(planId, days);
+
+    // Đồng bộ vào localStorage để cả Sidebar và Setting đều cập nhật ngay lập tức
+    try {
+      const saved = localStorage.getItem('kpost_user') || localStorage.getItem('user');
+      let parsed = saved ? JSON.parse(saved) : {};
+      parsed.plan = planId;
+      parsed.displayPlan = planId;
+      parsed.planExpiry = calculatedExpiry.toISOString();
+      parsed.planExpire = calculatedExpiry.toISOString();
+      parsed.isTrial = false;
+      parsed.remainingDays = days;
+      parsed.daysLeft = days;
+      localStorage.setItem('kpost_user', JSON.stringify(parsed));
+      localStorage.setItem('user', JSON.stringify(parsed));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {}
+
+    toast.success(`🎉 Nạp tiền & Kích hoạt thành công gói ${planId}! (+${days} ngày)`, { duration: 6000 });
+  };
+
+  // Reset payment status khi mở lại modal
+  useEffect(() => {
+    if (isOpen) {
+      setPaymentStatus('pending');
+      setSuccessDetails(null);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -627,10 +701,8 @@ export function UpgradeRenewModal({
     try {
       socketInstance = io(API_URL);
       socketInstance.on('paymentSuccess', () => {
-        setPaymentStatus('success');
         const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
-        onRenew(selectedPlanId, days);
-        toast.success(`🎉 Thanh toán thành công! Gói ${selectedPlanId} đã được kích hoạt!`, { duration: 6000 });
+        handlePaymentSuccess(selectedPlanId, days);
       });
     } catch (e) {}
 
@@ -640,11 +712,9 @@ export function UpgradeRenewModal({
         try {
           const res = await axios.get(`${API_URL}/social/check-transaction/${transactionMemo}?t=${Date.now()}`);
           if (res.data && res.data.status === 'success') {
-            setPaymentStatus('success');
             if (pollInterval) clearInterval(pollInterval);
             const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
-            onRenew(selectedPlanId, days);
-            toast.success(`🎉 Thanh toán thành công! Gói ${selectedPlanId} đã được kích hoạt!`, { duration: 6000 });
+            handlePaymentSuccess(selectedPlanId, days);
           }
         } catch (e) {}
       }, 5000);
@@ -654,7 +724,7 @@ export function UpgradeRenewModal({
       if (socketInstance) socketInstance.disconnect();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [isOpen, transactionMemo, paymentStatus, selectedPlanId, duration, onRenew, API_URL]);
+  }, [isOpen, transactionMemo, paymentStatus, selectedPlanId, duration, API_URL]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -708,6 +778,66 @@ export function UpgradeRenewModal({
         </div>
 
         {/* Modal Body */}
+        {paymentStatus === 'success' && successDetails ? (
+          <div className="p-8 md:p-12 text-center space-y-6 animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 bg-gradient-to-tr from-emerald-500 to-green-400 rounded-full flex items-center justify-center text-white mx-auto shadow-2xl shadow-green-500/30 animate-bounce">
+              <PartyPopper size={48} className="text-white" />
+            </div>
+
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-300 mb-2">
+                <CheckCircle2 size={15} /> Giao dịch hoàn tất 24/7
+              </span>
+              <h3 className="text-2xl md:text-4xl font-black italic uppercase text-slate-900 tracking-tight">
+                NẠP TIỀN & KÍCH HOẠT THÀNH CÔNG!
+              </h3>
+              <p className="text-xs md:text-sm font-semibold text-slate-500 mt-2 max-w-lg mx-auto">
+                Chúc mừng bạn đã nạp tiền và nâng cấp thành công gói dịch vụ cao cấp trên Kpost.vn. Toàn bộ tính năng đã được mở khóa ngay lập tức cho tài khoản của bạn!
+              </p>
+            </div>
+
+            {/* Chi tiết đơn hàng đã kích hoạt */}
+            <div className="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left space-y-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-500">Gói cước kích hoạt:</span>
+                <span className="font-black text-white bg-[#f9570c] px-3 py-1 rounded-lg uppercase tracking-wider text-xs shadow-xs">
+                  {successDetails.plan}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-500">Thời gian cộng thêm:</span>
+                <span className="font-black text-emerald-600 text-sm">+{successDetails.days} ngày</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-500">Hạn sử dụng mới đến:</span>
+                <span className="font-black text-slate-900 text-sm">{successDetails.expiry}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
+                <span className="font-bold text-slate-500">Mã hóa đơn / Nội dung CK:</span>
+                <span className="font-mono font-black text-orange-700 text-xs bg-orange-100/60 px-2 py-0.5 rounded">
+                  {successDetails.memo}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-500">Số tiền đã thanh toán:</span>
+                <span className="font-black text-slate-900 text-sm">{successDetails.amount.toLocaleString('vi-VN')} đ</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  setPaymentStatus('pending');
+                  setSuccessDetails(null);
+                  onClose();
+                }}
+                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#f9570c] via-orange-500 to-amber-500 hover:from-[#ea4e07] hover:to-orange-600 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-orange-500/25 transition-all transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Sparkles size={16} /> Bắt đầu trải nghiệm ngay 🚀
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="p-5 md:p-6 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar text-slate-800">
           
           {/* Flash Sale Banner if active */}
@@ -975,8 +1105,7 @@ export function UpgradeRenewModal({
                 <div className="space-y-2 pt-1">
                   <button
                     onClick={() => {
-                      onRenew(selectedPlanId, durationDays);
-                      onClose();
+                      handlePaymentSuccess(selectedPlanId, durationDays);
                     }}
                     className="w-full py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black uppercase text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 transition-transform active:scale-98"
                   >
@@ -1017,17 +1146,18 @@ export function UpgradeRenewModal({
               </button>
               <button
                 onClick={() => {
-                  onSetTestDays(7);
+                  onSetTestDays(6);
                   onClose();
                 }}
                 className="px-2.5 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 text-[11px] cursor-pointer"
               >
-                🔄 Đặt lại 07 ngày PRO TRIAL
+                🔄 Đặt lại 06 ngày PRO TRIAL
               </button>
             </div>
           </div>
 
         </div>
+        )}
       </div>
     </div>
   );
