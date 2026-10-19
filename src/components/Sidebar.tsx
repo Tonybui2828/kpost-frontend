@@ -62,6 +62,11 @@ const menuSections: MenuSection[] = [
         badge: "LIVE",
         badgeColor: "bg-red-500 text-white font-black"
       },
+      { 
+        name: "AI Remarketing", 
+        icon: <Target size={18} className="text-rose-500" />, 
+        href: "/remarketing" 
+      },
     ]
   },
   {
@@ -81,9 +86,7 @@ const menuSections: MenuSection[] = [
     items: [
       { name: "Doanh thu", icon: <TrendingUp size={18} className="text-emerald-500" />, href: "/dashboard" },
       { name: "Affiliate (Kiếm tiền)", icon: <Sparkles size={18} className="text-orange-500" />, href: "/affiliate", badge: "10% HOA HỒNG", badgeColor: "bg-orange-500 text-white font-black" },
-      { name: "AI Remarketing", icon: <Target size={18} className="text-rose-500" />, href: "/remarketing" }, 
       { name: "Kết nối MXH", icon: <Share2 size={18} className="text-blue-500" />, href: "/social" },
-      { name: "Cài đặt hệ thống", icon: <Settings size={18} />, href: "/settings" },
     ]
   },
   {
@@ -408,8 +411,25 @@ export default function Sidebar() {
           )}
         </nav>
 
-        {/* 3. PHẦN DƯỚI CÙNG SIDEBAR: NÚT NÂNG CẤP / GIA HẠN + USER PROFILE CARD */}
-        <div className="p-2.5 border-t border-slate-100 bg-white shrink-0">
+        {/* 3. PHẦN DƯỚI CÙNG SIDEBAR: CÀI ĐẶT HỆ THỐNG + NÚT NÂNG CẤP / GIA HẠN + USER PROFILE CARD */}
+        <div className="p-2.5 border-t border-slate-100 bg-white shrink-0 space-y-1.5">
+          {/* Cài đặt hệ thống để ngay bên trên phần nâng cấp và gia hạn */}
+          <Link
+            href="/settings"
+            className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-[13px] font-semibold transition-all cursor-pointer ${
+              pathname === "/settings" 
+                ? "bg-orange-50 text-[#f9570c] font-black shadow-xs" 
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className={`shrink-0 ${pathname === "/settings" ? "text-[#f9570c]" : "text-slate-500"}`}>
+                <Settings size={18} />
+              </span>
+              <span className="truncate">Cài đặt hệ thống</span>
+            </div>
+          </Link>
+
           {/* Nút NÂNG CẤP / GIA HẠN ra phần nạp tiền luôn */}
           <button
             onClick={() => setShowUpgradeModal(true)}
