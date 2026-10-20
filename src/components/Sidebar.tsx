@@ -378,7 +378,6 @@ export default function Sidebar() {
               <X size={18} />
             </button>
           </div>
-        </div>
 
         {/* 2. DANH SÁCH MENU DẠNG NHÓM (CHỮ THƯỜNG TRANG NHÃ, DỄ NHÌN) */}
         <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4 text-slate-700 custom-scrollbar">
@@ -730,7 +729,10 @@ export function UpgradeRenewModal({
 
   // Hàm xử lý kích hoạt và hiển thị màn hình thông báo thành công
   const handlePaymentSuccess = (planId: 'PRO' | 'GOLD' | 'DIAMOND', days: number) => {
-    const currentRemaining = (daysLeft && daysLeft > 0) ? daysLeft : 5;
+    const currentExpireMs = currentUser.planExpire && new Date(currentUser.planExpire).getTime() > Date.now()
+      ? new Date(currentUser.planExpire).getTime()
+      : Date.now();
+    const currentRemaining = Math.max(0, Math.ceil((currentExpireMs - Date.now()) / (1000 * 60 * 60 * 24)));
     const totalRemainingDays = currentRemaining + days;
     const calculatedExpiry = new Date(Date.now() + totalRemainingDays * 24 * 60 * 60 * 1000);
     const expiryStr = calculatedExpiry.toLocaleDateString('vi-VN');
@@ -776,10 +778,6 @@ export function UpgradeRenewModal({
       }));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {}
-
-    // Cập nhật state Sidebar ngay lập tức
-    setPlan(planId);
-    setDaysLeft(totalRemainingDays);
 
     // Đồng bộ lên server
     try {
