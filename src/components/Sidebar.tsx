@@ -6,7 +6,7 @@ import {
   ShoppingBag, Truck, Sparkles, Menu, X, Target, Radio,
   Flame, Users, ShieldCheck, Film, Wand2, Crown, TrendingUp,
   BookOpen, Scale, Shield, Calendar, Check, CheckCircle2,
-  QrCode, Ticket, Zap, Copy, PartyPopper
+  QrCode, Ticket, Zap, Copy, PartyPopper, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -837,6 +837,30 @@ export function UpgradeRenewModal({
     toast.success(`🎉 Nạp tiền & Kích hoạt thành công gói ${planId}! (Tổng còn ${totalRemainingDays} ngày)`, { duration: 6000 });
   };
 
+  // Tạo mã giao dịch chính thức từ API khi mở modal hoặc đổi gói
+  useEffect(() => {
+    if (!isOpen) return;
+    const createTx = async () => {
+      try {
+        const res = await axios.post(`${API_URL}/social/create-transaction`, {
+          workspaceId: wsId || 'KP_USER',
+          planName: selectedPlanId,
+          amount: finalPrice,
+        });
+        if (res.data && res.data.description) {
+          setTransactionMemo(res.data.description);
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback memo
+      const cleanName = (currentUser.name || 'USER').replace(/\s+/g, '').toUpperCase();
+      const code = Math.floor(1000 + Math.random() * 9000);
+      setTransactionMemo(`KPOST ${cleanName} ${selectedPlanId} ${code}`);
+    };
+    createTx();
+  }, [isOpen, selectedPlanId, duration, finalPrice, wsId, API_URL, currentUser.name]);
+
   // Reset payment status khi mở lại modal
   useEffect(() => {
     if (isOpen) {
@@ -851,31 +875,35 @@ export function UpgradeRenewModal({
     let socketInstance: any = null;
     try {
       socketInstance = io(API_URL);
-      socketInstance.on('paymentSuccess', () => {
-        const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
-        handlePaymentSuccess(selectedPlanId, days);
+      socketInstance.on('paymentSuccess', (data: any) => {
+        const activeMemo = transactionMemo || displayMemo;
+        if (!data || !data.billCode || data.billCode === activeMemo) {
+          const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
+          handlePaymentSuccess(selectedPlanId, days);
+        }
       });
     } catch (e) {}
 
     let pollInterval: NodeJS.Timeout | null = null;
-    if (transactionMemo && paymentStatus === 'pending') {
+    const activeMemo = transactionMemo || displayMemo;
+    if (activeMemo && paymentStatus === 'pending') {
       pollInterval = setInterval(async () => {
         try {
-          const res = await axios.get(`${API_URL}/social/check-transaction/${transactionMemo}?t=${Date.now()}`);
+          const res = await axios.get(`${API_URL}/social/check-transaction/${activeMemo}?t=${Date.now()}`);
           if (res.data && res.data.status === 'success') {
             if (pollInterval) clearInterval(pollInterval);
             const days = duration === '12m' ? 365 : duration === '6m' ? 180 : duration === '3m' ? 90 : 30;
             handlePaymentSuccess(selectedPlanId, days);
           }
         } catch (e) {}
-      }, 5000);
+      }, 3000);
     }
 
     return () => {
       if (socketInstance) socketInstance.disconnect();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [isOpen, transactionMemo, paymentStatus, selectedPlanId, duration, API_URL]);
+  }, [isOpen, transactionMemo, displayMemo, paymentStatus, selectedPlanId, duration, API_URL]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -1254,13 +1282,31 @@ export function UpgradeRenewModal({
                 </div>
 
                 <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-700 text-xs font-bold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Hệ thống tự động phát hiện tiền vào và kích hoạt ngay tức thì 24/7</span>
+                  </div>
                   <button
-                    onClick={() => {
-                      handlePaymentSuccess(selectedPlanId, durationDays);
+                    onClick={async () => {
+                      const memoToCheck = transactionMemo || displayMemo;
+                      toast.loading("Đang kiểm tra giao dịch từ ngân hàng...", { id: "check_sidebar_pay" });
+                      try {
+                        const res = await axios.get(`${API_URL}/social/check-transaction/${memoToCheck}?t=${Date.now()}`);
+                        if (res.data && res.data.status === 'success') {
+                          toast.dismiss("check_sidebar_pay");
+                          handlePaymentSuccess(selectedPlanId, durationDays);
+                        } else {
+                          toast.dismiss("check_sidebar_pay");
+                          toast.error("Hệ thống chưa nhận được tiền cho nội dung: " + memoToCheck + ". Nếu bạn vừa chuyển, vui lòng chờ 10-30 giây!");
+                        }
+                      } catch (e) {
+                        toast.dismiss("check_sidebar_pay");
+                        toast.error("Chưa ghi nhận tiền vào tài khoản. Vui lòng hoàn tất chuyển khoản trước.");
+                      }
                     }}
-                    className="w-full py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black uppercase text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 transition-transform active:scale-98"
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold uppercase text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-slate-200"
                   >
-                    <Crown size={15} /> Xác nhận nạp tiền & Kích hoạt gói {selectedPlanId} (+{durationDays} ngày)
+                    <RefreshCw size={14} /> Kiểm tra lại trạng thái giao dịch
                   </button>
                   <p className="text-[10px] text-slate-400 text-center font-medium">
                     * Hệ thống tích hợp SePay & Socket sẽ tự động nạp và kích hoạt ngay sau khi tiền vào tài khoản.

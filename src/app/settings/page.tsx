@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { io } from "socket.io-client"; 
 import { toast, Toaster } from "react-hot-toast"; 
@@ -10,7 +10,7 @@ import {
   Mail, KeyRound, UserPlus, LogIn, LogOut, ShieldCheck, Fingerprint,
   ShieldAlert, AlertCircle, FileText, Check, MessageCircle, XCircle, Share2,
   MousePointerClick, Users, ShoppingCart, DollarSign, TrendingUp, CheckCircle, Clock, Ticket,
-  AlertTriangle, Flame, Crown
+  AlertTriangle, Flame, Crown, RefreshCw
 } from "lucide-react";
 
 // --- 1. KẾT NỐI SOCKET ĐỘNG ---
@@ -249,43 +249,97 @@ export default function SettingsPage() {
   const isExpiringSoon = user && user.plan && user.plan.toUpperCase() === "PRO" && remainingDays !== null && remainingDays <= 3 && remainingDays > 0;
   const isPlanFree = user && user.plan && user.plan.toUpperCase() === "FREE" && !user.isTrial;
 
+  const activatePaidPlan = useCallback((activatedPlan: string, daysToAdd: number = 30) => {
+    setPaymentStatus("success");
+    try {
+      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+      audio.play();
+    } catch (e) {}
+
+    const currentExpireMs = user?.planExpiry && new Date(user.planExpiry).getTime() > Date.now()
+      ? new Date(user.planExpiry).getTime()
+      : Date.now();
+    const newExpireDate = new Date(currentExpireMs + daysToAdd * 24 * 60 * 60 * 1000);
+    const newExpire = newExpireDate.toISOString();
+    const totalRemaining = Math.max(1, Math.ceil((newExpireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+    setUser((prev: any) => ({
+      ...prev,
+      plan: activatedPlan,
+      displayPlan: activatedPlan,
+      planExpiry: newExpire,
+      planExpire: newExpire,
+      isTrial: false,
+      isPaid: true,
+      trialDays: 0,
+      remainingDays: totalRemaining,
+      daysLeft: totalRemaining,
+    }));
+
+    try {
+      const saved = localStorage.getItem("kpost_user") || localStorage.getItem("user");
+      let parsed = saved ? JSON.parse(saved) : {};
+      parsed.plan = activatedPlan;
+      parsed.displayPlan = activatedPlan;
+      parsed.planExpiry = newExpire;
+      parsed.planExpire = newExpire;
+      parsed.isTrial = false;
+      parsed.isPaid = true;
+      parsed.trialDays = 0;
+      parsed.remainingDays = totalRemaining;
+      parsed.daysLeft = totalRemaining;
+      localStorage.setItem("kpost_user", JSON.stringify(parsed));
+      localStorage.setItem("user", JSON.stringify(parsed));
+      localStorage.setItem("kpost_paid_subscription", JSON.stringify({
+        plan: activatedPlan,
+        displayPlan: activatedPlan,
+        planExpiry: newExpire,
+        isPaid: true,
+        daysLeft: totalRemaining,
+      }));
+      window.dispatchEvent(new Event("storage"));
+    } catch (e) {}
+
+    // Đồng bộ lên server
+    try {
+      axios.post(`${API_URL}/user/renew-plan`, {
+        email: user?.email || 'tech28.vn@gmail.com',
+        plan: activatedPlan,
+        days: daysToAdd
+      }).catch(() => {});
+    } catch (e) {}
+
+    toast.success(`🎉 Nạp tiền & Kích hoạt thành công gói ${activatedPlan}! (Tổng còn ${totalRemaining} ngày)`, { duration: 6000 });
+  }, [user, API_URL]);
+
   useEffect(() => {
     fetchProfile();
 
     socket.on("paymentSuccess", (data: any) => {
-      if (data.billCode === paymentInfo.memo) {
-        setPaymentStatus("success");
-        try {
-            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
-            audio.play();
-        } catch (e) { console.log("Audio play blocked"); }
+      if (!data || !data.billCode || data.billCode === paymentInfo.memo) {
+        activatePaidPlan(paymentInfo.plan || "PRO", 30);
       }
     });
 
     let interval: NodeJS.Timeout | null = null;
     
     if (showQR && paymentStatus === "pending" && paymentInfo.memo) {
-        interval = setInterval(async () => {
-            try {
-                const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}?t=${new Date().getTime()}`);
-                if (res.data && res.data.status === "success") {
-                    setPaymentStatus("success");
-                    if (interval) clearInterval(interval);
-                    
-                    try {
-                        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
-                        audio.play();
-                    } catch (e) { console.log("Audio play blocked"); }
-                }
-            } catch (e) { console.error("Poll Error:", e); }
-        }, 5000);
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}?t=${Date.now()}`);
+          if (res.data && res.data.status === "success") {
+            if (interval) clearInterval(interval);
+            activatePaidPlan(paymentInfo.plan || "PRO", 30);
+          }
+        } catch (e) {}
+      }, 3000);
     }
 
     return () => {
       socket.off("paymentSuccess");
       if (interval) clearInterval(interval);
     };
-  }, [paymentInfo.memo, showQR, paymentStatus, API_URL]);
+  }, [paymentInfo.memo, paymentInfo.plan, showQR, paymentStatus, API_URL, activatePaidPlan]);
 
   const handleUpgrade = async (planName: string, amount: number) => {
     if (!workspaceId) return alert("Vui lòng đăng nhập trước khi nâng cấp!");
@@ -406,69 +460,34 @@ export default function SettingsPage() {
                                 <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] mb-1">Nội dung chuyển khoản</p>
                                 <p className="text-2xl font-black italic tracking-widest flex items-center justify-center gap-3">{paymentInfo.memo} <Copy size={18} /></p>
                             </div>
-                            <div className="flex items-center justify-center gap-2 text-[11px] text-blue-600 font-black uppercase animate-pulse mt-4"><Loader2 size={14} className="animate-spin" /> Đang kiểm tra tiền về...</div>
-                            <button
-                              onClick={() => {
-                                setPaymentStatus("success");
-                                const currentExpireMs = user?.planExpiry && new Date(user.planExpiry).getTime() > Date.now()
-                                  ? new Date(user.planExpiry).getTime()
-                                  : Date.now();
-                                const extraDays = 30;
-                                const newExpireDate = new Date(currentExpireMs + extraDays * 24 * 60 * 60 * 1000);
-                                const newExpire = newExpireDate.toISOString();
-                                const totalRemaining = Math.max(1, Math.ceil((newExpireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-                                const activatedPlan = paymentInfo.plan || "PRO";
-
-                                setUser((prev: any) => ({
-                                  ...prev,
-                                  plan: activatedPlan,
-                                  displayPlan: activatedPlan,
-                                  planExpiry: newExpire,
-                                  planExpire: newExpire,
-                                  isTrial: false,
-                                  trialDays: 0,
-                                  remainingDays: totalRemaining,
-                                  daysLeft: totalRemaining,
-                                }));
-
-                                try {
-                                  const saved = localStorage.getItem("kpost_user");
-                                  let parsed = saved ? JSON.parse(saved) : {};
-                                  parsed.plan = activatedPlan;
-                                  parsed.displayPlan = activatedPlan;
-                                  parsed.planExpiry = newExpire;
-                                  parsed.planExpire = newExpire;
-                                  parsed.isTrial = false;
-                                  parsed.trialDays = 0;
-                                  parsed.remainingDays = totalRemaining;
-                                  parsed.daysLeft = totalRemaining;
-                                  localStorage.setItem("kpost_user", JSON.stringify(parsed));
-                                  localStorage.setItem("user", JSON.stringify(parsed));
-                                  localStorage.setItem("kpost_paid_subscription", JSON.stringify({
-                                    plan: activatedPlan,
-                                    displayPlan: activatedPlan,
-                                    planExpiry: newExpire,
-                                    isPaid: true,
-                                    daysLeft: totalRemaining,
-                                  }));
-                                  window.dispatchEvent(new Event("storage"));
-                                } catch (e) {}
-
-                                // Đồng bộ lên server
-                                try {
-                                  axios.post(`${API_URL}/user/renew-plan`, {
-                                    email: user?.email || 'tech28.vn@gmail.com',
-                                    plan: activatedPlan,
-                                    days: extraDays
-                                  }).catch(() => {});
-                                } catch (e) {}
-
-                                toast.success(`🎉 Đã kích hoạt thành công gói ${activatedPlan}! (Tổng còn ${totalRemaining} ngày)`);
-                              }}
-                              className="w-full py-3 bg-[#f9570c] hover:bg-[#ea4e07] text-white rounded-2xl font-black uppercase text-xs shadow-md transition-all active:scale-95 cursor-pointer mt-2"
-                            >
-                              👑 Xác nhận nạp tiền & Kích hoạt gói {paymentInfo.plan}
-                            </button>
+                            <div className="space-y-2.5 pt-2">
+                              <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-700 text-xs font-bold">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                <span>Hệ thống tự động ghi nhận tiền vào và kích hoạt ngay tức thì 24/7</span>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  if (!paymentInfo.memo) return;
+                                  toast.loading("Đang kiểm tra giao dịch từ ngân hàng...", { id: "check_pay" });
+                                  try {
+                                    const res = await axios.get(`${API_URL}/social/check-transaction/${paymentInfo.memo}?t=${Date.now()}`);
+                                    if (res.data && res.data.status === "success") {
+                                      toast.dismiss("check_pay");
+                                      activatePaidPlan(paymentInfo.plan || "PRO", 30);
+                                    } else {
+                                      toast.dismiss("check_pay");
+                                      toast.error("Hệ thống chưa ghi nhận tiền vào tài khoản. Nếu bạn vừa chuyển, vui lòng chờ 10-30 giây!");
+                                    }
+                                  } catch (e) {
+                                    toast.dismiss("check_pay");
+                                    toast.error("Chưa ghi nhận tiền vào tài khoản. Vui lòng hoàn tất chuyển khoản trước.");
+                                  }
+                                }}
+                                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black uppercase text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 border border-slate-200"
+                              >
+                                <RefreshCw size={15} /> Kiểm tra lại trạng thái giao dịch
+                              </button>
+                            </div>
                         </div>
                     </div>
                 ) : (
