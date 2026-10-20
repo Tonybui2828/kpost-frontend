@@ -124,8 +124,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
-  const [plan, setPlan] = useState("PRO TRIAL");
-  const [daysLeft, setDaysLeft] = useState<number>(6);
+  const [plan, setPlan] = useState<string>("");
+  const [daysLeft, setDaysLeft] = useState<number>(0);
   
   // STATE ĐIỀU KHIỂN MENU TRÊN MOBILE
   const [isOpen, setIsOpen] = useState(false);
@@ -133,8 +133,8 @@ export default function Sidebar() {
 
   // --- 2. HÀM TÍNH TOÁN QUYỀN LỢI GÓI CƯỚC CHUẨN ĐỒNG NHẤT HỆ THỐNG ---
   const resolveSubscription = useCallback((userData: any) => {
-    if (!userData) {
-      return { plan: 'PRO TRIAL', daysLeft: 6, isTrial: true, isPaid: false };
+    if (!userData || (!userData.email && !userData.id && !userData.name)) {
+      return null;
     }
 
     const email = (userData.email || '').toLowerCase().trim();
@@ -232,18 +232,30 @@ export default function Sidebar() {
 
   const fetchUserStatus = useCallback(async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const savedUserStr = typeof window !== "undefined" ? (localStorage.getItem("kpost_user") || localStorage.getItem("user")) : null;
+
+    // Nếu không có token và không có user trong localStorage -> KHÁCH CHƯA ĐĂNG NHẬP
+    if (!token && !savedUserStr) {
+      setUser(null);
+      setPlan("");
+      setDaysLeft(0);
+      return;
+    }
 
     // Đọc trước từ localStorage để giao diện hiển thị ngay lập tức (không delay)
-    try {
-      const savedUserStr = localStorage.getItem("kpost_user") || localStorage.getItem("user");
-      if (savedUserStr) {
+    if (savedUserStr) {
+      try {
         const parsed = JSON.parse(savedUserStr);
-        const resolved = resolveSubscription(parsed);
-        setUser(resolved);
-        setPlan(resolved.displayPlan || resolved.plan);
-        setDaysLeft(resolved.daysLeft);
-      }
-    } catch (e) {}
+        if (parsed && (parsed.email || parsed.id || parsed.name)) {
+          const resolved = resolveSubscription(parsed);
+          if (resolved) {
+            setUser(resolved);
+            setPlan(resolved.displayPlan || resolved.plan);
+            setDaysLeft(resolved.daysLeft || 0);
+          }
+        }
+      } catch (e) {}
+    }
 
     if (!token) {
       return;
@@ -254,20 +266,34 @@ export default function Sidebar() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userData = res.data || {};
-      const resolved = resolveSubscription(userData);
-      setUser(resolved);
-      setPlan(resolved.displayPlan || resolved.plan);
-      setDaysLeft(resolved.daysLeft);
+      if (userData && (userData.email || userData.id || userData.name)) {
+        const resolved = resolveSubscription(userData);
+        if (resolved) {
+          setUser(resolved);
+          setPlan(resolved.displayPlan || resolved.plan);
+          setDaysLeft(resolved.daysLeft || 0);
 
-      // Lưu ngược vào localStorage để đảm bảo dữ liệu đồng nhất
-      try {
-        localStorage.setItem("kpost_user", JSON.stringify(resolved));
-        localStorage.setItem("user", JSON.stringify(resolved));
-      } catch (err) {}
-    } catch (e) {
-      console.warn("Phiên kết nối máy chủ ngoại tuyến, sử dụng dữ liệu cục bộ");
+          // Lưu ngược vào localStorage để đảm bảo dữ liệu đồng nhất
+          try {
+            localStorage.setItem("kpost_user", JSON.stringify(resolved));
+            localStorage.setItem("user", JSON.stringify(resolved));
+          } catch (err) {}
+        }
+      }
+    } catch (e: any) {
+      // Nếu token hết hạn hoặc chưa đăng nhập, xóa để về chế độ khách
+      if (e.response?.status === 401 || e.response?.status === 403) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("kpost_user");
+          localStorage.removeItem("user");
+        }
+        setUser(null);
+        setPlan("");
+        setDaysLeft(0);
+      }
     }
-  }, [resolveSubscription]);
+  }, [resolveSubscription, API_URL]);
 
   useEffect(() => {
     fetchUserStatus();
@@ -301,8 +327,8 @@ export default function Sidebar() {
 
   // Kiểm tra tài khoản có phải Admin không
   const isAdmin = user?.role === "super_admin" || user?.role === "admin" || user?.email === "tech28.vn@gmail.com";
-  const userInitial = user?.name ? user.name.trim()[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : "B");
-  const displayName = user?.name || (user?.email ? user.email.split("@")[0].toUpperCase() : "BÙI VĂN KỲ");
+  const displayName = user?.name || (user?.email ? user.email.split("@")[0].toUpperCase() : "");
+  const userInitial = displayName ? displayName.trim()[0].toUpperCase() : "U";
 
   return (
     <>
@@ -361,16 +387,18 @@ export default function Sidebar() {
             </div>
           </Link>
 
-            {/* Huy hiệu PRO TRIAL màu cam gradient hoặc PRO */}
-            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm shrink-0 ${
-              plan === "PRO TRIAL"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white"
-                : plan === "FREE"
-                ? "bg-slate-200 text-slate-700"
-                : "bg-[#f9570c] text-white"
-            }`}>
-              {plan === "PRO TRIAL" ? "PRO TRIAL" : plan}
-            </span>
+            {/* Huy hiệu PRO TRIAL màu cam gradient hoặc PRO (chỉ hiện khi đã đăng nhập) */}
+            {user && plan && (
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm shrink-0 ${
+                plan === "PRO TRIAL"
+                  ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                  : plan === "FREE"
+                  ? "bg-slate-200 text-slate-700"
+                  : "bg-[#f9570c] text-white"
+              }`}>
+                {plan === "PRO TRIAL" ? "PRO TRIAL" : plan}
+              </span>
+            )}
             <button 
               className="md:hidden p-1.5 text-slate-400 hover:text-slate-800 rounded-lg"
               onClick={() => setIsOpen(false)}
@@ -481,55 +509,73 @@ export default function Sidebar() {
             </div>
           </Link>
 
-          {/* Nút NÂNG CẤP / GIA HẠN ra phần nạp tiền luôn */}
-          <button
-            onClick={() => setShowUpgradeModal(true)}
-            className="w-full bg-[#f9570c] hover:bg-[#ea4e07] text-white font-black py-2.5 px-3 rounded-[14px] text-[12px] uppercase tracking-wider shadow-md shadow-orange-500/20 flex items-center justify-center gap-1.5 transition-all transform active:scale-98 cursor-pointer"
-          >
-            <Crown size={16} className="fill-white" />
-            NÂNG CẤP / GIA HẠN
-          </button>
-
-          {/* Thẻ User Profile & Nút Đăng xuất */}
-          <div className="flex items-center justify-between pt-2.5 px-1 mt-1">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {/* Avatar cam chữ B */}
-              <div className="w-8 h-8 rounded-[10px] bg-[#f9570c] text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
-                {userInitial}
-              </div>
-              {/* Thông tin tên & Hạng PRO TRIAL */}
-              <div className="flex flex-col min-w-0">
-                <span className="font-black italic uppercase text-slate-900 text-xs tracking-tight truncate">
-                  {displayName}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${
-                    plan === "PRO TRIAL"
-                      ? "text-[#f9570c]"
-                      : plan === "FREE"
-                      ? "text-slate-400"
-                      : "text-blue-600 font-black"
-                  }`}>
-                    {plan}
-                  </span>
-                  {daysLeft > 0 && plan !== "FREE" && (
-                    <span className="text-[9px] font-bold text-slate-400">
-                      • Còn {daysLeft} ngày
-                    </span>
-                  )}
-                </div>
+          {/* Chưa đăng nhập: Hiện nút Đăng Nhập / Đăng Ký */}
+          {!user ? (
+            <div className="pt-1.5 space-y-1.5">
+              <Link
+                href="/settings"
+                className="w-full bg-[#f9570c] hover:bg-[#ea4e07] text-white font-black py-2.5 px-3 rounded-[14px] text-[12px] uppercase tracking-wider shadow-md shadow-orange-500/20 flex items-center justify-center gap-1.5 transition-all transform active:scale-98 cursor-pointer"
+              >
+                <LogIn size={15} />
+                ĐĂNG NHẬP / ĐĂNG KÝ
+              </Link>
+              <div className="text-[10px] text-center text-slate-400 font-bold px-1">
+                🎁 Đăng ký mới nhận ngay <strong className="text-[#f9570c]">07 ngày PRO TRIAL</strong>
               </div>
             </div>
+          ) : (
+            <>
+              {/* Nút NÂNG CẤP / GIA HẠN ra phần nạp tiền luôn */}
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="w-full bg-[#f9570c] hover:bg-[#ea4e07] text-white font-black py-2.5 px-3 rounded-[14px] text-[12px] uppercase tracking-wider shadow-md shadow-orange-500/20 flex items-center justify-center gap-1.5 transition-all transform active:scale-98 cursor-pointer"
+              >
+                <Crown size={16} className="fill-white" />
+                NÂNG CẤP / GIA HẠN
+              </button>
 
-            {/* Nút Đăng Xuất icon LogOut màu cam */}
-            <button
-              onClick={handleLogout}
-              title="Đăng xuất"
-              className="text-[#f9570c] hover:text-red-600 hover:bg-orange-50 p-1.5 rounded-lg transition-colors shrink-0 cursor-pointer"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
+              {/* Thẻ User Profile & Nút Đăng xuất */}
+              <div className="flex items-center justify-between pt-2.5 px-1 mt-1">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Avatar cam */}
+                  <div className="w-8 h-8 rounded-[10px] bg-[#f9570c] text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+                    {userInitial}
+                  </div>
+                  {/* Thông tin tên & Hạng */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-black italic uppercase text-slate-900 text-xs tracking-tight truncate">
+                      {displayName}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-black uppercase tracking-wider ${
+                        plan === "PRO TRIAL"
+                          ? "text-[#f9570c]"
+                          : plan === "FREE"
+                          ? "text-slate-400"
+                          : "text-blue-600 font-black"
+                      }`}>
+                        {plan}
+                      </span>
+                      {daysLeft > 0 && plan !== "FREE" && (
+                        <span className="text-[9px] font-bold text-slate-400">
+                          • Còn {daysLeft} ngày
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nút Đăng Xuất icon LogOut màu cam */}
+                <button
+                  onClick={handleLogout}
+                  title="Đăng xuất"
+                  className="text-[#f9570c] hover:text-red-600 hover:bg-orange-50 p-1.5 rounded-lg transition-colors shrink-0 cursor-pointer"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
       </aside>
