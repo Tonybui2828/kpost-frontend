@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
     if (user.createdAt) {
       const createdTime = new Date(user.createdAt).getTime();
       const diffDays = (Date.now() - createdTime) / (1000 * 60 * 60 * 24);
-      // Nếu khách đăng ký trong 7 ngày và chưa bị hạ gói
+      // Nếu đăng ký trong vòng 7 ngày và chưa hết hạn
       if (diffDays <= 7 && (!user.plan || user.plan.toUpperCase() === 'FREE' || user.plan.toUpperCase() === 'PRO')) {
         return true;
       }
