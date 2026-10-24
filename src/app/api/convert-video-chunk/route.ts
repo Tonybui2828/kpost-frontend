@@ -6,7 +6,7 @@ import os from 'os';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 phút
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const chunk = formData.get('chunk') as File | null;
 
     if (!fileId || isNaN(chunkIndex) || isNaN(totalChunks) || !chunk) {
-      return NextResponse.json({ error: 'Thiếu thông tin chunk upload' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu thông tin chunk' }, { status: 400 });
     }
 
     const sanitizedId = fileId.replace(/[^a-zA-Z0-9_-]/g, '');
@@ -26,46 +26,36 @@ export async function POST(req: NextRequest) {
     const chunkArrayBuffer = await chunk.arrayBuffer();
     const chunkBuffer = Buffer.from(chunkArrayBuffer);
 
-    // 🌟 Kiểm tra nếu là file trang web HTML tải nhầm từ Douyin
     if (chunkIndex === 0) {
-      const headerSnippet = chunkBuffer.slice(0, 300).toString('utf8').toLowerCase();
-      if (
-        headerSnippet.includes('<!doctype html') ||
-        headerSnippet.includes('<html') ||
-        headerSnippet.includes('<head') ||
-        headerSnippet.includes('<title>')
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              'File này là trang web HTML (do lưu nhầm trang web Douyin về máy thay vì tải file video MP4). Vui lòng kiểm tra lại file tải về!',
-          },
-          { status: 400 }
-        );
-      }
       await fs.promises.writeFile(tmpInputPath, chunkBuffer);
     } else {
       await fs.promises.appendFile(tmpInputPath, chunkBuffer);
     }
 
     if (chunkIndex < totalChunks - 1) {
-      return NextResponse.json({ success: true, chunkIndex, totalChunks, isDone: false });
+      return NextResponse.json({ success: true, chunkIndex, totalChunks });
     }
 
-    // ==========================================
-    // ĐÃ NHẬN ĐỦ 100% -> CHUYỂN MÃ SANG MP4 H.264
-    // ==========================================
+    // ĐÃ NHẬN ĐỦ TOÀN BỘ CHUNK -> CHUYỂN MÃ SANG H.264
     const tmpOutputPath = path.join(os.tmpdir(), `chunked_out_${sanitizedId}.mp4`);
+
+    // 🌟 Tự động lấy đường dẫn FFmpeg từ @ffmpeg-installer hoặc hệ thống
+    let ffmpegPath = 'ffmpeg';
+    try {
+      // @ts-ignore
+      const installer = require('@ffmpeg-installer/ffmpeg');
+      if (installer && installer.path) {
+        ffmpegPath = installer.path;
+      }
+    } catch {}
 
     const args = [
       '-y',
       '-i', tmpInputPath,
-      '-map', '0:v?',
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
       '-preset', 'ultrafast',
-      '-crf', '24',
-      '-map', '0:a?',
+      '-crf', '23',
       '-c:a', 'aac',
       '-b:a', '128k',
       '-movflags', '+faststart',
@@ -73,33 +63,17 @@ export async function POST(req: NextRequest) {
     ];
 
     await new Promise<void>((resolve, reject) => {
-      const ff = spawn('ffmpeg', args);
+      const ff = spawn(ffmpegPath, args);
       let errLog = '';
-      ff.stderr.on('data', (d) => {
-        errLog += d.toString();
-      });
+      ff.stderr.on('data', (d) => { errLog += d.toString(); });
       ff.on('close', (code) => {
         if (code === 0) resolve();
-        else {
-          console.error('[FFmpeg Error Code]', code, errLog);
-          reject(new Error(`Lỗi FFmpeg (mã ${code}): ${errLog.slice(-250)}`));
-        }
+        else reject(new Error(`FFmpeg error code ${code}: ${errLog.slice(-250)}`));
       });
-      ff.on('error', (err: any) => {
-        if (err.code === 'ENOENT') {
-          reject(
-            new Error(
-              'Máy chủ chưa được cài đặt FFmpeg. Vui lòng cài FFmpeg trên server hoặc mở video bằng CapCut xuất sang MP4 H.264!'
-            )
-          );
-        } else {
-          reject(err);
-        }
-      });
+      ff.on('error', (err) => reject(err));
     });
 
     const outputBuffer = await fs.promises.readFile(tmpOutputPath);
-
     fs.unlink(tmpInputPath, () => {});
     fs.unlink(tmpOutputPath, () => {});
 
@@ -113,10 +87,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error('[Convert Video Chunk Error]:', err);
-    return NextResponse.json(
-      { error: err.message || 'Lỗi xử lý và chuyển mã video' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message || 'Lỗi chuyển mã' }, { status: 500 });
   }
 }
