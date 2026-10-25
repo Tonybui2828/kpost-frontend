@@ -2659,15 +2659,16 @@ NGUYÊN TẮC:
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       setVideoName(file.name);
+      setVideoLoadError(null);
+      setHasNoVideoTrack(false);
       e.target.value = "";
 
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.load();
-          videoRef.current.currentTime = 0.05;
-          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+          videoRef.current.currentTime = 0;
         }
-      }, 150);
+      }, 100);
     }
   };
 
@@ -4768,47 +4769,6 @@ NGUYÊN TẮC:
                       </div>
                     )}
 
-                    {/* NÚT GỢI Ý SỬA ĐEN HÌNH KHI NẠP VIDEO DOUYIN HOẶC KHI PHÁT HIỆN MÀN HÌNH ĐEN */}
-                    {!isConvertingH264 && (hasNoVideoTrack || videoName.includes("抖音") || videoName.toLowerCase().includes("douyin") || videoName.toLowerCase().includes("hevc")) && (
-                      <div className="absolute top-3 left-3 z-30 pointer-events-auto">
-                        <button
-                          type="button"
-                          onClick={handleFixBlackScreenH264}
-                          className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white text-xs font-black rounded-xl shadow-lg flex items-center gap-1.5 transition-all border border-amber-300/40 cursor-pointer animate-pulse"
-                          title="Bấm để khắc phục video Douyin chỉ có tiếng/sub mà bị đen hình"
-                        >
-                          <Sparkles size={13} /> Sửa Lỗi Đen Hình (MP4 H.264)
-                        </button>
-                      </div>
-                    )}
-
-                    {hasNoVideoTrack && !isConvertingH264 && (
-                      <div className="absolute inset-x-4 top-16 z-30 bg-[#0e0305]/90 border border-amber-500/50 rounded-2xl p-4 text-center text-white backdrop-blur-md shadow-2xl animate-in fade-in">
-                        <p className="text-xs font-black text-amber-300 uppercase tracking-wide mb-1">
-                          ⚠️ Video Không Có Hình (Lỗi Codec H.265 / File Audio)
-                        </p>
-                        <p className="text-[11px] text-slate-200 leading-relaxed mb-3">
-                          Trình duyệt Chrome trên Windows không giải mã được hình ảnh video nén H.265 (Douyin) hoặc file này chỉ có âm thanh.
-                        </p>
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleFixBlackScreenH264}
-                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-black shadow cursor-pointer hover:from-amber-600 hover:to-orange-600"
-                          >
-                            ✨ Tự động chuyển sang MP4 H.264
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="px-3.5 py-1.5 bg-slate-800 text-slate-200 border border-slate-600 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-700"
-                          >
-                            Chọn file MP4 khác
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
                     <video
                       ref={videoRef}
                       src={videoUrl}
@@ -4827,19 +4787,16 @@ NGUYÊN TẮC:
                         }
                       }}
                       onLoadedMetadata={() => {
-                        if (videoRef.current) {
-                          if (videoRef.current.duration) {
-                            const dur = videoRef.current.duration;
-                            setVideoDuration(dur);
-                            setExportOptions((p) => ({
-                              ...p,
-                              customEndSec: p.customEndSec === 300 || p.customEndSec > dur ? Math.min(dur, 180) : p.customEndSec,
-                            }));
-                          }
-                          const isNoTrack = (videoRef.current.videoWidth === 0 && videoRef.current.videoHeight === 0);
-                          setHasNoVideoTrack(isNoTrack);
+                        if (videoRef.current && videoRef.current.duration) {
+                          const dur = videoRef.current.duration;
+                          setVideoDuration(dur);
+                          setExportOptions((p) => ({
+                            ...p,
+                            customEndSec: p.customEndSec === 300 || p.customEndSec > dur ? Math.min(dur, 180) : p.customEndSec,
+                          }));
                         }
                         setVideoLoadError(null);
+                        setHasNoVideoTrack(false);
                       }}
                       onPlay={() => setIsPlaying(true)}
                       onSeeked={() => {
@@ -4861,72 +4818,32 @@ NGUYÊN TẮC:
                           setVideoUrl(`/api/stream-video?url=${encodeURIComponent(videoUrl)}`);
                           return;
                         }
-                        if (videoUrl.startsWith("blob:") || selectedFile) {
-                          setVideoLoadError("CODEC_UNSUPPORTED");
-                          return;
+                        if (videoUrl.startsWith("http") && !selectedFile) {
+                          setVideoLoadError("Máy chủ nguồn chặn quyền phát trực tiếp (lỗi CORS) hoặc link trang web không chứa luồng video MP4 trực tiếp. Bạn chỉ cần bấm nút bên dưới để chọn file từ máy và biên tập trọn vẹn 8 phút.");
                         }
-                        setVideoLoadError("CORS_ERROR");
                       }}
-                      preload="auto"
                       className="w-full h-full object-contain pointer-events-auto"
                     />
 
-                    {/* NÚT PLAY LỚN Ở GIỮA KHUNG HÌNH KHI VIDEO ĐANG DỪNG */}
-                    {!isPlaying && !isConvertingH264 && !videoLoadError && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (videoRef.current) {
-                            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-                          }
-                        }}
-                        className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-[#1877F2]/90 hover:bg-blue-500 text-white flex items-center justify-center shadow-2xl z-20 transition-all hover:scale-110 cursor-pointer backdrop-blur-xs border-2 border-white/40"
-                        title="Bấm để phát video"
-                      >
-                        <Play size={28} className="ml-1 text-white fill-white" />
-                      </div>
-                    )}
-
-                    {/* THÔNG BÁO VÀ NÚT TẢI FILE TỪ MÁY HOẶC SỬA LỖI CODEC */}
-                    {videoLoadError && (
+                    {/* THÔNG BÁO VÀ NÚT TẢI FILE TỪ MÁY KHI LINK HTTP BỊ CHẶN CORS */}
+                    {videoLoadError && !selectedFile && (
                       <div className="absolute inset-0 bg-[#0e0305]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center text-white animate-in fade-in">
                         <span className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl mb-3 border border-amber-500/30">
                           <AlertTriangle size={36} />
                         </span>
-                        {videoLoadError === "CODEC_UNSUPPORTED" || (selectedFile && videoUrl?.startsWith("blob:")) ? (
-                          <>
-                            <h4 className="font-black text-sm text-amber-300 mb-1.5 uppercase tracking-wide">
-                              Video Dùng Chuẩn Nén HEVC (H.265) Chưa Thể Phát Trực Tiếp
-                            </h4>
-                            <p className="text-xs text-slate-200/80 max-w-md mb-4 leading-relaxed">
-                              File MP4 này được quay/tải bằng chuẩn nén HEVC (H.265). Trình duyệt Chrome trên máy tính không hỗ trợ giải mã trực tiếp định dạng này. Hãy bấm nút dưới đây để máy chủ tự động chuyển sang chuẩn MP4 H.264 xem được ngay:
-                            </p>
-                            <button
-                              type="button"
-                              onClick={handleFixBlackScreenH264}
-                              disabled={isConvertingH264}
-                              className="px-6 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
-                            >
-                              <Sparkles size={16} /> ⚡ Bấm Để Sửa Lỗi Đen Hình (Chuyển Sang MP4 H.264)
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <h4 className="font-black text-sm text-amber-300 mb-1.5 uppercase tracking-wide">
-                              Máy Chủ Nguồn Chặn Phát Trực Tiếp
-                            </h4>
-                            <p className="text-xs text-slate-200/80 max-w-sm mb-4 leading-relaxed">
-                              Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Để biên tập trọn vẹn video mà không bị ngắt, bạn bấm nút dưới đây để chọn file từ máy:
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="px-5 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
-                            >
-                              <Upload size={15} /> 📁 Chọn File Từ Máy Tính
-                            </button>
-                          </>
-                        )}
+                        <h4 className="font-black text-sm text-amber-300 mb-1.5 uppercase tracking-wide">
+                          Máy Chủ Nguồn Chặn Phát Trực Tiếp
+                        </h4>
+                        <p className="text-xs text-slate-200/80 max-w-sm mb-4 leading-relaxed">
+                          Link này bị máy chủ bên ngoài chặn quyền nhúng CORS vào trình duyệt. Để biên tập trọn vẹn video mà không bị ngắt, bạn bấm nút dưới đây để chọn file từ máy:
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-5 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                        >
+                          <Upload size={15} /> 📁 Chọn File Từ Máy Tính
+                        </button>
                       </div>
                     )}
 
