@@ -2672,8 +2672,114 @@ NGUYÊN TẮC:
   };
 
   // 🌟 HÀM TỰ ĐỘNG KHẮC PHỤC LỖI ĐEN HÌNH (DOUYIN / HEVC H.265 SANG MP4 H.264 CHUẨN)
-  // 🌟 HÀM TỰ ĐỘNG KHẮC PHỤC LỖI ĐEN HÌNH BẰNG CHUNKED UPLOAD (CHỐNG LỖI 413 100%)
-  const handleFixBlackScreenH264 = async () =>
+  const handleFixBlackScreenH264 = async () => {
+    if (!videoUrl && !selectedFile) {
+      alert("Vui lòng tải video hoặc dán link video trước khi chuyển đổi!");
+      return;
+    }
+
+    setIsConvertingH264(true);
+    setConvertStatusMsg("Đang chuẩn bị file để chuyển đổi sang chuẩn MP4 H.264...");
+
+    try {
+      let finalBlobData: any = null;
+
+      // 🌟 NẾU LÀ FILE TẢI TỪ MÁY: CHIA THÀNH CÁC CHUNK NHỎ 5MB ĐỂ GỬI LÊN (CHỐNG LỖI 413 100%)
+      if (selectedFile) {
+        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB mỗi phần
+        const totalChunks = Math.ceil(selectedFile.size / CHUNK_SIZE);
+        const fileId = "vid_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(selectedFile.size, start + CHUNK_SIZE);
+          const chunkBlob = selectedFile.slice(start, end);
+          const isLast = (i === totalChunks - 1);
+
+          const percent = Math.round(((i + 1) / totalChunks) * 100);
+          if (!isLast) {
+            setConvertStatusMsg(`Đang tải dữ liệu lên máy chủ: ${percent}% (Phần ${i + 1}/${totalChunks})...`);
+          } else {
+            setConvertStatusMsg(`Đã tải lên 100%! Máy chủ đang chuyển mã sang MP4 H.264 bằng FFmpeg...`);
+          }
+
+          const chunkFormData = new FormData();
+          chunkFormData.append("fileId", fileId);
+          chunkFormData.append("chunkIndex", i.toString());
+          chunkFormData.append("totalChunks", totalChunks.toString());
+          chunkFormData.append("chunk", chunkBlob, selectedFile.name);
+
+          const res = await axios.post("/api/convert-video-chunk", chunkFormData, {
+            timeout: isLast ? 300000 : 60000,
+          });
+
+          if (isLast && res.data) {
+            if (res.data.videoUrl) {
+              setVideoUrl(res.data.videoUrl);
+              setHasNoVideoTrack(false);
+              setVideoLoadError(null);
+
+              setTimeout(() => {
+                if (videoRef.current) {
+                  videoRef.current.load();
+                  videoRef.current.currentTime = 0.05;
+                  videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                }
+              }, 200);
+
+              alert("🎉 Chuyển đổi thành công sang chuẩn MP4 H.264! Video đã hiển thị rõ hình ảnh và sẵn sàng biên tập.");
+              return;
+            } else if (res.data.error) {
+              throw new Error(res.data.error);
+            }
+          }
+        }
+      } else if (videoUrl) {
+        setConvertStatusMsg("Đang kết nối máy chủ để giải mã video sang MP4 H.264...");
+        const formData = new FormData();
+        formData.append("url", videoUrl);
+        const res = await axios.post("/api/convert-video-h264", formData, {
+          responseType: "blob",
+          timeout: 180000,
+        });
+        if (res.data) {
+          const convertedBlob = new Blob([res.data], { type: "video/mp4" });
+          const newUrl = URL.createObjectURL(convertedBlob);
+          setVideoUrl(newUrl);
+          setHasNoVideoTrack(false);
+          setVideoLoadError(null);
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.load();
+              videoRef.current.currentTime = 0.05;
+              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            }
+          }, 200);
+          alert("🎉 Chuyển đổi thành công sang chuẩn MP4 H.264!");
+        }
+      }
+    } catch (err: any) {
+      console.error("Lỗi chuyển đổi video H.264:", err);
+      let errorMsg = err.message || "Vui lòng kiểm tra lại";
+      if (err.response?.data) {
+        if (typeof err.response.data.text === "function") {
+          try {
+            const rawText = await err.response.data.text();
+            const parsed = JSON.parse(rawText);
+            if (parsed.error) errorMsg = parsed.error;
+          } catch {
+            // ignore parse error
+          }
+        } else if (err.response.data.error) {
+          errorMsg = err.response.data.error;
+        }
+      }
+      alert("Lỗi khi chuyển đổi video: " + errorMsg);
+    } finally {
+      setIsConvertingH264(false);
+      setConvertStatusMsg("");
+    }
+  };
 
   // Tải ảnh Logo PNG/JPG lên
   const handleUploadLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
