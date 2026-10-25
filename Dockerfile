@@ -16,6 +16,9 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 
+# 👉 CÀI ĐẶT FFMPEG ĐỂ XỬ LÝ VIDEO ĐEN HÌNH VÀ CHUYỂN MÃ H.264
+RUN apk add --no-cache ffmpeg
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
@@ -24,6 +27,9 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
+
+# Tạo sẵn thư mục lưu video đã chuyển mã
+RUN mkdir -p /app/public/videos
 
 EXPOSE 3000
 
