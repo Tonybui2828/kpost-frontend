@@ -425,6 +425,7 @@ export default function AiVideoEditorPage() {
   const [isConvertingH264, setIsConvertingH264] = useState<boolean>(false);
   const [convertStatusMsg, setConvertStatusMsg] = useState<string>("");
   const [hasNoVideoTrack, setHasNoVideoTrack] = useState<boolean>(false);
+  const [isDetectedHevc, setIsDetectedHevc] = useState<boolean>(false);
 
   // Export State
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -1750,6 +1751,8 @@ export default function AiVideoEditorPage() {
     spokenTextsHistoryRef.current.clear();
     setTranscribeSuccessMsg("");
     setVideoLoadError(null);
+    setIsDetectedHevc(false);
+    setHasNoVideoTrack(false);
     setTranscribeProgress(0);
     setTranscribeStatus("");
 
@@ -2650,7 +2653,23 @@ NGUYÊN TẮC:
     }
   };
 
-  const handleUserUploadVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 🔍 KIỂM TRA NHANH XEM FILE MP4 CÓ DÙNG CHUẨN NÉN H.265 (HEVC / hev1 / hvc1) KHÔNG
+  const checkIsHevcVideoFile = async (file: File): Promise<boolean> => {
+    try {
+      const slice = file.slice(0, 512 * 1024);
+      const buffer = await slice.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length - 4; i++) {
+        // "hvc1" = 104, 118, 99, 49
+        if (bytes[i] === 104 && bytes[i + 1] === 118 && bytes[i + 2] === 99 && bytes[i + 3] === 49) return true;
+        // "hev1" = 104, 101, 118, 49
+        if (bytes[i] === 104 && bytes[i + 1] === 101 && bytes[i + 2] === 118 && bytes[i + 3] === 49) return true;
+      }
+    } catch {}
+    return false;
+  };
+
+  const handleUserUploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       // 🌟 Dọn sạch toàn bộ cache và trạng thái của video cũ
@@ -2662,6 +2681,15 @@ NGUYÊN TẮC:
       setVideoLoadError(null);
       setHasNoVideoTrack(false);
       e.target.value = "";
+
+      // 🔍 Kiểm tra xem file có chứa mã H.265 / HEVC không:
+      const isHevc = await checkIsHevcVideoFile(file);
+      if (isHevc) {
+        console.warn("⚠️ Phát hiện video Douyin/HEVC H.265. Trình duyệt Chrome sẽ bị đen hình nếu không chuyển sang H.264.");
+        setIsDetectedHevc(true);
+      } else {
+        setIsDetectedHevc(false);
+      }
 
       setTimeout(() => {
         if (videoRef.current) {
@@ -2719,6 +2747,7 @@ NGUYÊN TẮC:
               setVideoUrl(res.data.videoUrl);
               setHasNoVideoTrack(false);
               setVideoLoadError(null);
+              setIsDetectedHevc(false);
 
               setTimeout(() => {
                 if (videoRef.current) {
@@ -2749,6 +2778,7 @@ NGUYÊN TẮC:
           setVideoUrl(newUrl);
           setHasNoVideoTrack(false);
           setVideoLoadError(null);
+          setIsDetectedHevc(false);
           setTimeout(() => {
             if (videoRef.current) {
               videoRef.current.load();
@@ -4706,47 +4736,47 @@ NGUYÊN TẮC:
                   </span>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setShowEffectsModal(true)}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-2 py-1.5 rounded-xl bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Palette size={13} />
-                    {visualEffects.filterType !== "none" ? "Đã bật hiệu ứng" : "Bộ lọc"}
+                    {visualEffects.filterType !== "none" ? "Hiệu ứng" : "Bộ lọc"}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowExportModal(true)}
                     disabled={!videoUrl || isExporting}
-                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
                   >
                     <Scissors size={13} />
-                    {isExporting ? `Đang xuất ${exportProgress}%` : "Cắt & Xuất Video"}
+                    {isExporting ? `Xuất ${exportProgress}%` : "Cắt & Xuất"}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setCompareOriginal(!compareOriginal)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       compareOriginal
                         ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
                         : "bg-[#13223F] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867]"
                     }`}
                   >
                     <Eye size={13} />
-                    {compareOriginal ? "Đang xem: GỐC" : "Xem bản gốc"}
+                    {compareOriginal ? "Xem GỐC" : "Bản gốc"}
                   </button>
 
                   <button
                     type="button"
                     onClick={handleFixBlackScreenH264}
                     disabled={isConvertingH264 || !videoUrl}
-                    className="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white shadow-md shadow-orange-500/25 active:scale-95 disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white shadow-lg shadow-orange-500/30 active:scale-95 disabled:opacity-50 border border-amber-400/50 animate-pulse"
                     title="Khắc phục video Douyin/HEVC H.265 chỉ có tiếng & sub nhưng bị đen hình"
                   >
-                    <Sparkles size={13} className={isConvertingH264 ? "animate-spin" : "animate-pulse"} />
+                    <Sparkles size={13} className={isConvertingH264 ? "animate-spin" : ""} />
                     {isConvertingH264 ? "Đang sửa..." : "Sửa Lỗi Đen Hình"}
                   </button>
                 </div>
@@ -4769,6 +4799,35 @@ NGUYÊN TẮC:
                       </div>
                     )}
 
+                    {/* 🌟 NÚT NỔI SỬA LỖI ĐEN HÌNH TRỰC DIỆN (CHỐNG BỊ BỎ LỠ HOẶC CHE KHUẤT) */}
+                    {isDetectedHevc && !isConvertingH264 && (
+                      <div className="absolute inset-x-3 bottom-16 sm:bottom-20 z-40 flex justify-center animate-in fade-in slide-in-from-bottom-2">
+                        <div className="bg-gradient-to-r from-[#200a0e]/95 via-[#1a060a]/95 to-[#2a0e14]/95 border-2 border-amber-500/80 rounded-2xl p-3 shadow-2xl backdrop-blur-md max-w-lg w-full flex flex-col sm:flex-row items-center justify-between gap-3 shadow-orange-950/90">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="p-2 bg-amber-500/20 text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
+                              <Sparkles size={18} className="animate-spin text-amber-400" />
+                            </span>
+                            <div>
+                              <h5 className="text-xs font-black text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                                Video Bị Đen Hình (Do Mã H.265 Douyin)
+                              </h5>
+                              <p className="text-[11px] text-slate-200">
+                                Chrome không đọc được hình ảnh H.265. Bấm nút để máy chủ chuyển sang MP4 chuẩn xem được ngay!
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleFixBlackScreenH264}
+                            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-black text-xs rounded-xl shadow-lg shadow-orange-500/40 shrink-0 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles size={14} />
+                            BẤM ĐỂ HIỆN HÌNH NGAY
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <video
                       ref={videoRef}
                       src={videoUrl}
@@ -4777,6 +4836,34 @@ NGUYÊN TẮC:
                       style={{
                         filter: canvasFilterCss,
                         transition: "filter 0.3s ease"
+                      }}
+                      onTimeUpdate={() => {
+                        if (videoRef.current) {
+                          setCurrentTime(videoRef.current.currentTime);
+                          // Tự động phát hiện nếu khung hình bị đen hoàn toàn khi đang phát
+                          if (!isDetectedHevc && videoRef.current.currentTime > 1.2 && !videoRef.current.paused) {
+                            try {
+                              const testCanvas = document.createElement("canvas");
+                              testCanvas.width = 32;
+                              testCanvas.height = 32;
+                              const testCtx = testCanvas.getContext("2d");
+                              if (testCtx && videoRef.current.videoWidth > 0) {
+                                testCtx.drawImage(videoRef.current, 0, 0, 32, 32);
+                                const pix = testCtx.getImageData(0, 0, 32, 32).data;
+                                let isBlack = true;
+                                for (let p = 0; p < pix.length; p += 4) {
+                                  if (pix[p] > 15 || pix[p + 1] > 15 || pix[p + 2] > 15) {
+                                    isBlack = false;
+                                    break;
+                                  }
+                                }
+                                if (isBlack) {
+                                  setIsDetectedHevc(true);
+                                }
+                              }
+                            } catch {}
+                          }
+                        }
                       }}
                       onEnded={() => {
                         setIsPlaying(false);
