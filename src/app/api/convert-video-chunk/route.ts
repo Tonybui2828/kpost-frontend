@@ -6,7 +6,7 @@ import os from 'os';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const maxDuration = 300; // 5 phút
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const chunk = formData.get('chunk') as File | null;
 
     if (!fileId || isNaN(chunkIndex) || isNaN(totalChunks) || !chunk) {
-      return NextResponse.json({ error: 'Thiếu thông tin chunk' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu thông tin chunk upload' }, { status: 400 });
     }
 
     const sanitizedId = fileId.replace(/[^a-zA-Z0-9_-]/g, '');
@@ -33,13 +33,20 @@ export async function POST(req: NextRequest) {
     }
 
     if (chunkIndex < totalChunks - 1) {
-      return NextResponse.json({ success: true, chunkIndex, totalChunks });
+      return NextResponse.json({ success: true, chunkIndex, totalChunks, isDone: false });
     }
 
-    // ĐÃ NHẬN ĐỦ TOÀN BỘ CHUNK -> CHUYỂN MÃ SANG H.264
-    const tmpOutputPath = path.join(os.tmpdir(), `chunked_out_${sanitizedId}.mp4`);
+    // ĐÃ NHẬN ĐỦ 100% -> CHUYỂN MÃ SANG MP4 H.264
+    console.log(`[Chunked Upload] Đã nhận đủ ${totalChunks} chunks. Bắt đầu chuyển mã FFmpeg H.264...`);
 
-    // 🌟 Tự động lấy đường dẫn FFmpeg từ @ffmpeg-installer hoặc hệ thống
+    const publicVideosDir = path.join(process.cwd(), 'public', 'videos');
+    if (!fs.existsSync(publicVideosDir)) {
+      await fs.promises.mkdir(publicVideosDir, { recursive: true });
+    }
+
+    const outputFileName = `converted_${sanitizedId}.mp4`;
+    const outputPath = path.join(publicVideosDir, outputFileName);
+
     let ffmpegPath = 'ffmpeg';
     try {
       // @ts-ignore
@@ -55,11 +62,11 @@ export async function POST(req: NextRequest) {
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
       '-preset', 'ultrafast',
-      '-crf', '23',
+      '-crf', '26',
       '-c:a', 'aac',
       '-b:a', '128k',
       '-movflags', '+faststart',
-      tmpOutputPath,
+      outputPath,
     ];
 
     await new Promise<void>((resolve, reject) => {
@@ -68,25 +75,30 @@ export async function POST(req: NextRequest) {
       ff.stderr.on('data', (d) => { errLog += d.toString(); });
       ff.on('close', (code) => {
         if (code === 0) resolve();
-        else reject(new Error(`FFmpeg error code ${code}: ${errLog.slice(-250)}`));
+        else reject(new Error(`Lỗi FFmpeg mã ${code}: ${errLog.slice(-250)}`));
       });
-      ff.on('error', (err) => reject(err));
+      ff.on('error', (err: any) => {
+        if (err.code === 'ENOENT') {
+          reject(new Error('Máy chủ chưa có FFmpeg. Chạy lệnh: npm install @ffmpeg-installer/ffmpeg'));
+        } else {
+          reject(err);
+        }
+      });
     });
 
-    const outputBuffer = await fs.promises.readFile(tmpOutputPath);
     fs.unlink(tmpInputPath, () => {});
-    fs.unlink(tmpOutputPath, () => {});
 
-    return new NextResponse(outputBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Length': outputBuffer.length.toString(),
-        'Access-Control-Allow-Origin': '*',
-        'Content-Disposition': 'inline; filename="converted_h264.mp4"',
-      },
+    // Trả về link video tĩnh để phát mượt mà, không bao giờ bị nghẽn RAM lỗi 500
+    return NextResponse.json({
+      success: true,
+      videoUrl: `/videos/${outputFileName}`,
+      message: 'Chuyển đổi thành công!',
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Lỗi chuyển mã' }, { status: 500 });
+    console.error('[Convert Video Chunk Error]:', err);
+    return NextResponse.json(
+      { error: err.message || 'Lỗi xử lý và chuyển mã video' },
+      { status: 500 }
+    );
   }
 }
