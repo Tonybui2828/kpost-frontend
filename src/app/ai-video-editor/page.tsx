@@ -2739,10 +2739,13 @@ NGUYÊN TẮC:
           chunkFormData.append("chunk", chunkBlob, selectedFile.name);
 
           const res = await axios.post("/api/convert-video-chunk", chunkFormData, {
-            timeout: isLast ? 300000 : 60000,
+            timeout: 60000,
           });
 
           if (isLast && res.data) {
+            const jobId = res.data.jobId || fileId;
+
+            // Nếu trả về trực tiếp videoUrl
             if (res.data.videoUrl) {
               setVideoUrl(res.data.videoUrl);
               setHasNoVideoTrack(false);
@@ -2759,9 +2762,52 @@ NGUYÊN TẮC:
 
               alert("🎉 Chuyển đổi thành công sang chuẩn MP4 H.264! Video đã hiển thị rõ hình ảnh và sẵn sàng biên tập.");
               return;
-            } else if (res.data.error) {
-              throw new Error(res.data.error);
             }
+
+            // Nếu server xử lý trong nền (tránh timeout 524 Cloudflare): Bắt đầu kiểm tra tiến trình định kỳ
+            setConvertStatusMsg("Đã tải lên 100%! Máy chủ đang chuyển mã sang MP4 H.264 bằng FFmpeg...");
+            let attempts = 0;
+            const maxAttempts = 180; // Tối đa 6 phút
+
+            while (attempts < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 2000));
+              attempts++;
+              const sec = attempts * 2;
+              setConvertStatusMsg(`Đang chuyển mã MP4 H.264 (${sec}s)... Xin vui lòng đợi giây lát!`);
+
+              try {
+                const statusRes = await axios.get(`/api/convert-video-status?jobId=${jobId}`, {
+                  timeout: 15000,
+                });
+
+                if (statusRes.data?.status === "completed" && statusRes.data.videoUrl) {
+                  setVideoUrl(statusRes.data.videoUrl);
+                  setHasNoVideoTrack(false);
+                  setVideoLoadError(null);
+                  setIsDetectedHevc(false);
+
+                  setTimeout(() => {
+                    if (videoRef.current) {
+                      videoRef.current.load();
+                      videoRef.current.currentTime = 0.05;
+                      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                    }
+                  }, 200);
+
+                  alert("🎉 Chuyển đổi thành công sang chuẩn MP4 H.264! Video đã hiển thị rõ hình ảnh và sẵn sàng biên tập.");
+                  return;
+                } else if (statusRes.data?.status === "error") {
+                  throw new Error(statusRes.data.error || "Lỗi chuyển mã video từ FFmpeg");
+                }
+              } catch (pollErr: any) {
+                if (pollErr.message && (pollErr.message.includes("Lỗi chuyển mã") || pollErr.message.includes("FFmpeg"))) {
+                  throw pollErr;
+                }
+                // Nếu là lỗi mạng tạm thời trong lúc poll, tiếp tục vòng lặp tiếp theo
+              }
+            }
+
+            throw new Error("Quá thời gian chuyển đổi (timeout). Vui lòng thử lại!");
           }
         }
       } else if (videoUrl) {
