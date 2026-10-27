@@ -2089,19 +2089,24 @@ export default function AiVideoEditorPage() {
   const generateSmartFallbackReview = ({
     duration,
     startOffset,
+    totalVideoDuration,
     reviewStyle,
     density,
     existingTranscript,
+    usedSentencesSet,
   }: {
     duration: number;
-    startOffset: number;
+    startOffset?: number;
+    totalVideoDuration?: number;
     reviewStyle: string;
     density: string;
     existingTranscript?: string;
+    usedSentencesSet?: Set<string>;
   }): { cues: any[]; storySummary: string; hook: string } => {
     const step = density === 'high' ? 3.8 : density === 'compact' ? 5.5 : 4.5;
     const cues: any[] = [];
     const totalSteps = Math.max(2, Math.floor(duration / step));
+    const offset = Number(startOffset || 0);
 
     // Bóc tách các câu lời thoại thực tế từ video nếu có
     const transcriptSentences = existingTranscript
@@ -2116,6 +2121,8 @@ export default function AiVideoEditorPage() {
       "Khung cảnh mở ra với một tình huống trớ trêu khiến bất kỳ ai theo dõi cũng phải chú ý.",
       "Nhìn biểu cảm của nhân vật lúc này thực sự rất uy tín, nhưng biến số lớn sắp sửa xuất hiện.",
       "Câu chuyện bắt đầu bằng một quyết định táo bạo mà nhân vật chính không hề do dự.",
+      "Những khung hình đầu tiên đã khéo léo gài gắm các chi tiết quan trọng thu hút người xem.",
+      "Không một ai ngờ rằng phân cảnh khởi đầu tưởng chừng bình thường này lại ẩn chứa nhiều toan tính.",
     ];
 
     const act2_BuildUp = [
@@ -2125,6 +2132,9 @@ export default function AiVideoEditorPage() {
       "Tình huống phát triển theo chiều hướng dở khóc dở cười mà không ai lường trước được.",
       "Nhân vật chính liên tục xử lý các tình huống phát sinh với sự liều lĩnh đáng kinh ngạc.",
       "Lúc này mọi ánh mắt đều đổ dồn vào từng cử chỉ đầy ẩn ý của các nhân vật trên màn hình.",
+      "Kế hoạch dần hé lộ những mắt xích thú vị, từng bước đưa câu chuyện vào guồng quay kịch tính.",
+      "Sự tự tin thái quá của nhân vật chính vô tình tạo nên những khe hở cho đối phương khai thác.",
+      "Bầu không khí dần nóng lên khi các toan tính ngầm bắt đầu va chạm trực diện với nhau.",
     ];
 
     const act3_Conflict = [
@@ -2134,6 +2144,9 @@ export default function AiVideoEditorPage() {
       "Tình thế bỗng chốc quay ngoắt một trăm tám mươi độ khiến người trong cuộc không kịp trở tay.",
       "Sự hiểu lầm và xung đột bị đẩy lên một nấc thang mới đầy kịch tính.",
       "Những toan tính ban đầu bắt đầu xuất hiện những lỗ hổng chí mạng không thể cứu vãn.",
+      "Sự việc trượt dốc không phanh khi mọi phương án dự phòng đều lần lượt vô hiệu hóa.",
+      "Nhân vật chính phải đối mặt với thử thách cam go nhất từ trước đến nay.",
+      "Từng giây trôi qua đều là sự đấu trí căng não nghẹt thở giữa các bên tham gia.",
     ];
 
     const act4_Climax = [
@@ -2143,6 +2156,8 @@ export default function AiVideoEditorPage() {
       "Mọi bí mật và kịch tính được đẩy lên đến đỉnh điểm trong sự ngỡ ngàng tột độ.",
       "Đúng là cao nhân không bằng liều mạng, một bước đi liều lĩnh làm thay đổi hoàn toàn kết quả.",
       "Sự việc leo thang vượt ra ngoài tầm kiểm soát của tất cả mọi người có mặt tại hiện trường.",
+      "Đỉnh điểm kịch tính vỡ òa khi sự thật phơi bày ngoài sức tưởng tượng của tất cả.",
+      "Một màn lật kèo kinh điển làm đảo lộn mọi dự đoán của khán giả từ đầu đến giờ.",
     ];
 
     const act5_Ending = [
@@ -2152,31 +2167,80 @@ export default function AiVideoEditorPage() {
       "Đúng là hết nước chấm, xem xong chỉ biết thốt lên hai chữ hảo hán cho màn trình diễn này!",
       "Một đoạn kết trọn vẹn và đầy thuyết phục, kết thúc một chuỗi tình huống dở khóc dở cười.",
       "Khép lại video với một nụ cười ngẫm nghĩ, quả thực là một câu chuyện đáng xem từng giây.",
+      "Lời cảnh tỉnh sâu sắc gửi đến tất cả chúng ta qua một tình huống đời thực vô cùng thú vị.",
+      "Thông điệp đắt giá đọng lại khiến video này xứng đáng nhận triệu like từ cộng đồng mạng.",
     ];
 
-    const usedSentences = new Set<string>();
+    const usedSentences = usedSentencesSet || new Set<string>();
 
     for (let i = 0; i < totalSteps; i++) {
       const s = Number((i * step + 0.3).toFixed(1));
       const e = Number(Math.min(duration - 0.2, (i + 1) * step).toFixed(1));
       if (e <= s) break;
 
-      // Xác định đang ở Hồi nào của video (0.0 -> 1.0)
-      const progress = i / totalSteps;
+      // 🌟 TÍNH TOÁN VỊ TRÍ HỒI DỰA TRÊN THỜI GIAN TOÀN CỤC CỦA VIDEO (CHỐNG LẶP HỒI 1 Ở ĐOẠN SAU)
+      const globalTime = offset + s;
+      const wholeDuration = Math.max(10, totalVideoDuration || (offset + duration) || 60);
+      const progress = Math.min(1.0, Math.max(0.0, globalTime / wholeDuration));
+
       let pool: string[];
-      if (progress < 0.2) pool = act1_Intro;
+      // Hồi 1 chỉ được phép xuất hiện ở 25 giây đầu tiên của video (globalTime <= 25)
+      if (progress < 0.20 && globalTime <= 25) pool = act1_Intro;
       else if (progress < 0.45) pool = act2_BuildUp;
-      else if (progress < 0.7) pool = act3_Conflict;
+      else if (progress < 0.70) pool = act3_Conflict;
       else if (progress < 0.88) pool = act4_Climax;
       else pool = act5_Ending;
 
-      let chosenText = pool[i % pool.length];
+      // Tìm câu chưa từng xuất hiện trong toàn bộ video
+      let chosenText = "";
       for (const candidate of pool) {
         if (!usedSentences.has(candidate)) {
           chosenText = candidate;
           break;
         }
       }
+
+      // Nếu pool hiện tại đã dùng hết, mượn câu chưa dùng từ các pool khác (trừ act1_Intro nếu đã qua 25s)
+      if (!chosenText) {
+        const fallbackPools = globalTime > 25
+          ? [act2_BuildUp, act3_Conflict, act4_Climax, act5_Ending]
+          : [act1_Intro, act2_BuildUp, act3_Conflict, act4_Climax, act5_Ending];
+        for (const p of fallbackPools) {
+          for (const candidate of p) {
+            if (!usedSentences.has(candidate)) {
+              chosenText = candidate;
+              break;
+            }
+          }
+          if (chosenText) break;
+        }
+      }
+
+      // Nếu toàn bộ câu mẫu tĩnh đều đã được dùng (video dài nhiều phút), tự động sinh câu dẫn truyện động
+      if (!chosenText) {
+        const minLabel = Math.floor(globalTime / 60);
+        const secLabel = Math.round(globalTime % 60);
+        const dynamicCandidates = [
+          `Quan sát ở phút ${minLabel} giây ${secLabel}, tình thế của các nhân vật ngày càng trở nên phức tạp và khó đoán.`,
+          `Tại mốc thời gian ${minLabel}p${secLabel}s, nhịp độ video tiếp tục được đẩy lên một nấc thang kịch tính mới.`,
+          `Từng cử chỉ và hành động ở phân đoạn này cho thấy sự toan tính kỹ lưỡng của người trong cuộc.`,
+          `Biến số tiếp theo xuất hiện làm lung lay hoàn toàn những dự liệu ban đầu của các bên.`,
+          `Lúc này áp lực đè nặng lên từng giây khiến người xem không thể rời mắt khỏi màn hình.`,
+          `Một pha chuyển biến bất ngờ khiến người theo dõi phải trầm trồ trước sự liều lĩnh của nhân vật.`,
+          `Căng thẳng được duy trì liên tục qua từng góc máy, không một khoảnh khắc nào bị lơ là.`,
+          `Mọi sự chú ý đều hướng về cách xử lý tiếp theo của nhân vật trước ngã rẽ quan trọng này.`,
+        ];
+        for (const dyn of dynamicCandidates) {
+          if (!usedSentences.has(dyn)) {
+            chosenText = dyn;
+            break;
+          }
+        }
+        if (!chosenText) {
+          chosenText = `Ở thời điểm ${minLabel} phút ${secLabel} giây, một chuyển biến mới lại tiếp tục làm đảo lộn tình hình.`;
+        }
+      }
+
       usedSentences.add(chosenText);
 
       // Nếu có lời thoại thực tế của video, lồng ghép vào câu review một cách tự nhiên
@@ -2218,6 +2282,8 @@ export default function AiVideoEditorPage() {
     customPrompt,
     frameSnapshots,
     existingTranscript,
+    totalVideoDuration,
+    usedSentencesSet,
   }: {
     geminiKey?: string;
     groqKey?: string;
@@ -2228,6 +2294,8 @@ export default function AiVideoEditorPage() {
     customPrompt?: string;
     frameSnapshots?: string[];
     existingTranscript?: string;
+    totalVideoDuration?: number;
+    usedSentencesSet?: Set<string>;
   }): Promise<{ cues: any[]; storySummary?: string; hook?: string }> => {
     const styleDescriptions: Record<string, string> = {
       humorous_viral: `🎭 PHONG CÁCH: HÀI HƯỚC - CÀ KHỊA - LẦY LỘI - BẮT TREND TIKTOK / SHORTS:
@@ -2383,9 +2451,11 @@ NGUYÊN TẮC:
     return generateSmartFallbackReview({
       duration,
       startOffset,
+      totalVideoDuration,
       reviewStyle,
       density,
       existingTranscript,
+      usedSentencesSet,
     });
   };
 
@@ -2452,6 +2522,10 @@ NGUYÊN TẮC:
             const whisperUrls = [
               "/api/transcribe-and-translate",
               `${apiBase}/api/transcribe-and-translate`,
+              "https://api.kpost.vn/ai-content/transcribe-and-translate",
+              `${apiBase}/ai-content/transcribe-and-translate`,
+              "/ai-content/transcribe-and-translate",
+              "https://api.kpost.vn/api/transcribe-and-translate",
               "/api/transcribe-video",
               `${apiBase}/api/transcribe-video`,
             ];
@@ -2501,6 +2575,7 @@ NGUYÊN TẮC:
       const CHUNK_LEN = 120;
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
       let allReviewCues: SubtitleCue[] = [];
+      const globalUsedSentences = new Set<string>();
       let globalLastErrorMsg = "";
       let capturedSummary = "";
       let serverWarning = "";
@@ -2599,6 +2674,7 @@ NGUYÊN TẮC:
                 mimeType: "audio/wav",
                 duration: chunkDur,
                 startOffset: chunkStart,
+                totalVideoDuration: fullDuration,
                 chunkIndex: chunkIdx + 1,
                 totalChunks: totalChunks,
                 videoTitle: videoName || "Video Review Hài Hước",
@@ -2648,6 +2724,8 @@ NGUYÊN TẮC:
               groqKey: clientGroq,
               duration: chunkDur,
               startOffset: chunkStart,
+              totalVideoDuration: fullDuration,
+              usedSentencesSet: globalUsedSentences,
               reviewStyle: reviewConfig.style,
               density: reviewConfig.density,
               customPrompt: reviewConfig.customPrompt,
@@ -2663,6 +2741,8 @@ NGUYÊN TẮC:
             const fallbackData = generateSmartFallbackReview({
               duration: chunkDur,
               startOffset: chunkStart,
+              totalVideoDuration: fullDuration,
+              usedSentencesSet: globalUsedSentences,
               reviewStyle: reviewConfig.style,
               density: reviewConfig.density,
               existingTranscript: chunkExistingTranscript,
@@ -2683,14 +2763,16 @@ NGUYÊN TẮC:
             const e = Number(c.endSec);
             const finalS = s >= chunkStart ? s : Number((s + chunkStart).toFixed(1));
             const finalE = e > finalS ? (e >= chunkStart ? e : Number((e + chunkStart).toFixed(1))) : Number((finalS + 4.0).toFixed(1));
+            const textStr = String(c.text || "").trim();
+            if (textStr) globalUsedSentences.add(textStr);
             return {
               id: `review_cue_${chunkIdx + 1}_${i + 1}`,
               startSec: finalS,
               endSec: finalE,
-              text: String(c.text || "").trim(),
+              text: textStr,
               words: [],
               parentSentenceId: `review_s_${chunkIdx + 1}_${i + 1}`,
-              parentSentenceText: String(c.text || "").trim(),
+              parentSentenceText: textStr,
             };
           });
           allReviewCues = [...allReviewCues, ...rawCues];
@@ -2735,6 +2817,8 @@ NGUYÊN TẮC:
         const fallback = generateSmartFallbackReview({
           duration: fullDuration,
           startOffset: 0,
+          totalVideoDuration: fullDuration,
+          usedSentencesSet: globalUsedSentences,
           reviewStyle: reviewConfig.style,
           density: reviewConfig.density,
           existingTranscript: fullRealTranscript,

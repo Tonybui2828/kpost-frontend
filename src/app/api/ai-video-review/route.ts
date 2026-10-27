@@ -169,6 +169,7 @@ async function callGroqAi(apiKey: string, systemPrompt: string, userPrompt: stri
 function generateSmartReviewFallback({
   duration,
   startOffset,
+  totalVideoDuration,
   reviewStyle,
   density,
   videoTitle,
@@ -177,6 +178,7 @@ function generateSmartReviewFallback({
 }: {
   duration: number;
   startOffset: number;
+  totalVideoDuration?: number;
   reviewStyle: string;
   density: string;
   videoTitle?: string;
@@ -185,6 +187,8 @@ function generateSmartReviewFallback({
 }) {
   const step = density === 'high' ? 3.8 : density === 'compact' ? 5.5 : 4.5;
   const numSteps = Math.max(2, Math.floor(duration / step));
+  const offset = Number(startOffset || 0);
+  const wholeDuration = Math.max(10, totalVideoDuration || (offset + duration) || 60);
 
   // Tách các từ/câu từ lời thoại bóc băng thực tế của video (nếu có)
   const transcriptSentences = existingTranscript
@@ -199,6 +203,8 @@ function generateSmartReviewFallback({
     "Khung cảnh mở ra với một tình huống trớ trêu khiến bất kỳ ai theo dõi cũng phải chú ý.",
     "Nhìn biểu cảm của nhân vật lúc này thực sự rất uy tín, nhưng biến số lớn sắp sửa xuất hiện.",
     "Câu chuyện bắt đầu bằng một quyết định táo bạo mà nhân vật chính không hề do dự.",
+    "Những khung hình đầu tiên đã khéo léo gài gắm các chi tiết quan trọng thu hút người xem.",
+    "Không một ai ngờ rằng phân cảnh khởi đầu tưởng chừng bình thường này lại ẩn chứa nhiều toan tính.",
   ];
 
   const act2_BuildUp = [
@@ -208,6 +214,8 @@ function generateSmartReviewFallback({
     "Tình huống phát triển theo chiều hướng dở khóc dở cười mà không ai lường trước được.",
     "Nhân vật chính liên tục xử lý các tình huống phát sinh với sự liều lĩnh đáng kinh ngạc.",
     "Lúc này mọi ánh mắt đều đổ dồn vào từng cử chỉ đầy ẩn ý của các nhân vật trên màn hình.",
+    "Kế hoạch dần hé lộ những mắt xích thú vị, từng bước đưa câu chuyện vào guồng quay kịch tính.",
+    "Sự tự tin thái quá của nhân vật chính vô tình tạo nên những khe hở cho đối phương khai thác.",
   ];
 
   const act3_Conflict = [
@@ -217,6 +225,7 @@ function generateSmartReviewFallback({
     "Tình thế bỗng chốc quay ngoắt một trăm tám mươi độ khiến người trong cuộc không kịp trở tay.",
     "Sự hiểu lầm và xung đột bị đẩy lên một nấc thang mới đầy kịch tính.",
     "Những toan tính ban đầu bắt đầu xuất hiện những lỗ hổng chí mạng không thể cứu vãn.",
+    "Sự việc trượt dốc không phanh khi mọi phương án dự phòng đều lần lượt vô hiệu hóa.",
   ];
 
   const act4_Climax = [
@@ -226,6 +235,7 @@ function generateSmartReviewFallback({
     "Mọi bí mật và kịch tính được đẩy lên đến đỉnh điểm trong sự ngỡ ngàng tột độ.",
     "Đúng là cao nhân không bằng liều mạng, một bước đi liều lĩnh làm thay đổi hoàn toàn kết quả.",
     "Sự việc leo thang vượt ra ngoài tầm kiểm soát của tất cả mọi người có mặt tại hiện trường.",
+    "Một màn lật kèo kinh điển làm đảo lộn mọi dự đoán của khán giả từ đầu đến giờ.",
   ];
 
   const act5_Ending = [
@@ -235,6 +245,7 @@ function generateSmartReviewFallback({
     "Đúng là hết nước chấm, xem xong chỉ biết thốt lên hai chữ hảo hán cho màn trình diễn này!",
     "Một đoạn kết trọn vẹn và đầy thuyết phục, kết thúc một chuỗi tình huống dở khóc dở cười.",
     "Khép lại video với một nụ cười ngẫm nghĩ, quả thực là một câu chuyện đáng xem từng giây.",
+    "Lời cảnh tỉnh sâu sắc gửi đến tất cả chúng ta qua một tình huống đời thực vô cùng thú vị.",
   ];
 
   const cues: any[] = [];
@@ -245,23 +256,47 @@ function generateSmartReviewFallback({
     const e = Number(Math.min(duration - 0.2, (i + 1) * step).toFixed(1));
     if (e <= s) break;
 
-    // Xác định đang ở Hồi nào của video (0.0 -> 1.0)
-    const progress = i / numSteps;
+    // 🌟 Tính toán Hồi dựa trên thời gian thực tế toàn cục của video
+    const globalTime = offset + s;
+    const progress = Math.min(1.0, Math.max(0.0, globalTime / wholeDuration));
+
     let pool: string[];
-    if (progress < 0.2) pool = act1_Intro;
+    if (progress < 0.20 && globalTime <= 25) pool = act1_Intro;
     else if (progress < 0.45) pool = act2_BuildUp;
-    else if (progress < 0.7) pool = act3_Conflict;
+    else if (progress < 0.70) pool = act3_Conflict;
     else if (progress < 0.88) pool = act4_Climax;
     else pool = act5_Ending;
 
     // Chọn câu chưa từng sử dụng
-    let chosenSentence = pool[i % pool.length];
+    let chosenSentence = "";
     for (const candidate of pool) {
       if (!usedSentences.has(candidate)) {
         chosenSentence = candidate;
         break;
       }
     }
+
+    if (!chosenSentence) {
+      const fallbackPools = globalTime > 25
+        ? [act2_BuildUp, act3_Conflict, act4_Climax, act5_Ending]
+        : [act1_Intro, act2_BuildUp, act3_Conflict, act4_Climax, act5_Ending];
+      for (const p of fallbackPools) {
+        for (const candidate of p) {
+          if (!usedSentences.has(candidate)) {
+            chosenSentence = candidate;
+            break;
+          }
+        }
+        if (chosenSentence) break;
+      }
+    }
+
+    if (!chosenSentence) {
+      const minLabel = Math.floor(globalTime / 60);
+      const secLabel = Math.round(globalTime % 60);
+      chosenSentence = `Quan sát ở phút ${minLabel} giây ${secLabel}, tình thế của các nhân vật ngày càng trở nên phức tạp và khó đoán.`;
+    }
+
     usedSentences.add(chosenSentence);
 
     // Lồng ghép lời thoại bóc băng thực tế của video theo đúng trình tự thời gian
@@ -472,6 +507,7 @@ NGUYÊN TẮC BẮT BUỘC:
       resultJson = generateSmartReviewFallback({
         duration: totalDuration,
         startOffset,
+        totalVideoDuration: Number(body.totalVideoDuration) || (startOffset + totalDuration),
         reviewStyle,
         density,
         videoTitle,
