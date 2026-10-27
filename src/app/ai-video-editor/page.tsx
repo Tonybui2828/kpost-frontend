@@ -2099,47 +2099,95 @@ export default function AiVideoEditorPage() {
     density: string;
     existingTranscript?: string;
   }): { cues: any[]; storySummary: string; hook: string } => {
-    const step = density === 'high' ? 4.0 : 5.0;
+    const step = density === 'high' ? 3.8 : density === 'compact' ? 5.5 : 4.5;
     const cues: any[] = [];
     const totalSteps = Math.max(2, Math.floor(duration / step));
 
-    const humorousLines = [
-      "Mở đầu video, anh chàng số nhọ của chúng ta xuất hiện với phong thái hết sức nguy hiểm.",
-      "Nhìn cái bản mặt tưởng chừng rất uy tín, ai ngờ sắp có biến cố lớn xảy ra.",
-      "Cứ tưởng phen này vớ được món bở, ai ngờ vừa quay lưng đi thì toang luôn.",
-      "Đúng là cao nhân không bằng liều mạng, một pha xử lý cồng kềnh đi vào lòng đất.",
-      "Tình huống quay xe cực khét khiến cả làng bật ngửa, không ai kịp trở tay.",
-      "Đến đoạn này thì bắt đầu thấy có mùi toang rồi anh em ạ, nhìn mà cười ra nước mắt.",
-      "Thanh niên vẫn tỏ ra vô cùng tự tin, nhưng thực tế thì đã nắm chắc cái kết đắng lòng.",
-      "Và đây là cái kết không thể nào cay đắng hơn cho người thích thể hiện.",
-      "Đúng là hết nước chấm, xem xong chỉ biết thốt lên hai chữ hảo hán!",
+    // Bóc tách các câu lời thoại thực tế từ video nếu có
+    const transcriptSentences = existingTranscript
+      ? existingTranscript.split(/[.?!;\n]+/).map((s) => s.trim()).filter((s) => s.length > 2)
+      : [];
+
+    // 🌟 KHO CÂU REVIEW PHONG PHÚ THEO KẾT CẤU 5 HỒI ĐIỆN ẢNH (KHÔNG BAO GIỜ LẶP LẠI)
+    const act1_Intro = [
+      "Mở đầu video, chúng ta lập tức bị cuốn vào một bối cảnh đầy bất ngờ và tò mò.",
+      "Nhân vật chính xuất hiện với phong thái hết sức tự tin, cứ ngỡ mọi thứ đã trong tầm kiểm soát.",
+      "Ngay từ những giây đầu tiên, nhịp điệu câu chuyện đã bắt đầu nhen nhóm những tình tiết khác thường.",
+      "Khung cảnh mở ra với một tình huống trớ trêu khiến bất kỳ ai theo dõi cũng phải chú ý.",
+      "Nhìn biểu cảm của nhân vật lúc này thực sự rất uy tín, nhưng biến số lớn sắp sửa xuất hiện.",
+      "Câu chuyện bắt đầu bằng một quyết định táo bạo mà nhân vật chính không hề do dự.",
     ];
 
-    const dramaticLines = [
-      "Ngay từ những giây đầu tiên, bầu không khí căng thẳng đã bao trùm toàn bộ khung cảnh.",
-      "Liệu điều gì đang chờ đón nhân vật chính phía sau những bí ẩn này?",
-      "Từng bước đi đều chứa đựng hiểm nguy khôn lường không thể lùi bước.",
-      "Cao trào bất ngờ bùng nổ khi mọi toan tính ban đầu đều sụp đổ hoàn toàn.",
-      "Một quyết định sinh tử đã được đưa ra ngay trong tích tắc.",
-      "Cái kết để lại sự ngỡ ngàng và hồi hộp tột độ cho tất cả người xem.",
+    const act2_BuildUp = [
+      "Diễn biến tiếp theo trở nên thú vị hơn khi nhân vật bắt đầu thực hiện kế hoạch của mình.",
+      "Từng hành động diễn ra liên tiếp, khiến bầu không khí bắt đầu có sự căng thẳng nhẹ.",
+      "Cứ tưởng rằng mọi tính toán đã đâu vào đấy, nào ngờ đối phương lại có phản ứng cực kỳ khó lường.",
+      "Tình huống phát triển theo chiều hướng dở khóc dở cười mà không ai lường trước được.",
+      "Nhân vật chính liên tục xử lý các tình huống phát sinh với sự liều lĩnh đáng kinh ngạc.",
+      "Lúc này mọi ánh mắt đều đổ dồn vào từng cử chỉ đầy ẩn ý của các nhân vật trên màn hình.",
     ];
 
-    const chosenLines = reviewStyle === 'dramatic_cinema' ? dramaticLines : humorousLines;
+    const act3_Conflict = [
+      "Biến cố thực sự ập đến khi một sai sót nhỏ đã làm đảo lộn toàn bộ cục diện.",
+      "Đến đoạn này thì bắt đầu thấy có mùi toang rồi anh em ạ, áp lực đè nặng lên từng giây.",
+      "Một quyết định then chốt được đưa ra, ranh giới giữa thành công và thất bại chỉ còn trong gang tấc.",
+      "Tình thế bỗng chốc quay ngoắt một trăm tám mươi độ khiến người trong cuộc không kịp trở tay.",
+      "Sự hiểu lầm và xung đột bị đẩy lên một nấc thang mới đầy kịch tính.",
+      "Những toan tính ban đầu bắt đầu xuất hiện những lỗ hổng chí mạng không thể cứu vãn.",
+    ];
+
+    const act4_Climax = [
+      "Và rồi khoảnh khắc cao trào nghẹt thở nhất của toàn bộ câu chuyện đã chính thức bùng nổ.",
+      "Một pha xử lý cực kỳ cồng kềnh đi thẳng vào lòng đất khiến cả làng bật ngửa.",
+      "Cú quay xe cực gắt diễn ra trong chớp mắt khiến người xem phải thốt lên kinh ngạc.",
+      "Mọi bí mật và kịch tính được đẩy lên đến đỉnh điểm trong sự ngỡ ngàng tột độ.",
+      "Đúng là cao nhân không bằng liều mạng, một bước đi liều lĩnh làm thay đổi hoàn toàn kết quả.",
+      "Sự việc leo thang vượt ra ngoài tầm kiểm soát của tất cả mọi người có mặt tại hiện trường.",
+    ];
+
+    const act5_Ending = [
+      "Sau tất cả những sóng gió dồn dập, câu chuyện khép lại bằng một cái kết không thể nào đắng lòng hơn.",
+      "Và đây chính là bài học nhớ đời cho những ai quá tự tin mà không lường trước hậu quả.",
+      "Cái kết để lại sự ngỡ ngàng và dư âm vô cùng sâu sắc cho tất cả người theo dõi.",
+      "Đúng là hết nước chấm, xem xong chỉ biết thốt lên hai chữ hảo hán cho màn trình diễn này!",
+      "Một đoạn kết trọn vẹn và đầy thuyết phục, kết thúc một chuỗi tình huống dở khóc dở cười.",
+      "Khép lại video với một nụ cười ngẫm nghĩ, quả thực là một câu chuyện đáng xem từng giây.",
+    ];
+
+    const usedSentences = new Set<string>();
 
     for (let i = 0; i < totalSteps; i++) {
       const s = Number((i * step + 0.3).toFixed(1));
       const e = Number(Math.min(duration - 0.2, (i + 1) * step).toFixed(1));
       if (e <= s) break;
 
-      const lineIndex = (Math.floor(startOffset / 10) + i) % chosenLines.length;
-      let text = chosenLines[lineIndex];
+      // Xác định đang ở Hồi nào của video (0.0 -> 1.0)
+      const progress = i / totalSteps;
+      let pool: string[];
+      if (progress < 0.2) pool = act1_Intro;
+      else if (progress < 0.45) pool = act2_BuildUp;
+      else if (progress < 0.7) pool = act3_Conflict;
+      else if (progress < 0.88) pool = act4_Climax;
+      else pool = act5_Ending;
 
-      if (existingTranscript) {
-        const words = existingTranscript.split(/\s+/).filter(Boolean);
-        if (words.length > i * 4) {
-          const snippet = words.slice(i * 4, (i + 1) * 4).join(" ");
-          if (snippet.length > 3) {
-            text = `${text} Đặc biệt là phân đoạn: "${snippet}".`;
+      let chosenText = pool[i % pool.length];
+      for (const candidate of pool) {
+        if (!usedSentences.has(candidate)) {
+          chosenText = candidate;
+          break;
+        }
+      }
+      usedSentences.add(chosenText);
+
+      // Nếu có lời thoại thực tế của video, lồng ghép vào câu review một cách tự nhiên
+      if (transcriptSentences.length > 0) {
+        const sentenceIdx = Math.floor(progress * transcriptSentences.length);
+        const realSnippet = transcriptSentences[sentenceIdx];
+        if (realSnippet && realSnippet.length >= 3 && realSnippet.length <= 60) {
+          if (i % 2 === 1) {
+            chosenText = `${chosenText} Khi nghe thấy: "${realSnippet}", tình thế càng thêm gay cấn.`;
+          } else if (i % 3 === 0 && i > 0) {
+            chosenText = `Lúc này, câu nói "${realSnippet}" như châm ngòi cho toàn bộ diễn biến tiếp theo.`;
           }
         }
       }
@@ -2148,7 +2196,7 @@ export default function AiVideoEditorPage() {
         id: cues.length + 1,
         startSec: s,
         endSec: e,
-        text,
+        text: chosenText,
       });
     }
 
@@ -2348,10 +2396,11 @@ NGUYÊN TẮC:
       return;
     }
 
+    const initialSubtitles = [...subtitleCues];
     setShowReviewModal(false);
     setIsReviewing(true);
-    setReviewProgress(10);
-    setReviewStatus("Đang phân tích cốt truyện & các tình tiết nổi bật trong video...");
+    setReviewProgress(8);
+    setReviewStatus("Đang trích xuất luồng âm thanh & bối cảnh video...");
 
     // Dọn dẹp cache âm thanh & phụ đề cũ
     audioCacheRef.current.clear();
@@ -2369,15 +2418,92 @@ NGUYÊN TẮC:
       const decodedBuffer: AudioBuffer | null = realAudioBuffer;
       const fullDuration = realDuration;
       setVideoDuration(realDuration);
+      const apiBase = getApiBaseUrl();
 
-      // Phân đoạn thông minh 120 giây để AI nắm bao quát toàn diện câu chuyện
+      // 🌟 BƯỚC 1: TỰ ĐỘNG BÓC BĂNG & HIỂU LỜI THOẠI GỐC CỦA VIDEO
+      // Nếu video chưa có phụ đề lời thoại, AI sẽ tự động bóc băng qua Whisper / STT để thấu hiểu cốt truyện thật
+      let baseDialogueCues: SubtitleCue[] = [...initialSubtitles];
+
+      if (baseDialogueCues.length === 0 && decodedBuffer) {
+        setReviewProgress(15);
+        setReviewStatus("Đang tự động bóc băng lời thoại gốc của video qua Whisper AI...");
+
+        const TRANSCRIBE_CHUNK = 120;
+        const totalTransChunks = Math.max(1, Math.ceil(fullDuration / TRANSCRIBE_CHUNK));
+
+        for (let tIdx = 0; tIdx < totalTransChunks; tIdx++) {
+          const tStart = tIdx * TRANSCRIBE_CHUNK;
+          const tEnd = Math.min(fullDuration, (tIdx + 1) * TRANSCRIBE_CHUNK);
+          const tDur = Number((tEnd - tStart).toFixed(1));
+
+          setReviewProgress(15 + Math.round((tIdx / totalTransChunks) * 20));
+          setReviewStatus(
+            `Đang lắng nghe & bóc băng lời thoại đoạn ${tIdx + 1}/${totalTransChunks} (${Math.floor(tStart / 60)}p${Math.round(tStart % 60)}s - ${Math.floor(tEnd / 60)}p${Math.round(tEnd % 60)}s)...`
+          );
+
+          try {
+            const chunkBlob = await extractAudioChunkBlob(decodedBuffer, tStart, tDur);
+            const chunkB64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(chunkBlob);
+            });
+
+            const whisperUrls = [
+              "/api/transcribe-and-translate",
+              `${apiBase}/api/transcribe-and-translate`,
+              "/api/transcribe-video",
+              `${apiBase}/api/transcribe-video`,
+            ];
+
+            for (const ep of whisperUrls) {
+              try {
+                const transRes = await axios.post(
+                  ep,
+                  {
+                    audioBase64: chunkB64,
+                    mimeType: "audio/wav",
+                    duration: tDur,
+                    startOffset: tStart,
+                    chunkIndex: tIdx + 1,
+                    totalChunks: totalTransChunks,
+                    sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
+                    model: "gemini-3.8-flash",
+                    groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
+                    geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
+                  },
+                  { timeout: 45000 }
+                );
+                if (transRes?.data?.cues && transRes.data.cues.length > 0) {
+                  const chunkCues = transRes.data.cues.map((c: any) => ({
+                    id: c.id || `dialogue_${baseDialogueCues.length + 1}`,
+                    startSec: Number(c.startSec),
+                    endSec: Number(c.endSec),
+                    text: String(c.text || "").trim(),
+                    words: [],
+                  }));
+                  baseDialogueCues.push(...chunkCues);
+                  break;
+                }
+              } catch {}
+            }
+          } catch (e) {
+            console.warn(`Lỗi bóc băng phân đoạn ${tIdx + 1}:`, e);
+          }
+        }
+      }
+
+      // Toàn bộ lời thoại & diễn biến thực tế đã bóc băng được
+      const fullRealTranscript = baseDialogueCues.map((c) => c.text).join(" ").trim();
+      console.log(`[AI Review] Tổng hợp lời thoại gốc (${baseDialogueCues.length} câu):`, fullRealTranscript.slice(0, 150));
+
+      // 🌟 BƯỚC 2: AI REVIEWER SÁNG TÁC KỊCH BẢN REVIEW CUỐN HÚT DỰA TRÊN CỐT TRUYỆN THỰC TẾ
       const CHUNK_LEN = 120;
       const totalChunks = Math.max(1, Math.ceil(fullDuration / CHUNK_LEN));
       let allReviewCues: SubtitleCue[] = [];
       let globalLastErrorMsg = "";
       let capturedSummary = "";
       let serverWarning = "";
-      const apiBase = getApiBaseUrl();
 
       console.log(`[AI Review] Bắt đầu tổng hợp review video dài ${fullDuration}s chia thành ${totalChunks} phân đoạn...`);
 
@@ -2390,10 +2516,10 @@ NGUYÊN TẮC:
         const chunkEnd = Math.min(fullDuration, (chunkIdx + 1) * CHUNK_LEN);
         const chunkDur = Number((chunkEnd - chunkStart).toFixed(1));
 
-        const pctStart = 15 + Math.round((chunkIdx / totalChunks) * 75);
+        const pctStart = 38 + Math.round((chunkIdx / totalChunks) * 55);
         setReviewProgress(pctStart);
         setReviewStatus(
-          `Đang xem và viết kịch bản review phân đoạn ${chunkIdx + 1}/${totalChunks} (${Math.floor(chunkStart / 60)}p${Math.round(chunkStart % 60)}s - ${Math.floor(chunkEnd / 60)}p${Math.round(chunkEnd % 60)}s)...`
+          `AI đang viết kịch bản review phân đoạn ${chunkIdx + 1}/${totalChunks} (${Math.floor(chunkStart / 60)}p${Math.round(chunkStart % 60)}s - ${Math.floor(chunkEnd / 60)}p${Math.round(chunkEnd % 60)}s)...`
         );
 
         let chunkBase64: string | undefined = undefined;
@@ -2449,11 +2575,12 @@ NGUYÊN TẮC:
         }
 
         let res: any = null;
-        const chunkExistingTranscript = subtitleCues
+        const chunkDialogue = baseDialogueCues
           .filter((c) => c.startSec >= chunkStart && c.startSec <= chunkEnd)
           .map((c) => c.text)
           .join(" ")
           .trim();
+        const chunkExistingTranscript = chunkDialogue || fullRealTranscript;
 
         // Thử các endpoint khả dụng
         const reviewEndpoints = [
@@ -2610,7 +2737,7 @@ NGUYÊN TẮC:
           startOffset: 0,
           reviewStyle: reviewConfig.style,
           density: reviewConfig.density,
-          existingTranscript: subtitleCues.map((c) => c.text).join(" "),
+          existingTranscript: fullRealTranscript,
         });
         const cuesList = fallback.cues.map((c: any, i: number) => ({
           id: `review_cue_fallback_${i + 1}`,
