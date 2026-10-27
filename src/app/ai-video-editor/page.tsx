@@ -426,6 +426,7 @@ export default function AiVideoEditorPage() {
   const [convertStatusMsg, setConvertStatusMsg] = useState<string>("");
   const [hasNoVideoTrack, setHasNoVideoTrack] = useState<boolean>(false);
   const [isDetectedHevc, setIsDetectedHevc] = useState<boolean>(false);
+  const [videoAspect, setVideoAspect] = useState<"9:16" | "16:9">("9:16");
 
   // Export State
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -3411,7 +3412,7 @@ NGUYÊN TẮC:
       ctx.restore();
     }
 
-    // 4. VẼ PHỤ ĐỀ TIKTOK (NẰM 1/4 TỪ GÓC DƯỚI LÊN, TRÊN BANNER VÀ TRONG TẦM MẮT)
+    // 4. VẼ PHỤ ĐỀ CHUẨN CAPCUT (TỰ ĐỘNG CÂN CHỈNH 16:9 & 9:16, TỰ NGẮT DÒNG VÀ CO GIÃN THÔNG MINH, KHÔNG TRÀN MÀN HÌNH)
     if (subtitleConfig.enabled && subtitleCues.length > 0) {
       const adjTime = currentSec + subtitleConfig.offsetSeconds;
       const matchedCue = subtitleCues.find(
@@ -3420,38 +3421,199 @@ NGUYÊN TẮC:
 
       if (matchedCue) {
         ctx.save();
-        const subY = height * 0.75;
-        const fontSize = Math.round((subtitleConfig.fontSize || 20) * (width / 360));
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        const isHorizontal = width > height;
+        const minDim = Math.min(width, height);
+
+        // Vùng an toàn chuẩn CapCut: Phụ đề không bao giờ vượt quá tỷ lệ an toàn của màn hình
+        // Với 16:9: Rộng tối đa 80% chiều rộng để không sát 2 mép
+        // Với 9:16: Rộng tối đa 84% chiều rộng để tránh các icon tương tác bên lề TikTok
+        const maxSafeWidth = isHorizontal ? Math.round(width * 0.80) : Math.round(width * 0.84);
+
+        // Cỡ chữ chuẩn CapCut theo tỷ lệ khung hình
+        // 16:9: Cỡ chữ ~3.8% chiều cao (ví dụ 1080p -> ~41px)
+        // 9:16: Cỡ chữ ~4.4% chiều rộng (ví dụ 1080p -> ~48px)
+        const userScale = (subtitleConfig.fontSize || 20) / 20;
+        let fontSize = Math.round(userScale * minDim * (isHorizontal ? 0.038 : 0.044));
+        fontSize = Math.max(16, fontSize);
+
+        // Danh sách từ trong câu
+        const rawWords: { word: string; startSec: number; endSec: number }[] =
+          matchedCue.words && matchedCue.words.length > 0
+            ? matchedCue.words
+            : matchedCue.text
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((w) => ({
+                  word: w,
+                  startSec: matchedCue.startSec,
+                  endSec: matchedCue.endSec,
+                }));
+
+        // Thuật toán tự động ngắt dòng thông minh (CapCut standard: tối đa 2 dòng, ngắt cân xứng đẹp mắt)
+        interface SubLine {
+          words: { word: string; startSec: number; endSec: number; width: number }[];
+          totalWidth: number;
+          text: string;
+        }
+
+        let lines: SubLine[] = [];
+        let spaceWidth = 0;
+
+        // Vòng lặp tự động co nhỏ font nếu câu quá dài để luôn nằm gọn trong 2 dòng và trong maxSafeWidth
+        let attempts = 0;
+        while (attempts < 8) {
+          attempts++;
+          ctx.font = `bold ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+          spaceWidth = ctx.measureText(" ").width;
+
+          const measuredWords = rawWords.map((rw) => ({
+            ...rw,
+            width: ctx.measureText(rw.word).width,
+          }));
+
+          const totalSingleLineWidth =
+            measuredWords.reduce((sum, w) => sum + w.width, 0) +
+            Math.max(0, measuredWords.length - 1) * spaceWidth;
+
+          if (totalSingleLineWidth <= maxSafeWidth) {
+            // Vừa vặn trên 1 dòng
+            lines = [
+              {
+                words: measuredWords,
+                totalWidth: totalSingleLineWidth,
+                text: measuredWords.map((w) => w.word).join(" "),
+              },
+            ];
+            break;
+          }
+
+          // Cần chia thành 2 dòng cân xứng (Balanced wrap chuẩn CapCut)
+          let bestSplitIdx = Math.ceil(measuredWords.length / 2);
+          let minDiff = Infinity;
+
+          for (let i = 1; i < measuredWords.length; i++) {
+            const line1Words = measuredWords.slice(0, i);
+            const line2Words = measuredWords.slice(i);
+
+            const w1 =
+              line1Words.reduce((sum, w) => sum + w.width, 0) +
+              Math.max(0, line1Words.length - 1) * spaceWidth;
+            const w2 =
+              line2Words.reduce((sum, w) => sum + w.width, 0) +
+              Math.max(0, line2Words.length - 1) * spaceWidth;
+
+            if (w1 <= maxSafeWidth && w2 <= maxSafeWidth) {
+              const diff = Math.abs(w1 - w2);
+              if (diff < minDiff) {
+                minDiff = diff;
+                bestSplitIdx = i;
+              }
+            }
+          }
+
+          const l1Words = measuredWords.slice(0, bestSplitIdx);
+          const l2Words = measuredWords.slice(bestSplitIdx);
+
+          const l1Width =
+            l1Words.reduce((sum, w) => sum + w.width, 0) +
+            Math.max(0, l1Words.length - 1) * spaceWidth;
+          const l2Width =
+            l2Words.reduce((sum, w) => sum + w.width, 0) +
+            Math.max(0, l2Words.length - 1) * spaceWidth;
+
+          if (l1Width <= maxSafeWidth && l2Width <= maxSafeWidth) {
+            lines = [
+              { words: l1Words, totalWidth: l1Width, text: l1Words.map((w) => w.word).join(" ") },
+              { words: l2Words, totalWidth: l2Width, text: l2Words.map((w) => w.word).join(" ") },
+            ];
+            break;
+          }
+
+          // Nếu vẫn vượt quá, tự động giảm cỡ chữ xuống 10% và thử lại
+          fontSize = Math.max(14, Math.round(fontSize * 0.9));
+        }
+
+        if (lines.length === 0) {
+          ctx.font = `bold ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+          lines = [
+            {
+              words: rawWords.map((rw) => ({ ...rw, width: ctx.measureText(rw.word).width })),
+              totalWidth: maxSafeWidth,
+              text: matchedCue.text,
+            },
+          ];
+        }
+
+        // Tính toán kích thước hộp nền phụ đề CapCut
+        const maxLineWidth = Math.max(...lines.map((l) => l.totalWidth));
+        const padX = Math.round(fontSize * 0.7);
+        const padY = Math.round(fontSize * 0.38);
+        const lineHeight = Math.round(fontSize * 1.32);
+        const boxWidth = Math.min(width * 0.94, maxLineWidth + padX * 2);
+        const boxHeight = lines.length * lineHeight + padY * 2;
+        const boxRadius = Math.round(fontSize * 0.35);
+
+        // Vị trí Y chuẩn CapCut:
+        // 16:9 -> Nằm ở 83% chiều cao (vùng 1/3 dưới)
+        // 9:16 -> Nằm ở 74% chiều cao (cách đáy 26% để tránh nút icon TikTok)
+        const boxCenterY = isHorizontal ? height * 0.83 : height * 0.74;
+        let boxTopY = Math.round(boxCenterY - boxHeight / 2);
+
+        // Chống đè lên Banner quảng cáo nếu banner đang bật
+        if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
+          const bannerH = Math.round(72 * (height / 800));
+          const bannerY = height - bannerH - Math.round(20 * (height / 800));
+          if (boxTopY + boxHeight >= bannerY - 10) {
+            boxTopY = bannerY - boxHeight - Math.round(12 * (height / 800));
+          }
+        }
+
+        // Giữ vị trí trong khung hình an toàn
+        boxTopY = Math.max(Math.round(height * 0.08), Math.min(height - boxHeight - 20, boxTopY));
+        const boxLeftX = Math.round((width - boxWidth) / 2);
+
+        // 1. Vẽ hộp nền đen mờ bo tròn chuẩn CapCut
+        ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+        ctx.shadowBlur = Math.round(fontSize * 0.4);
+        ctx.shadowOffsetY = Math.round(fontSize * 0.15);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        ctx.beginPath();
+        ctx.roundRect(boxLeftX, boxTopY, boxWidth, boxHeight, boxRadius);
+        ctx.fill();
+
+        // Viền mỏng tinh tế
+        ctx.shadowColor = "transparent";
+        ctx.lineWidth = Math.max(1, Math.round(fontSize * 0.05));
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.stroke();
+
+        // 2. Vẽ chữ phụ đề (viền đen nét căng, chữ vàng/trắng nổi bật, hỗ trợ karaoke nhấp nháy theo từ)
+        ctx.font = `900 ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        const words = matchedCue.words && matchedCue.words.length > 0
-          ? matchedCue.words
-          : matchedCue.text.split(" ").map((w) => ({ word: w, startSec: matchedCue.startSec, endSec: matchedCue.endSec }));
+        lines.forEach((line, lineIdx) => {
+          const lineY = boxTopY + padY + lineIdx * lineHeight + lineHeight / 2;
+          let curWordX = (width - line.totalWidth) / 2;
 
-        const spaceWidth = ctx.measureText(" ").width;
-        const wordWidths = words.map((w) => ctx.measureText(w.word).width);
-        const totalTextWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1);
+          line.words.forEach((w) => {
+            const isWordActive = adjTime >= w.startSec && adjTime <= w.endSec + 0.18;
+            const wordCenterX = curWordX + w.width / 2;
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-        const padX = 24;
-        const padY = 12;
-        ctx.roundRect((width - totalTextWidth) / 2 - padX, subY - fontSize / 2 - padY, totalTextWidth + padX * 2, fontSize + padY * 2, 16);
-        ctx.fill();
+            // Viền chữ màu đen đậm để chữ luôn nổi khối trên mọi nền video
+            ctx.lineWidth = Math.max(3.5, Math.round(fontSize * 0.14));
+            ctx.strokeStyle = "#000000";
+            ctx.lineJoin = "round";
+            ctx.miterLimit = 2;
+            ctx.strokeText(w.word, wordCenterX, lineY);
 
-        let startX = (width - totalTextWidth) / 2;
-        words.forEach((w, wIdx) => {
-          const isWordActive = adjTime >= w.startSec && adjTime <= w.endSec + 0.15;
+            // Màu chữ: Vàng rực rỡ khi đang đọc hoặc cấu hình highlight, trắng cho từ còn lại
+            ctx.fillStyle = isWordActive ? (subtitleConfig.highlightColor || "#FACC15") : "#FFFFFF";
+            ctx.fillText(w.word, wordCenterX, lineY);
 
-          ctx.lineWidth = 4;
-          ctx.strokeStyle = "#000000";
-          ctx.strokeText(w.word, startX + wordWidths[wIdx] / 2, subY);
-
-          ctx.fillStyle = isWordActive ? "#FACC15" : "#FFFFFF";
-          ctx.fillText(w.word, startX + wordWidths[wIdx] / 2, subY);
-
-          startX += wordWidths[wIdx] + spaceWidth;
+            curWordX += w.width + spaceWidth;
+          });
         });
 
         ctx.restore();
@@ -4994,6 +5156,40 @@ NGUYÊN TẮC:
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Chuyển đổi nhanh tỷ lệ xem trước 16:9 / 9:16 chuẩn CapCut */}
+                  <div className="flex items-center bg-[#13223F] p-0.5 rounded-xl border border-[#1E3867]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoAspect("9:16");
+                        setExportOptions((p) => ({ ...p, aspectRatio: "9:16" }));
+                      }}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        videoAspect === "9:16"
+                          ? "bg-[#1877F2] text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                      title="Xem trước tỷ lệ dọc 9:16 (TikTok, Reels, Shorts)"
+                    >
+                      📱 9:16
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoAspect("16:9");
+                        setExportOptions((p) => ({ ...p, aspectRatio: "16:9" }));
+                      }}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        videoAspect === "16:9"
+                          ? "bg-[#1877F2] text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                      title="Xem trước tỷ lệ ngang 16:9 (YouTube, Facebook, PC)"
+                    >
+                      🖥️ 16:9
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setShowEffectsModal(true)}
@@ -5039,8 +5235,14 @@ NGUYÊN TẮC:
                 </div>
               </div>
 
-              {/* KHUNG VIDEO 9:16 */}
-              <div className="w-full bg-[#0a0204] rounded-2xl overflow-hidden relative border border-[#1E3867] flex items-center justify-center aspect-[9/16] max-h-[560px] mx-auto shadow-2xl">
+              {/* KHUNG VIDEO: TỰ ĐỘNG CÂN CHỈNH TỶ LỆ 16:9 VÀ 9:16 CHUẨN CAPCUT */}
+              <div
+                className={`w-full bg-[#0a0204] rounded-2xl overflow-hidden relative border border-[#1E3867] flex items-center justify-center mx-auto shadow-2xl transition-all duration-300 ${
+                  videoAspect === "16:9"
+                    ? "aspect-video max-h-[500px]"
+                    : "aspect-[9/16] max-h-[560px]"
+                }`}
+              >
                 {videoUrl && (
                   <>
                     {/* OVERLAY ĐANG CHUYỂN MÃ H.264 */}
@@ -5131,13 +5333,26 @@ NGUYÊN TẮC:
                         }
                       }}
                       onLoadedMetadata={() => {
-                        if (videoRef.current && videoRef.current.duration) {
+                        if (videoRef.current) {
                           const dur = videoRef.current.duration;
-                          setVideoDuration(dur);
-                          setExportOptions((p) => ({
-                            ...p,
-                            customEndSec: p.customEndSec === 300 || p.customEndSec > dur ? Math.min(dur, 180) : p.customEndSec,
-                          }));
+                          if (dur) {
+                            setVideoDuration(dur);
+                            setExportOptions((p) => ({
+                              ...p,
+                              customEndSec: p.customEndSec === 300 || p.customEndSec > dur ? Math.min(dur, 180) : p.customEndSec,
+                            }));
+                          }
+                          const vw = videoRef.current.videoWidth;
+                          const vh = videoRef.current.videoHeight;
+                          if (vw && vh) {
+                            const isLandscape = vw > vh * 1.15;
+                            const detectedAspect = isLandscape ? "16:9" : "9:16";
+                            setVideoAspect(detectedAspect);
+                            setExportOptions((p) => ({
+                              ...p,
+                              aspectRatio: isLandscape ? "16:9" : "9:16",
+                            }));
+                          }
                         }
                         setVideoLoadError(null);
                         setHasNoVideoTrack(false);
@@ -5257,14 +5472,21 @@ NGUYÊN TẮC:
                       </div>
                     )}
 
-                    {/* 🌟 PHỤ ĐỀ CHUẨN 3-5 TỪ: NẰM 1/4 TỪ GÓC DƯỚI MÀN HÌNH LÊN VÀ NẰM GỌN TRONG VIDEO */}
+                    {/* 🌟 PHỤ ĐỀ CHUẨN CAPCUT: TỰ ĐỘNG CĂN CHỈNH TỶ LỆ 16:9 VÀ 9:16, TỰ NGẮT DÒNG KHÔNG BỊ TRÀN CHỮ */}
                     {subtitleConfig.enabled && !compareOriginal && currentSubtitleCue && (
-                      <div className="absolute bottom-[25%] left-0 right-0 z-40 pointer-events-none flex justify-center px-4">
-                        <div className="bg-black/85 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 shadow-2xl max-w-[80%] text-center animate-in fade-in zoom-in-95 duration-100">
+                      <div
+                        className={`absolute left-0 right-0 z-40 pointer-events-none flex justify-center px-4 transition-all duration-200 ${
+                          videoAspect === "16:9" ? "bottom-[14%]" : "bottom-[24%]"
+                        }`}
+                      >
+                        <div className="bg-black/85 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-2xl max-w-[82%] text-center animate-in fade-in zoom-in-95 duration-100">
                           <p
-                            className="font-black leading-snug tracking-wide text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
+                            className="font-black leading-snug tracking-wide text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] break-words whitespace-normal [text-wrap:balance]"
                             style={{
-                              fontSize: `${Math.min(22, Math.max(16, subtitleConfig.fontSize || 20))}px`,
+                              fontSize:
+                                videoAspect === "16:9"
+                                  ? `${Math.min(20, Math.max(14, (subtitleConfig.fontSize || 20) * 0.9))}px`
+                                  : `${Math.min(22, Math.max(15, subtitleConfig.fontSize || 20))}px`,
                               textShadow: "0 0 8px rgba(0,0,0,0.95), 0 2px 4px #000",
                             }}
                           >
