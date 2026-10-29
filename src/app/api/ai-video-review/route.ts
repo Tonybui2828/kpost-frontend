@@ -26,9 +26,9 @@ function extractJsonFromAiResponse(rawText: string): any {
 // =========================================================================
 async function callGeminiAi(apiKey: string, systemPrompt: string, parts: any[]) {
   const models = [
-    'gemini-3.8-flash',
-    'gemini-3.5-flash',
-    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
     'gemini-flash-latest',
   ];
 

@@ -37,7 +37,8 @@ import {
   Film,
   Layers,
   ExternalLink,
-  Settings
+  Settings,
+  Plus
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -452,6 +453,34 @@ export default function AiVideoEditorPage() {
   });
   const exportAbortRef = useRef<boolean>(false);
   const exportForceDownloadRef = useRef<boolean>(false);
+
+  // ✂️ SKILL AI CẮT & GHÉP VIDEO STATES
+  const [cutMergeTab, setCutMergeTab] = useState<"cut" | "merge">("cut");
+  const [episodeTitles, setEpisodeTitles] = useState<Record<string, string>>({});
+  const [isAiSuggestingSplit, setIsAiSuggestingSplit] = useState<boolean>(false);
+  const [aiSplitNotice, setAiSplitNotice] = useState<string>("");
+
+  // 🎞️ GHÉP VIDEO 3 PHẦN: Mở đầu (Intro) - Phần giữa (Main & Clips) - Phần cuối (Outro)
+  interface MergeClipItem {
+    id: string;
+    file: File | null;
+    url: string;
+    name: string;
+    duration: number;
+  }
+  const [introClip, setIntroClip] = useState<MergeClipItem | null>(null);
+  const [middleClips, setMiddleClips] = useState<MergeClipItem[]>([]);
+  const [outroClip, setOutroClip] = useState<MergeClipItem | null>(null);
+  const [mergeTransition, setMergeTransition] = useState<"fade_black" | "crossfade" | "cut">("fade_black");
+  const [mergeBurnLogo, setMergeBurnLogo] = useState<boolean>(true);
+  const [mergeBurnBanner, setMergeBurnBanner] = useState<boolean>(true);
+  const [isMerging, setIsMerging] = useState<boolean>(false);
+  const [mergeProgress, setMergeProgress] = useState<number>(0);
+  const [mergeStatus, setMergeStatus] = useState<string>("");
+
+  const introInputRef = useRef<HTMLInputElement>(null);
+  const middleInputRef = useRef<HTMLInputElement>(null);
+  const outroInputRef = useRef<HTMLInputElement>(null);
 
   // Batch Export State (Tải tất cả các tập tự động)
   const [isBatchExporting, setIsBatchExporting] = useState<boolean>(false);
@@ -1091,12 +1120,14 @@ export default function AiVideoEditorPage() {
       }
 
       const count = subtitleCues.filter((c) => c.startSec >= currentStart && c.startSec < currentEnd).length;
+      const defaultLabel = `Tập ${partIndex}`;
+      const userTitle = episodeTitles[`part_${partIndex}`] || defaultLabel;
       parts.push({
         id: `part_${partIndex}`,
         partNumber: partIndex,
         startSec: currentStart,
         endSec: currentEnd,
-        label: `Tập ${partIndex}`,
+        label: userTitle,
         timeLabel: `${formatSecToTime(currentStart)} - ${formatSecToTime(currentEnd)}`,
         cuesCount: count,
       });
@@ -1123,7 +1154,7 @@ export default function AiVideoEditorPage() {
     }
 
     return parts;
-  }, [videoDuration, exportOptions.partDurationMinutes, subtitleCues]);
+  }, [videoDuration, exportOptions.partDurationMinutes, subtitleCues, episodeTitles]);
 
   // THUẬT TOÁN GỘP CÂU TỰ ĐỘNG:
   // Nối các phân đoạn phụ đề ngắn < 0.65s thành câu hoàn chỉnh cho MC đọc liền mạch, không giật cục
@@ -2503,14 +2534,14 @@ NGUYÊN TẮC:
       return;
     }
 
-    const initialSubtitles = [...subtitleCues];
     setShowReviewModal(false);
     setIsReviewing(true);
     setReviewProgress(8);
     setReviewStatus("Đang trích xuất luồng âm thanh & bối cảnh video...");
 
-    // Dọn dẹp cache âm thanh & phụ đề cũ
+    // Dọn dẹp cache âm thanh & phụ đề cũ - TUYỆT ĐỐI KHÔNG DÙNG LẠI DỮ LIỆU CỦA VIDEO TRƯỚC
     audioCacheRef.current.clear();
+    spokenTextsHistoryRef.current.clear();
     currentSentenceSpokenRef.current = null;
     lastSpokenCueIdRef.current = null;
     setSubtitleCues([]);
@@ -2527,11 +2558,11 @@ NGUYÊN TẮC:
       setVideoDuration(realDuration);
       const apiBase = getApiBaseUrl();
 
-      // 🌟 BƯỚC 1: TỰ ĐỘNG BÓC BĂNG & HIỂU LỜI THOẠI GỐC CỦA VIDEO
-      // Nếu video chưa có phụ đề lời thoại, AI sẽ tự động bóc băng qua Whisper / STT để thấu hiểu cốt truyện thật
-      let baseDialogueCues: SubtitleCue[] = [...initialSubtitles];
+      // 🌟 BƯỚC 1: TỰ ĐỘNG BÓC BĂNG & HIỂU LỜI THOẠI GỐC CỦA VIDEO HIỆN TẠI
+      // Luôn khởi tạo mảng rỗng để bóc băng chính xác từ video đang mở, không bị dính video trước
+      let baseDialogueCues: SubtitleCue[] = [];
 
-      if (baseDialogueCues.length === 0 && decodedBuffer) {
+      if (decodedBuffer) {
         setReviewProgress(15);
         setReviewStatus("Đang tự động bóc băng lời thoại gốc của video qua Whisper AI...");
 
@@ -2579,7 +2610,7 @@ NGUYÊN TẮC:
                     chunkIndex: tIdx + 1,
                     totalChunks: totalTransChunks,
                     sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
-                    model: "gemini-3.8-flash",
+                    model: "gemini-2.5-flash",
                     groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
                     geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
                   },
@@ -2707,14 +2738,14 @@ NGUYÊN TẮC:
             res = await axios.post(
               url,
               {
-                audioBase64: chunkExistingTranscript ? undefined : chunkBase64,
+                audioBase64: chunkBase64,
                 mimeType: "audio/wav",
                 duration: chunkDur,
                 startOffset: chunkStart,
                 totalVideoDuration: fullDuration,
                 chunkIndex: chunkIdx + 1,
                 totalChunks: totalChunks,
-                videoTitle: videoName || "Video Review Hài Hước",
+                videoTitle: videoName || "Video Review AI",
                 reviewStyle: reviewConfig.style,
                 density: reviewConfig.density,
                 customPrompt: reviewConfig.customPrompt,
@@ -4372,6 +4403,434 @@ NGUYÊN TẮC:
     setIsBatchExporting(false);
   };
 
+  // ✂️ TÍNH NĂNG AI ĐỀ XUẤT CẮT PHÂN ĐOẠN THEO CỐT TRUYỆN & THỜI LƯỢNG
+  const handleAiSuggestSplit = () => {
+    setIsAiSuggestingSplit(true);
+    const dur = videoDuration || 0;
+    setTimeout(() => {
+      let suggestedMins = 3;
+      let reason = "";
+      if (dur >= 900) {
+        suggestedMins = 5;
+        reason = `🎬 Video dài ${formatSecToTime(dur)}. AI đề xuất chia 5 phút/tập: Cung cấp đầy đủ cao trào kịch tính, tối ưu hóa lượt xem và doanh thu trên Facebook Watch & TikTok!`;
+      } else if (dur >= 300) {
+        suggestedMins = 3;
+        reason = `🎬 Video dài ${formatSecToTime(dur)}. AI đề xuất chia 3 phút/tập: Độ dài vàng giúp thuật toán TikTok/Reels phân phối tối đa (High Completion Rate)!`;
+      } else if (dur >= 120) {
+        suggestedMins = 1.5;
+        reason = `🎬 Video dài ${formatSecToTime(dur)}. AI đề xuất chia 1.5 phút/tập: Tạo điểm dừng tò mò (Cliffhanger Hook) giữ chân người xem chờ tập tiếp theo!`;
+      } else {
+        suggestedMins = 1;
+        reason = `🎬 Video ngắn ${formatSecToTime(dur)}. AI đề xuất chia 1 phút/tập chuẩn Shorts!`;
+      }
+      setExportOptions((p) => ({ ...p, partDurationMinutes: suggestedMins, splitMode: "auto_parts" }));
+      setAiSplitNotice(reason);
+      setIsAiSuggestingSplit(false);
+    }, 350);
+  };
+
+  // 🎞️ HANDLERS TẢI VIDEO GHÉP 3 PHẦN
+  const handleUploadIntroVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.src = url;
+      v.onloadedmetadata = () => {
+        setIntroClip({
+          id: "intro_" + Date.now(),
+          file,
+          url,
+          name: file.name,
+          duration: v.duration || 5,
+        });
+      };
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadMiddleVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.src = url;
+      v.onloadedmetadata = () => {
+        setMiddleClips((prev) => [
+          ...prev,
+          {
+            id: "mid_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+            file,
+            url,
+            name: file.name,
+            duration: v.duration || 10,
+          },
+        ]);
+      };
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadOutroVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.src = url;
+      v.onloadedmetadata = () => {
+        setOutroClip({
+          id: "outro_" + Date.now(),
+          file,
+          url,
+          name: file.name,
+          duration: v.duration || 5,
+        });
+      };
+      e.target.value = "";
+    }
+  };
+
+  const handleMoveMiddleClip = (index: number, direction: "up" | "down") => {
+    setMiddleClips((prev) => {
+      const updated = [...prev];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= updated.length) return prev;
+      const temp = updated[index];
+      updated[index] = updated[targetIndex];
+      updated[targetIndex] = temp;
+      return updated;
+    });
+  };
+
+  const handleRemoveMiddleClip = (id: string) => {
+    setMiddleClips((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  useEffect(() => {
+    if (videoUrl) {
+      setMiddleClips((prev) => {
+        const hasMain = prev.some((c) => c.id === "main_active");
+        if (!hasMain) {
+          return [
+            {
+              id: "main_active",
+              file: selectedFile,
+              url: videoUrl,
+              name: videoName || "Video Chính (Đang xử lý)",
+              duration: videoDuration || 0,
+            },
+            ...prev,
+          ];
+        }
+        return prev.map((c) =>
+          c.id === "main_active"
+            ? { ...c, file: selectedFile, url: videoUrl, name: videoName || "Video Chính", duration: videoDuration || c.duration }
+            : c
+        );
+      });
+    }
+  }, [videoUrl, videoName, videoDuration, selectedFile]);
+
+  // 🚀 GHÉP VIDEO 3 PHẦN: MỞ ĐẦU (INTRO) - PHẦN GIỮA (MAIN & CLIPS) - PHẦN CUỐI (OUTRO) VỚI CHUYỂN CẢNH MƯỢT MÀ
+  const handleExportMergedVideo = async () => {
+    const clipsToMerge: { id: string; url: string; name: string; duration: number }[] = [];
+
+    if (introClip?.url) {
+      clipsToMerge.push({
+        id: "intro",
+        url: introClip.url,
+        name: introClip.name || "Phần Mở Đầu (Intro)",
+        duration: introClip.duration || 5,
+      });
+    }
+
+    middleClips.forEach((m, idx) => {
+      if (m.url) {
+        clipsToMerge.push({
+          id: m.id || `mid_${idx}`,
+          url: m.url,
+          name: m.name || `Video Chính #${idx + 1}`,
+          duration: m.duration || videoDuration || 10,
+        });
+      }
+    });
+
+    if (outroClip?.url) {
+      clipsToMerge.push({
+        id: "outro",
+        url: outroClip.url,
+        name: outroClip.name || "Phần Kết Thúc (Outro)",
+        duration: outroClip.duration || 5,
+      });
+    }
+
+    if (clipsToMerge.length < 2) {
+      alert("⚠️ Vui lòng tải ít nhất 2 video (ví dụ: Video Mở Đầu + Video Chính, hoặc Video Chính + Video Kết Thúc) để tiến hành ghép!");
+      return;
+    }
+
+    setIsMerging(true);
+    setMergeProgress(0);
+    setMergeStatus("Đang khởi tạo bộ giải mã & hòa trộn chuyển cảnh video...");
+
+    try {
+      // 1. Tính toán kích thước canvas theo tỷ lệ & độ phân giải mong muốn
+      let canvasW = 1920;
+      let canvasH = 1080;
+      const reqRatio = exportOptions.aspectRatio;
+      const reqRes = exportOptions.resolution;
+
+      if (reqRatio === "9:16") {
+        if (reqRes === "4k") { canvasW = 2160; canvasH = 3840; }
+        else if (reqRes === "2k") { canvasW = 1440; canvasH = 2560; }
+        else if (reqRes === "720p") { canvasW = 720; canvasH = 1280; }
+        else { canvasW = 1080; canvasH = 1920; }
+      } else if (reqRatio === "1:1") {
+        if (reqRes === "4k") { canvasW = 2160; canvasH = 2160; }
+        else if (reqRes === "2k") { canvasW = 1440; canvasH = 1440; }
+        else if (reqRes === "720p") { canvasW = 720; canvasH = 720; }
+        else { canvasW = 1080; canvasH = 1080; }
+      } else {
+        // 16:9 hoặc original
+        if (reqRes === "4k") { canvasW = 3840; canvasH = 2160; }
+        else if (reqRes === "2k") { canvasW = 2560; canvasH = 1440; }
+        else if (reqRes === "720p") { canvasW = 1280; canvasH = 720; }
+        else { canvasW = 1920; canvasH = 1080; }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
+      if (!ctx) throw new Error("Không thể khởi tạo Canvas GPU");
+
+      // Logo chuẩn bị
+      let logoImg: HTMLImageElement | null = null;
+      if (mergeBurnLogo && logoConfig.enabled && logoConfig.imageSrc) {
+        logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.src = logoConfig.imageSrc;
+        await new Promise((r) => { logoImg!.onload = r; logoImg!.onerror = r; });
+      }
+
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const destination = audioCtx.createMediaStreamDestination();
+      const canvasStream = canvas.captureStream(30);
+
+      const combinedTracks = [
+        ...canvasStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks(),
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      let mimeType = "video/webm;codecs=vp9,opus";
+      let actualExt = "webm";
+      if (exportOptions.format === "mp4") {
+        const mp4Candidates = [
+          "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+          "video/mp4;codecs=avc1",
+          "video/mp4",
+        ];
+        const supp = mp4Candidates.find((m) => MediaRecorder.isTypeSupported(m));
+        if (supp) {
+          mimeType = supp;
+          actualExt = "mp4";
+        }
+      }
+
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType,
+        videoBitsPerSecond: reqRes === "4k" ? 30_000_000 : reqRes === "2k" ? 22_000_000 : 16_000_000,
+      });
+
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.start(100);
+
+      const totalEstimatedSec = clipsToMerge.reduce((acc, c) => acc + (c.duration || 5), 0);
+      let cumulativeTimeSec = 0;
+      const transitionDuration = 0.8;
+
+      for (let clipIdx = 0; clipIdx < clipsToMerge.length; clipIdx++) {
+        const currentClip = clipsToMerge[clipIdx];
+        setMergeStatus(`Đang xử lý ghép [${clipIdx + 1}/${clipsToMerge.length}]: ${currentClip.name}...`);
+
+        const vEl = document.createElement("video");
+        vEl.crossOrigin = "anonymous";
+        vEl.muted = false;
+        vEl.playsInline = true;
+        vEl.preload = "auto";
+        vEl.src = currentClip.url;
+
+        await new Promise<void>((resolve) => {
+          vEl.onloadedmetadata = () => resolve();
+          vEl.onerror = () => resolve();
+          setTimeout(resolve, 3000);
+        });
+
+        try {
+          const srcNode = audioCtx.createMediaElementSource(vEl);
+          srcNode.connect(destination);
+        } catch {}
+
+        await vEl.play().catch(() => {});
+        const clipDur = vEl.duration || currentClip.duration || 5;
+
+        await new Promise<void>((resolveClip) => {
+          let reqId: number;
+          const drawFrame = () => {
+            if (vEl.ended || vEl.currentTime >= clipDur - 0.05) {
+              cancelAnimationFrame(reqId);
+              resolveClip();
+              return;
+            }
+
+            const cTime = vEl.currentTime;
+            const overallTime = cumulativeTimeSec + cTime;
+            const pct = Math.min(99, Math.round((overallTime / totalEstimatedSec) * 100));
+            setMergeProgress(pct);
+
+            ctx.fillStyle = "#030712";
+            ctx.fillRect(0, 0, canvasW, canvasH);
+
+            const vW = vEl.videoWidth || canvasW;
+            const vH = vEl.videoHeight || canvasH;
+            const scale = Math.min(canvasW / vW, canvasH / vH);
+            const drawW = vW * scale;
+            const drawH = vH * scale;
+            const drawX = (canvasW - drawW) / 2;
+            const drawY = (canvasH - drawH) / 2;
+
+            ctx.drawImage(vEl, drawX, drawY, drawW, drawH);
+
+            // Chuyển cảnh mượt mà
+            if (mergeTransition === "fade_black") {
+              if (clipIdx < clipsToMerge.length - 1 && cTime >= clipDur - transitionDuration) {
+                const fadeProgress = (cTime - (clipDur - transitionDuration)) / transitionDuration;
+                ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, Math.max(0, fadeProgress))})`;
+                ctx.fillRect(0, 0, canvasW, canvasH);
+              }
+              if (clipIdx > 0 && cTime <= transitionDuration) {
+                const fadeProgress = 1 - cTime / transitionDuration;
+                ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, Math.max(0, fadeProgress))})`;
+                ctx.fillRect(0, 0, canvasW, canvasH);
+              }
+            } else if (mergeTransition === "crossfade") {
+              if (clipIdx < clipsToMerge.length - 1 && cTime >= clipDur - transitionDuration) {
+                const fadeProgress = (cTime - (clipDur - transitionDuration)) / transitionDuration;
+                ctx.fillStyle = `rgba(10, 16, 29, ${Math.min(0.85, Math.max(0, fadeProgress * 0.85))})`;
+                ctx.fillRect(0, 0, canvasW, canvasH);
+              }
+            }
+
+            // Chèn Logo thương hiệu
+            if (mergeBurnLogo && logoConfig.enabled) {
+              ctx.save();
+              ctx.globalAlpha = logoConfig.opacity / 100;
+              const logoSize = (logoConfig.size || 40) * (canvasW / 400);
+              let posX = canvasW - logoSize - 20;
+              let posY = 25;
+              if (logoConfig.position === "top-left") { posX = 20; posY = 25; }
+              else if (logoConfig.position === "bottom-right") { posX = canvasW - logoSize - 20; posY = canvasH - logoSize - 40; }
+              else if (logoConfig.position === "bottom-left") { posX = 20; posY = canvasH - logoSize - 40; }
+
+              if (logoImg && logoImg.complete) {
+                ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
+              } else {
+                ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+                const textWidth = ctx.measureText(logoConfig.name).width + 30;
+                ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
+                ctx.fill();
+                ctx.fillStyle = "#FFFFFF";
+                ctx.font = `bold ${Math.round(15 * (canvasW / 400))}px Arial, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
+              }
+              ctx.restore();
+            }
+
+            // Chèn Banner quảng cáo
+            if (mergeBurnBanner && bannerConfig.enabled) {
+              ctx.save();
+              const bannerMarginX = Math.round(canvasW * 0.04);
+              const bW = canvasW - bannerMarginX * 2;
+              const bH = Math.round(72 * (canvasH / 800));
+              const bY = canvasH - bH - Math.round(20 * (canvasH / 800));
+              const bRadius = Math.round(18 * (canvasH / 800));
+
+              ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+              ctx.shadowBlur = Math.round(18 * (canvasH / 800));
+              ctx.shadowOffsetY = Math.round(5 * (canvasH / 800));
+
+              const grad = ctx.createLinearGradient(bannerMarginX, bY, bannerMarginX + bW, bY);
+              grad.addColorStop(0, "#dc2626");
+              grad.addColorStop(0.48, "#e11d48");
+              grad.addColorStop(1, "#ea580c");
+              ctx.fillStyle = grad;
+              ctx.roundRect(bannerMarginX, bY, bW, bH, bRadius);
+              ctx.fill();
+
+              ctx.fillStyle = "#FFFFFF";
+              ctx.font = `900 ${Math.round(16 * (canvasW / 400))}px Arial, sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(bannerConfig.title, canvasW / 2, bannerConfig.subtitle ? bY + bH * 0.38 : bY + bH * 0.5);
+
+              if (bannerConfig.subtitle) {
+                ctx.fillStyle = "#FEF08A";
+                ctx.font = `700 ${Math.round(11 * (canvasW / 400))}px Arial, sans-serif`;
+                ctx.fillText(bannerConfig.subtitle, canvasW / 2, bY + bH * 0.72);
+              }
+              ctx.restore();
+            }
+
+            reqId = requestAnimationFrame(drawFrame);
+          };
+
+          reqId = requestAnimationFrame(drawFrame);
+        });
+
+        cumulativeTimeSec += clipDur;
+        vEl.pause();
+        vEl.src = "";
+      }
+
+      recorder.onstop = () => {
+        const finalBlob = new Blob(chunks, { type: mimeType });
+        const downloadUrl = URL.createObjectURL(finalBlob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        const safeName = (videoName || "kpost").replace(/\.[^/.]+$/, "");
+        a.download = `${safeName}_3part_merged_${reqRatio.replace(':', 'x')}_${reqRes}.${actualExt}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        setMergeProgress(100);
+        setMergeStatus("✅ Đã ghép video 3 phần thành công!");
+        setTimeout(() => {
+          setIsMerging(false);
+          setShowExportModal(false);
+        }, 1200);
+      };
+
+      recorder.stop();
+      audioCtx.close().catch(() => {});
+    } catch (err: any) {
+      console.error("Lỗi ghép video:", err);
+      alert("Lỗi khi ghép video: " + (err?.message || "Vui lòng thử lại"));
+      setIsMerging(false);
+    }
+  };
+
   const isBannerVisible = useMemo(() => {
     if (!bannerConfig.enabled || compareOriginal) return false;
     return currentTime >= bannerConfig.startSec && currentTime <= bannerConfig.endSec;
@@ -4400,7 +4859,7 @@ NGUYÊN TẮC:
               </h1>
             </div>
             <p className="text-xs text-slate-200/70 font-medium">
-              Trình chỉnh sửa Video AI thông minh: Bóc băng tạo phụ đề tự động (Whisper AI), lồng tiếng MC đa giọng và xuất bản chất lượng cao.
+              Trình chỉnh sửa Video AI thông minh của Kpost AI : Bóc băng tạo phụ đề tự động , dịch và lồng tiếng MC đa giọng và xuất bản chất lượng cao...
             </p>
           </div>
 
@@ -4437,7 +4896,7 @@ NGUYÊN TẮC:
               <Sparkles size={16} className="text-amber-300" /> 🌐 Dịch & Lồng Tiếng
             </button>
 
-            {/* 🎬 NÚT 3: REVIEW VIDEO HÀI HƯỚC & TÓM TẮT PHIM (TIKTOK / YOUTUBE) */}
+            {/* 🎬 NÚT 3: REVIEW VIDEO BẰNG AI (TIKTOK / YOUTUBE) */}
             <button
               type="button"
               onClick={() => {
@@ -4449,10 +4908,10 @@ NGUYÊN TẮC:
               }}
               disabled={isTranscribing || isReviewing || isExporting}
               className="px-3.5 py-2.5 bg-gradient-to-r from-purple-900/70 via-fuchsia-900/70 to-pink-900/70 hover:from-purple-800 hover:to-pink-800 text-pink-200 border border-fuchsia-500/50 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-purple-950/50 disabled:opacity-50 hover:scale-[1.02]"
-              title="Phân tích tình tiết video, viết lời bình review hài hước, hóm hỉnh và lồng tiếng chuẩn phong cách TikTok / YouTube"
+              title="Phân tích tình tiết video, viết lời bình review dí dỏm, lôi cuốn và lồng tiếng chuẩn phong cách TikTok / YouTube"
             >
               <Film size={16} className="text-fuchsia-300 animate-pulse" />
-              <span>🎬 AI Review Hài Hước</span>
+              <span>🎬 AI Review</span>
               <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs">
                 HOT
               </span>
@@ -4536,7 +4995,7 @@ NGUYÊN TẮC:
                 </>
               ) : (
                 <>
-                  <Download size={16} /> ⬇️ Cắt & Xuất Video
+                  <Scissors size={16} /> ✂️ AI Cắt & Ghép Video
                 </>
               )}
             </button>
@@ -5801,7 +6260,7 @@ NGUYÊN TẮC:
                 </span>
                 <div>
                   <h3 className="text-base font-black text-white flex items-center gap-2">
-                    🎬 AI Review & Lồng Tiếng Video Hài Hước
+                    🎬 AI Review & Lồng Tiếng Video
                     <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                       TRIỆU VIEW
                     </span>
@@ -6006,7 +6465,7 @@ NGUYÊN TẮC:
                 disabled={isReviewing}
                 className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-fuchsia-950 flex items-center gap-2 hover:scale-[1.02]"
               >
-                <Film size={15} /> 🚀 Bắt Đầu Tạo Video Review Hài Hước
+                <Film size={15} /> 🚀 Bắt Đầu Tạo AI Review
               </button>
             </div>
           </div>
@@ -6708,25 +7167,25 @@ NGUYÊN TẮC:
         </div>
       )}
 
-      {/* ✂️ MODAL CẮT VIDEO DÀI THÀNH NHIỀU VIDEO NGẮN & ĐỔI ĐỊNH DẠNG XUẤT BẢN */}
+      {/* ✂️ MODAL: AI CẮT VÀ GHÉP VIDEO PRO (SMART SPLIT & 3-STAGE MERGER) */}
       {showExportModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-2xl w-full p-5 md:p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-6 max-h-[90vh] flex flex-col">
+          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-3xl w-full p-5 md:p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-6 max-h-[92vh] flex flex-col">
             {/* Header Modal */}
-            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#1E3867] shrink-0">
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-[#1E3867] shrink-0">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-gradient-to-tr from-emerald-600 to-teal-600 text-white rounded-2xl shadow-lg shadow-emerald-950/60">
-                  <Scissors size={20} />
+                <span className="p-2.5 bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-2xl shadow-lg shadow-emerald-950/60">
+                  <Scissors size={22} />
                 </span>
                 <div>
                   <h3 className="text-base md:text-lg font-black text-white flex items-center gap-2">
-                    Cắt Video & Đổi Định Dạng Xuất Bản
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                      PRO
+                    AI Cắt & Ghép Video Pro
+                    <span className="bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                      KPOST AI
                     </span>
                   </h3>
                   <p className="text-xs text-blue-200/70">
-                    Cắt video dài thành các clip ngắn TikTok/Reels/Shorts, đổi định dạng MP4/WebM và độ phân giải trước khi tải về
+                    Phân đoạn video dài thông minh có sửa tiêu đề từng tập, hoặc ghép 3 phần Intro - Thân bài - Outro với chuyển cảnh mượt mà
                   </p>
                 </div>
               </div>
@@ -6739,110 +7198,529 @@ NGUYÊN TẮC:
               </button>
             </div>
 
-            {/* Body (scrollable) */}
-            <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-              {/* PHẦN 1: ĐỔI ĐỊNH DẠNG & THÔNG SỐ XUẤT */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                    <Film size={14} className="text-emerald-400" /> 1. Đổi Định Dạng & Thông Số Video
-                  </span>
-                  <span className="text-[11px] text-emerald-400 font-bold">
-                    {exportOptions.format.toUpperCase()} • {exportOptions.resolution} • {exportOptions.aspectRatio}
-                  </span>
-                </div>
+            {/* 🌟 2 TAB CHÍNH: CẮT VIDEO VS GHÉP VIDEO */}
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#0B1527] border border-[#1E3867] rounded-2xl mb-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => setCutMergeTab("cut")}
+                className={`py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  cutMergeTab === "cut"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-950"
+                    : "text-slate-300 hover:text-white hover:bg-[#13223F]"
+                }`}
+              >
+                <Scissors size={15} /> ✂️ AI Cắt Video (Nhiều Tập & Sửa Tiêu Đề)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCutMergeTab("merge")}
+                className={`py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  cutMergeTab === "merge"
+                    ? "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 text-white shadow-lg shadow-purple-950"
+                    : "text-slate-300 hover:text-white hover:bg-[#13223F]"
+                }`}
+              >
+                <Layers size={15} /> 🎞️ Ghép Video 3 Phần (Intro - Main - Outro)
+              </button>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Định dạng file */}
-                  <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Định dạng file:</label>
-                    <div className="grid grid-cols-2 gap-1.5">
+            {/* Body (scrollable) */}
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
+
+              {/* ============================================================== */}
+              {/* TAB 1: AI CẮT VIDEO THÔNG MINH                                 */}
+              {/* ============================================================== */}
+              {cutMergeTab === "cut" && (
+                <div className="space-y-4">
+                  {/* AI Phân Tích & Đề Xuất Thời Lượng Cắt */}
+                  <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-slate-900 border border-emerald-500/40 rounded-2xl shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl">
+                          <Clock size={16} />
+                        </span>
+                        <div>
+                          <p className="font-black text-white text-xs">
+                            Thời lượng video gốc:{" "}
+                            <span className="text-emerald-300 font-mono text-sm">
+                              {formatSecToTime(videoDuration || 0)}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-blue-200/70">
+                            AI tự động đọc độ dài và đề xuất kích thước phân đoạn tối ưu cho nền tảng của bạn
+                          </p>
+                        </div>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => setExportOptions((p) => ({ ...p, format: "mp4" }))}
-                        className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                          exportOptions.format === "mp4"
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950"
-                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
-                        }`}
+                        onClick={handleAiSuggestSplit}
+                        disabled={isAiSuggestingSplit || !videoDuration}
+                        className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-950/60 transition-all shrink-0 disabled:opacity-50"
                       >
-                        <span>MP4 (.mp4)</span>
-                        <span className="text-[9px] font-normal opacity-80">Phổ biến nhất</span>
+                        <Sparkles size={13} className={isAiSuggestingSplit ? "animate-spin" : ""} />
+                        <span>🤖 AI Đề Xuất Phân Đoạn</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setExportOptions((p) => ({ ...p, format: "webm" }))}
-                        className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                          exportOptions.format === "webm"
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950"
-                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
-                        }`}
-                      >
-                        <span>WebM (.webm)</span>
-                        <span className="text-[9px] font-normal opacity-80">Chất lượng cao</span>
-                      </button>
+                    </div>
+
+                    {aiSplitNotice && (
+                      <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl mb-3 text-[11px] text-amber-200 font-medium leading-relaxed">
+                        {aiSplitNotice}
+                      </div>
+                    )}
+
+                    {/* Lựa chọn độ dài mỗi tập */}
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-200 block">
+                        Đề xuất cắt video thành các đoạn bao nhiêu phút:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                        {[
+                          { mins: 1.5, label: "1.5 phút", sub: "Cliffhanger" },
+                          { mins: 3, label: "3 phút", sub: "TikTok/Reels" },
+                          { mins: 5, label: "5 phút", sub: "Facebook" },
+                          { mins: 8, label: "8 phút", sub: "YouTube" },
+                          { mins: 10, label: "10 phút", sub: "Phim Dài" },
+                        ].map((item) => (
+                          <button
+                            key={item.mins}
+                            type="button"
+                            onClick={() => {
+                              setExportOptions((p) => ({
+                                ...p,
+                                partDurationMinutes: item.mins,
+                                splitMode: "auto_parts",
+                              }));
+                            }}
+                            className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                              exportOptions.partDurationMinutes === item.mins && exportOptions.splitMode === "auto_parts"
+                                ? "bg-emerald-600 text-white border-emerald-400 font-black shadow-md shadow-emerald-950"
+                                : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                            }`}
+                          >
+                            <span className="font-black text-xs">{item.label}</span>
+                            <span className="text-[9px] opacity-75">{item.sub}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[11px] text-slate-300">Hoặc tự chỉnh:</span>
+                        <input
+                          type="number"
+                          min={0.5}
+                          max={60}
+                          step={0.5}
+                          value={exportOptions.partDurationMinutes}
+                          onChange={(e) =>
+                            setExportOptions((p) => ({
+                              ...p,
+                              partDurationMinutes: Math.max(0.5, Number(e.target.value) || 1),
+                              splitMode: "auto_parts",
+                            }))
+                          }
+                          className="w-16 px-2 py-1 bg-[#0F1C33] border border-[#1E3867] rounded-lg text-xs font-black text-emerald-300 text-center focus:outline-none"
+                        />
+                        <span className="text-[11px] text-slate-400">phút/tập (Dự kiến tạo thành <strong>{autoParts.length} tập</strong>)</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Độ phân giải */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-bold text-blue-200">Độ phân giải (Độ nét):</label>
-                      <span className="text-[10px] text-emerald-400 font-extrabold uppercase">
-                        {exportOptions.resolution === "4k"
-                          ? "4K Ultra HD"
-                          : exportOptions.resolution === "2k"
-                          ? "2K Siêu Nét (>1080p)"
-                          : exportOptions.resolution === "1080p"
-                          ? "Full HD 1080p"
-                          : exportOptions.resolution === "original"
-                          ? "Gốc Siêu Nét"
-                          : "HD 720p"}
+                  {/* BATCH EXPORT ACTION BAR */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 border border-amber-500/40 rounded-2xl shadow-lg">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl shrink-0">
+                        <Download size={18} />
+                      </span>
+                      <div>
+                        <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
+                          ⚡ Tải nhanh toàn bộ {autoParts.length} tập
+                          <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[10px] font-black uppercase">
+                            Tự động
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-blue-200/80">
+                          Tự động render lần lượt và tải về máy từng tập theo đúng tiêu đề bạn đã sửa bên dưới.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleExportAllParts}
+                      disabled={!videoUrl || isExporting || isBatchExporting}
+                      className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-950/80 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50"
+                    >
+                      <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                    </button>
+                  </div>
+
+                  {/* DANH SÁCH CÁC TẬP & SỬA TIÊU ĐỀ TỪNG TẬP */}
+                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div>
+                        <p className="text-xs font-black text-white flex items-center gap-1.5">
+                          <Layers size={14} className="text-emerald-400" /> Danh sách {autoParts.length} tập phim (Bạn có thể sửa tiêu đề riêng cho từng tập):
+                        </p>
+                        <p className="text-[11px] text-blue-200/70">
+                          Bấm vào ô tiêu đề để đổi tên tập trước khi bấm tải về máy
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-emerald-400 font-bold uppercase">
+                        {exportOptions.format.toUpperCase()} • {exportOptions.resolution.toUpperCase()}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-1 mb-1">
-                      {[
-                        { id: "4k", label: "4K (2160p)", sub: "Ultra HD" },
-                        { id: "2k", label: "2K (1440p)", sub: "Siêu nét" },
-                        { id: "1080p", label: "1080p", sub: "Full HD" },
-                      ].map((res) => (
-                        <button
-                          key={res.id}
-                          type="button"
-                          onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
-                          className={`py-1.5 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center ${
-                            exportOptions.resolution === res.id
-                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950 font-black"
-                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
-                          }`}
+
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {autoParts.map((part) => (
+                        <div
+                          key={part.id}
+                          className="p-3 bg-[#13223F] hover:bg-[#172B50] border border-[#1E3867] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors"
                         >
-                          <span className="font-black text-[11px]">{res.label}</span>
-                          <span className="text-[9px] opacity-80">{res.sub}</span>
-                        </button>
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <span className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-xs font-black shrink-0">
+                              #{part.partNumber}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <label className="text-[10px] uppercase font-black text-slate-400">Tiêu đề tập {part.partNumber}:</label>
+                                <span className="text-[10px] font-mono text-emerald-400">⏱️ {part.timeLabel} • 💬 {part.cuesCount} câu</span>
+                              </div>
+                              <input
+                                type="text"
+                                value={episodeTitles[part.id] !== undefined ? episodeTitles[part.id] : part.label}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEpisodeTitles((prev) => ({ ...prev, [part.id]: val }));
+                                }}
+                                placeholder={`Nhập tiêu đề cho Tập ${part.partNumber}...`}
+                                className="w-full text-xs font-bold px-2.5 py-1.5 bg-[#0B1527] border border-[#1E3867] rounded-lg text-emerald-300 focus:border-emerald-400 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 justify-end shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (videoRef.current) {
+                                  videoRef.current.currentTime = part.startSec;
+                                  videoRef.current.play().catch(() => {});
+                                  setIsPlaying(true);
+                                }
+                              }}
+                              className="px-2 py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Xem trước tập này trong trình phát"
+                            >
+                              <Play size={11} /> Xem
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPartInNewTab(part)}
+                              className="px-2 py-1 bg-[#152747] hover:bg-[#1E3867] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Mở tập này trong Tab mới"
+                            >
+                              <ExternalLink size={11} /> Tab mới
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleExportFullVideo({
+                                  startTimeSec: part.startSec,
+                                  endTimeSec: part.endSec,
+                                  partTitle: episodeTitles[part.id] || `${part.label} (${part.timeLabel})`,
+                                  format: exportOptions.format,
+                                  aspectRatio: exportOptions.aspectRatio,
+                                  resolution: exportOptions.resolution,
+                                });
+                              }}
+                              className="px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-black flex items-center gap-1 cursor-pointer shadow-sm transition-all"
+                            >
+                              <Download size={11} /> Xuất Tập {part.partNumber}
+                            </button>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
+                  </div>
+                </div>
+              )}
+
+              {/* ============================================================== */}
+              {/* TAB 2: GHÉP VIDEO 3 PHẦN (INTRO - THÂN BÀI - OUTRO)            */}
+              {/* ============================================================== */}
+              {cutMergeTab === "merge" && (
+                <div className="space-y-4">
+                  {/* PHẦN 1: MỞ ĐẦU (INTRO / QUẢNG CÁO) */}
+                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-pink-300 flex items-center gap-1.5">
+                        <Film size={14} className="text-pink-400" /> 1. Phần Mở Đầu Video (Giới thiệu kênh, Hook, Quảng cáo...)
+                      </span>
+                      {introClip && (
+                        <span className="text-[11px] font-mono text-emerald-400">
+                          ⏱️ {formatSecToTime(introClip.duration)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-blue-200/70 mb-3">
+                      Tải lên clip mở đầu có sẵn của bạn để ghép vào phần đầu của video hoàn chỉnh.
+                    </p>
+
+                    {introClip ? (
+                      <div className="p-3 bg-[#13223F] border border-pink-500/40 rounded-xl flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="p-2 bg-pink-500/20 text-pink-300 rounded-lg shrink-0">
+                            <Film size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-black text-white text-xs truncate">{introClip.name}</p>
+                            <p className="text-[11px] text-pink-300 font-mono">Thời lượng: {formatSecToTime(introClip.duration)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => introInputRef.current?.click()}
+                            className="px-2.5 py-1 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Đổi clip khác
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIntroClip(null)}
+                            className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                            title="Xóa Intro"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => introInputRef.current?.click()}
+                        className="w-full py-4 px-3 bg-[#13223F]/60 hover:bg-[#13223F] border-2 border-dashed border-[#1E3867] hover:border-pink-500/60 rounded-xl text-center text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                      >
+                        <UploadCloud size={20} className="text-pink-400" />
+                        <span>Bấm để chọn video mở đầu có sẵn (.mp4, .webm, .mov)</span>
+                        <span className="text-[10px] text-slate-500 font-normal">Video giới thiệu kênh hoặc teaser ngắn</span>
+                      </button>
+                    )}
+                    <input
+                      ref={introInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleUploadIntroVideo}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* PHẦN 2: PHẦN GIỮA (VIDEO CHÍNH & CÁC VIDEO CẦN GHÉP BẤM DẤU +) */}
+                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                        <Layers size={14} className="text-purple-400" /> 2. Phần Giữa (Video Chính & Các Video Cần Ghép)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => middleInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-purple-950 cursor-pointer transition-all hover:scale-[1.02]"
+                      >
+                        <Plus size={14} /> ➕ Thêm Video Ghép
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-blue-200/70 mb-3">
+                      Video chính đang làm việc được tự động đưa vào danh sách. Bấm dấu <strong>+</strong> để tải thêm nhiều clip nối tiếp và sắp xếp thứ tự.
+                    </p>
+
+                    <div className="space-y-2">
+                      {middleClips.map((clip, idx) => (
+                        <div
+                          key={clip.id}
+                          className="p-3 bg-[#13223F] border border-[#1E3867] rounded-xl flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center text-xs font-black shrink-0">
+                              #{idx + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-black text-white text-xs truncate">{clip.name}</p>
+                              <p className="text-[11px] text-purple-300 font-mono">Thời lượng: {formatSecToTime(clip.duration)}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveMiddleClip(idx, "up")}
+                              disabled={idx === 0}
+                              className="p-1.5 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg cursor-pointer disabled:opacity-30"
+                              title="Di chuyển lên trên"
+                            >
+                              ⬆️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveMiddleClip(idx, "down")}
+                              disabled={idx === middleClips.length - 1}
+                              className="p-1.5 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg cursor-pointer disabled:opacity-30"
+                              title="Di chuyển xuống dưới"
+                            >
+                              ⬇️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMiddleClip(clip.id)}
+                              className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                              title="Xóa clip này"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {middleClips.length === 0 && (
+                        <div className="p-3 text-center text-slate-400 bg-[#13223F]/40 rounded-xl">
+                          Chưa có clip nào trong phần giữa. Vui lòng bấm "➕ Thêm Video Ghép" bên trên.
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={middleInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleUploadMiddleVideo}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* PHẦN 3: KẾT THÚC (OUTRO / KÊU GỌI HÀNH ĐỘNG) */}
+                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                        <Flame size={14} className="text-amber-400" /> 3. Phần Kết Thúc (Outro / Kêu gọi hành động CTA, Subscribe...)
+                      </span>
+                      {outroClip && (
+                        <span className="text-[11px] font-mono text-emerald-400">
+                          ⏱️ {formatSecToTime(outroClip.duration)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-blue-200/70 mb-3">
+                      Tải lên clip kết thúc video để kêu gọi người xem follow kênh, like, chia sẻ hoặc đặt mua hàng.
+                    </p>
+
+                    {outroClip ? (
+                      <div className="p-3 bg-[#13223F] border border-amber-500/40 rounded-xl flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="p-2 bg-amber-500/20 text-amber-300 rounded-lg shrink-0">
+                            <Flame size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-black text-white text-xs truncate">{outroClip.name}</p>
+                            <p className="text-[11px] text-amber-300 font-mono">Thời lượng: {formatSecToTime(outroClip.duration)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => outroInputRef.current?.click()}
+                            className="px-2.5 py-1 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Đổi clip khác
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOutroClip(null)}
+                            className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                            title="Xóa Outro"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => outroInputRef.current?.click()}
+                        className="w-full py-4 px-3 bg-[#13223F]/60 hover:bg-[#13223F] border-2 border-dashed border-[#1E3867] hover:border-amber-500/60 rounded-xl text-center text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                      >
+                        <UploadCloud size={20} className="text-amber-400" />
+                        <span>Bấm để chọn video kết thúc (Outro / Kêu gọi hành động CTA)</span>
+                        <span className="text-[10px] text-slate-500 font-normal">Video kêu gọi like, đăng ký kênh, mua hàng</span>
+                      </button>
+                    )}
+                    <input
+                      ref={outroInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleUploadOutroVideo}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* CHUYỂN CẢNH MƯỢT MÀ */}
+                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                    <span className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1.5 mb-2.5">
+                      <Sparkles size={14} className="text-cyan-400" /> 4. Chuyển Cảnh Mượt Mà Giữa Các Phần:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
-                        { id: "original", label: "Gốc", sub: "100% Nguyên bản" },
-                        { id: "720p", label: "720p", sub: "HD Nhanh (File nhẹ)" },
-                      ].map((res) => (
+                        { id: "fade_black", label: "⬛ Mờ dần đen", desc: "Fade to Black chuẩn điện ảnh" },
+                        { id: "crossfade", label: "🔀 Hòa tan mờ chồng", desc: "Crossfade mượt mà" },
+                        { id: "cut", label: "⚡ Cắt liền mạch", desc: "Hard cut không độ trễ" },
+                      ].map((t) => (
                         <button
-                          key={res.id}
+                          key={t.id}
                           type="button"
-                          onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
-                          className={`py-1.5 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center ${
-                            exportOptions.resolution === res.id
-                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-md shadow-emerald-950 font-black"
+                          onClick={() => setMergeTransition(t.id as any)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            mergeTransition === t.id
+                              ? "bg-[#1877F2] text-white border-blue-400 shadow-md"
                               : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
                           }`}
                         >
-                          <span className="font-black text-[11px]">{res.label}</span>
-                          <span className="text-[9px] opacity-80">{res.sub}</span>
+                          <p className="font-black text-xs text-white">{t.label}</p>
+                          <p className="text-[10px] opacity-80">{t.desc}</p>
                         </button>
                       ))}
                     </div>
                   </div>
+                </div>
+              )}
 
+              {/* ============================================================== */}
+              {/* PHẦN CHUNG: LOGO, BANNER, ĐỊNH DẠNG & ĐỘ PHÂN GIẢI              */}
+              {/* ============================================================== */}
+              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl space-y-3">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                  <Film size={14} className="text-emerald-400" /> Tùy Chọn Xuất Bản Video (Logo, Banner & Khung Hình)
+                </span>
+
+                {/* Tùy chọn chèn Logo & Banner */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 bg-[#13223F] border border-[#1E3867] rounded-xl">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="checkbox"
+                      checked={mergeBurnLogo}
+                      onChange={(e) => setMergeBurnLogo(e.target.checked)}
+                      className="w-4 h-4 accent-emerald-500 rounded"
+                    />
+                    <span>🏷️ Chèn Logo thương hiệu vào video</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                    <input
+                      type="checkbox"
+                      checked={mergeBurnBanner}
+                      onChange={(e) => setMergeBurnBanner(e.target.checked)}
+                      className="w-4 h-4 accent-emerald-500 rounded"
+                    />
+                    <span>🏷️ Chèn Banner quảng cáo trên/dưới</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   {/* Tỷ lệ khung hình */}
                   <div>
                     <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Tỷ lệ khung hình:</label>
@@ -6859,7 +7737,7 @@ NGUYÊN TẮC:
                           onClick={() => setExportOptions((p) => ({ ...p, aspectRatio: ratio.id as any }))}
                           className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-between ${
                             exportOptions.aspectRatio === ratio.id
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
+                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm font-black"
                               : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
                           }`}
                         >
@@ -6869,333 +7747,87 @@ NGUYÊN TẮC:
                       ))}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* PHẦN 2: CHỌN CHẾ ĐỘ CẮT & XUẤT BẢN */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5 mb-3">
-                  <Scissors size={14} className="text-amber-400" /> 2. Chế Độ Cắt & Phân Đoạn Video
-                </span>
-
-                {/* Tab switch */}
-                <div className="grid grid-cols-3 gap-2 p-1 bg-[#0A101D] border border-[#1E3867] rounded-xl mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setExportOptions((p) => ({ ...p, splitMode: "auto_parts" }))}
-                    className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      exportOptions.splitMode === "auto_parts"
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-950"
-                        : "text-slate-300 hover:text-white hover:bg-[#13223F]"
-                    }`}
-                  >
-                    <Layers size={14} /> Cắt Nhiều Tập
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExportOptions((p) => ({ ...p, splitMode: "custom" }))}
-                    className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      exportOptions.splitMode === "custom"
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-950"
-                        : "text-slate-300 hover:text-white hover:bg-[#13223F]"
-                    }`}
-                  >
-                    <Clock size={14} /> Cắt Tùy Chọn
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExportOptions((p) => ({ ...p, splitMode: "full" }))}
-                    className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      exportOptions.splitMode === "full"
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950"
-                        : "text-slate-300 hover:text-white hover:bg-[#13223F]"
-                    }`}
-                  >
-                    <Film size={14} /> Toàn Bộ Video
-                  </button>
-                </div>
-
-                {/* Tab 1: CẮT THÀNH NHIỀU TẬP TỰ ĐỘNG */}
-                {exportOptions.splitMode === "auto_parts" && (
-                  <div className="space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#13223F] border border-[#1E3867] rounded-xl">
-                      <div>
-                        <p className="text-xs font-black text-white flex items-center gap-1.5">
-                          <Clock size={13} className="text-amber-400" /> Thời lượng mỗi tập ngắn:
-                        </p>
-                        <p className="text-[11px] text-blue-200/70">
-                          Video dài {formatSecToTime(videoDuration || 0)} sẽ tự động chia thành {autoParts.length} tập
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        {[1, 2, 3, 5, 10].map((mins) => (
-                          <button
-                            key={mins}
-                            type="button"
-                            onClick={() => setExportOptions((p) => ({ ...p, partDurationMinutes: mins }))}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer border ${
-                              exportOptions.partDurationMinutes === mins
-                                ? "bg-amber-500 text-slate-950 border-amber-300 shadow-sm font-black"
-                                : "bg-[#0F1C33] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
-                            }`}
-                          >
-                            {mins}p
-                          </button>
-                        ))}
-                        <div className="flex items-center gap-1 ml-1 bg-[#0F1C33] px-2 py-1 rounded-lg border border-[#1E3867]">
-                          <input
-                            type="number"
-                            min={0.5}
-                            max={60}
-                            step={0.5}
-                            value={exportOptions.partDurationMinutes}
-                            onChange={(e) =>
-                              setExportOptions((p) => ({
-                                ...p,
-                                partDurationMinutes: Math.max(0.5, Number(e.target.value) || 1),
-                              }))
-                            }
-                            className="w-12 bg-transparent text-xs font-black text-amber-300 text-center focus:outline-none"
-                          />
-                          <span className="text-[11px] text-slate-400">phút</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* BATCH EXPORT ACTION BAR */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 border border-amber-500/40 rounded-2xl shadow-lg">
-                      <div className="flex items-center gap-2.5">
-                        <span className="p-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl shrink-0">
-                          <Download size={18} />
-                        </span>
-                        <div>
-                          <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
-                            ⚡ Tải nhanh toàn bộ {autoParts.length} tập
-                            <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[10px] font-black uppercase">
-                              Tự động
-                            </span>
-                          </p>
-                          <p className="text-[11px] text-blue-200/80">
-                            Không cần ngồi bấm từng tập! Tự động render lần lượt và tải về máy từng file.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleExportAllParts}
-                        disabled={!videoUrl || isExporting || isBatchExporting}
-                        className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-950/80 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50"
-                      >
-                        <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
-                      </button>
-                    </div>
-
-                    {/* Danh sách các tập */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[11px] font-bold text-blue-200">
-                          Danh sách {autoParts.length} tập: Tải từng tập, mở trong tab mới hoặc xuất hàng loạt
-                        </p>
-                        <span className="text-[10px] text-emerald-400 font-bold uppercase">
-                          {exportOptions.format} • {exportOptions.resolution}
-                        </span>
-                      </div>
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {autoParts.map((part) => (
-                          <div
-                            key={part.id}
-                            className="p-2.5 bg-[#13223F] hover:bg-[#172B50] border border-[#1E3867] rounded-xl flex items-center justify-between gap-3 transition-colors"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <span className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center text-xs font-black shrink-0">
-                                #{part.partNumber}
-                              </span>
-                              <div>
-                                <p className="text-xs font-black text-white">{part.label}</p>
-                                <p className="text-[11px] text-blue-200/80 font-mono">
-                                  ⏱️ {part.timeLabel} • 💬 {part.cuesCount} câu phụ đề & lồng tiếng
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (videoRef.current) {
-                                    videoRef.current.currentTime = part.startSec;
-                                    videoRef.current.play().catch(() => {});
-                                    setIsPlaying(true);
-                                  }
-                                }}
-                                className="px-2 py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Xem trước tập này trong trình phát"
-                              >
-                                <Play size={11} /> Xem
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenPartInNewTab(part)}
-                                className="px-2 py-1 bg-[#152747] hover:bg-[#1E3867] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Mở tập này trong Tab mới để xem hoặc tải riêng"
-                              >
-                                <ExternalLink size={11} /> Tab mới
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleExportFullVideo({
-                                    startTimeSec: part.startSec,
-                                    endTimeSec: part.endSec,
-                                    partTitle: `${part.label} (${part.timeLabel})`,
-                                    format: exportOptions.format,
-                                    aspectRatio: exportOptions.aspectRatio,
-                                    resolution: exportOptions.resolution,
-                                  });
-                                }}
-                                className="px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-black flex items-center gap-1 cursor-pointer shadow-sm transition-all"
-                              >
-                                <Download size={11} /> Xuất Tập {part.partNumber}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 2: CẮT ĐOẠN TÙY CHỌN */}
-                {exportOptions.splitMode === "custom" && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-blue-200/80">
-                      Chọn thời điểm bắt đầu và kết thúc bạn muốn cắt. Hệ thống sẽ trích xuất đoạn này kèm phụ đề và lồng tiếng chuẩn xác.
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Bắt đầu */}
-                      <div className="p-3 bg-[#13223F] border border-[#1E3867] rounded-xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-white flex items-center gap-1">
-                            <Clock size={13} className="text-emerald-400" /> Bắt đầu (giây):
-                          </label>
-                          <span className="text-xs font-mono font-bold text-emerald-300">
-                            {formatSecToTime(exportOptions.customStartSec)}
-                          </span>
-                        </div>
-                        <input
-                          type="number"
-                          min={0}
-                          max={exportOptions.customEndSec || videoDuration || 300}
-                          value={exportOptions.customStartSec}
-                          onChange={(e) =>
-                            setExportOptions((p) => ({
-                              ...p,
-                              customStartSec: Math.max(0, Number(e.target.value) || 0),
-                            }))
-                          }
-                          className="w-full px-3 py-1.5 bg-[#0F1C33] border border-[#1E3867] rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExportOptions((p) => ({
-                              ...p,
-                              customStartSec: Math.round(currentTime),
-                            }))
-                          }
-                          className="w-full py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
-                        >
-                          📌 Lấy vị trí hiện tại ({formatSecToTime(currentTime)})
-                        </button>
-                      </div>
-
-                      {/* Kết thúc */}
-                      <div className="p-3 bg-[#13223F] border border-[#1E3867] rounded-xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-white flex items-center gap-1">
-                            <Clock size={13} className="text-rose-400" /> Kết thúc (giây):
-                          </label>
-                          <span className="text-xs font-mono font-bold text-rose-300">
-                            {formatSecToTime(exportOptions.customEndSec)}
-                          </span>
-                        </div>
-                        <input
-                          type="number"
-                          min={exportOptions.customStartSec || 0}
-                          max={videoDuration || 1800}
-                          value={exportOptions.customEndSec}
-                          onChange={(e) =>
-                            setExportOptions((p) => ({
-                              ...p,
-                              customEndSec: Math.max(p.customStartSec + 1, Number(e.target.value) || 1),
-                            }))
-                          }
-                          className="w-full px-3 py-1.5 bg-[#0F1C33] border border-[#1E3867] rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExportOptions((p) => ({
-                              ...p,
-                              customEndSec: Math.round(currentTime),
-                            }))
-                          }
-                          className="w-full py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
-                        >
-                          📌 Lấy vị trí hiện tại ({formatSecToTime(currentTime)})
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-[#0A101D] border border-[#1E3867] rounded-xl flex items-center justify-between text-xs font-medium">
-                      <span className="text-slate-300">
-                        Thời lượng đoạn cắt:{" "}
-                        <strong className="text-amber-300 font-mono">
-                          {formatSecToTime(Math.max(0, exportOptions.customEndSec - exportOptions.customStartSec))}
-                        </strong>
+                  {/* Độ phân giải */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-blue-200">Độ nét đầu ra:</label>
+                      <span className="text-[10px] text-emerald-400 font-extrabold uppercase">
+                        {exportOptions.resolution.toUpperCase()}
                       </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        { id: "1080p", label: "1080p", sub: "Full HD" },
+                        { id: "2k", label: "2K", sub: "1440p Siêu Nét" },
+                        { id: "4k", label: "4K", sub: "Ultra HD" },
+                        { id: "720p", label: "720p", sub: "HD File nhẹ" },
+                      ].map((res) => (
+                        <button
+                          key={res.id}
+                          type="button"
+                          onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
+                          className={`py-1 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-between ${
+                            exportOptions.resolution === res.id
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 font-black shadow-sm"
+                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                          }`}
+                        >
+                          <span className="font-black text-[11px]">{res.label}</span>
+                          <span className="text-[9px] opacity-75">{res.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Định dạng file */}
+                  <div>
+                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Định dạng file:</label>
+                    <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
-                        onClick={() => {
-                          if (videoRef.current) {
-                            videoRef.current.currentTime = exportOptions.customStartSec;
-                            videoRef.current.play().catch(() => {});
-                            setIsPlaying(true);
-                          }
-                        }}
-                        className="text-blue-300 hover:text-white font-bold flex items-center gap-1 cursor-pointer"
+                        onClick={() => setExportOptions((p) => ({ ...p, format: "mp4" }))}
+                        className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          exportOptions.format === "mp4"
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-sm"
+                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                        }`}
                       >
-                        <Play size={12} /> Xem trước đoạn cắt này
+                        <span>MP4 (.mp4)</span>
+                        <span className="text-[9px] font-normal opacity-80">Phổ biến nhất</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExportOptions((p) => ({ ...p, format: "webm" }))}
+                        className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          exportOptions.format === "webm"
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-sm"
+                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                        }`}
+                      >
+                        <span>WebM (.webm)</span>
+                        <span className="text-[9px] font-normal opacity-80">Chất lượng cao</span>
                       </button>
                     </div>
                   </div>
-                )}
-
-                {/* Tab 3: TOÀN BỘ VIDEO */}
-                {exportOptions.splitMode === "full" && (
-                  <div className="p-3 bg-[#13223F] border border-[#1E3867] rounded-xl space-y-2 text-xs">
-                    <p className="font-bold text-white">Xuất toàn bộ video từ đầu đến cuối không cắt:</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
-                      <div className="p-2 bg-[#0F1C33] rounded-lg border border-[#1E3867]">
-                        <span className="text-slate-400 block">Thời lượng:</span>
-                        <strong className="text-white text-xs">{formatSecToTime(videoDuration || 0)}</strong>
-                      </div>
-                      <div className="p-2 bg-[#0F1C33] rounded-lg border border-[#1E3867]">
-                        <span className="text-slate-400 block">Số câu phụ đề:</span>
-                        <strong className="text-amber-300 text-xs">{subtitleCues.length} câu</strong>
-                      </div>
-                      <div className="p-2 bg-[#0F1C33] rounded-lg border border-[#1E3867] col-span-2 sm:col-span-1">
-                        <span className="text-slate-400 block">Lồng tiếng MC:</span>
-                        <strong className="text-emerald-300 text-xs">
-                          {voiceoverConfig.enabled ? "Đang BẬT" : "TẮT (Tiếng gốc)"}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
+
+              {/* PROGRESS BAR KHI ĐANG GHÉP HOẶC XUẤT */}
+              {(isMerging || isExporting) && (
+                <div className="p-3.5 bg-[#0B1527] border border-blue-500/40 rounded-2xl space-y-2 animate-pulse">
+                  <div className="flex items-center justify-between text-xs font-bold text-white">
+                    <span>{isMerging ? mergeStatus : "Đang xuất video..."}</span>
+                    <span className="text-emerald-400 font-mono text-sm">{isMerging ? mergeProgress : exportProgress}%</span>
+                  </div>
+                  <div className="w-full bg-[#13223F] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300 rounded-full"
+                      style={{ width: `${isMerging ? mergeProgress : exportProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer Modal */}
@@ -7209,62 +7841,54 @@ NGUYÊN TẮC:
               </button>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {exportOptions.splitMode === "auto_parts" && autoParts.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={handleExportAllParts}
-                    disabled={!videoUrl || isExporting || isBatchExporting}
-                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-950/80 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
-                  >
-                    <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
-                  </button>
+                {cutMergeTab === "cut" && (
+                  <>
+                    {autoParts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={handleExportAllParts}
+                        disabled={!videoUrl || isExporting || isBatchExporting}
+                        className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-950/80 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
+                      >
+                        <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstPart = autoParts[0];
+                        if (firstPart) {
+                          handleExportFullVideo({
+                            startTimeSec: firstPart.startSec,
+                            endTimeSec: firstPart.endSec,
+                            partTitle: episodeTitles[firstPart.id] || `${firstPart.label} (${firstPart.timeLabel})`,
+                            format: exportOptions.format,
+                            aspectRatio: exportOptions.aspectRatio,
+                            resolution: exportOptions.resolution,
+                          });
+                        }
+                      }}
+                      disabled={!videoUrl || isExporting || isBatchExporting}
+                      className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+                    >
+                      <Download size={15} />
+                      {`Xuất Tập 1 (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`}
+                    </button>
+                  </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (exportOptions.splitMode === "full") {
-                      handleExportFullVideo({
-                        startTimeSec: 0,
-                        endTimeSec: videoDuration || undefined,
-                        partTitle: "Toàn bộ video",
-                        format: exportOptions.format,
-                        aspectRatio: exportOptions.aspectRatio,
-                        resolution: exportOptions.resolution,
-                      });
-                    } else if (exportOptions.splitMode === "custom") {
-                      handleExportFullVideo({
-                        startTimeSec: exportOptions.customStartSec,
-                        endTimeSec: exportOptions.customEndSec,
-                        partTitle: `Đoạn ${formatSecToTime(exportOptions.customStartSec)} - ${formatSecToTime(exportOptions.customEndSec)}`,
-                        format: exportOptions.format,
-                        aspectRatio: exportOptions.aspectRatio,
-                        resolution: exportOptions.resolution,
-                      });
-                    } else if (exportOptions.splitMode === "auto_parts") {
-                      const firstPart = autoParts[0];
-                      if (firstPart) {
-                        handleExportFullVideo({
-                          startTimeSec: firstPart.startSec,
-                          endTimeSec: firstPart.endSec,
-                          partTitle: `${firstPart.label} (${firstPart.timeLabel})`,
-                          format: exportOptions.format,
-                          aspectRatio: exportOptions.aspectRatio,
-                          resolution: exportOptions.resolution,
-                        });
-                      }
-                    }
-                  }}
-                  disabled={!videoUrl || isExporting || isBatchExporting}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
-                >
-                  <Download size={15} />
-                  {exportOptions.splitMode === "auto_parts"
-                    ? `Xuất Tập 1 (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`
-                    : exportOptions.splitMode === "custom"
-                    ? `Xuất Đoạn Cắt (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`
-                    : `Xuất Toàn Bộ Video (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`}
-                </button>
+                {cutMergeTab === "merge" && (
+                  <button
+                    type="button"
+                    onClick={handleExportMergedVideo}
+                    disabled={isMerging}
+                    className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-purple-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+                  >
+                    <Layers size={15} />
+                    {isMerging ? `Đang Ghép Video (${mergeProgress}%)...` : "🚀 Ghép & Xuất Video 3 Phần Ngay"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
