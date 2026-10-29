@@ -102,11 +102,19 @@ export async function POST(req: NextRequest) {
     ff.on('close', async (code) => {
       if (code === 0) {
         console.log(`[FFmpeg Async Done] File ${outputFileName} đã chuyển mã thành công!`);
+        // Đồng thời sao lưu vào os.tmpdir để endpoint /api/converted-video luôn đọc được
+        try {
+          const tmpOut = path.join(os.tmpdir(), outputFileName);
+          if (fs.existsSync(outputPath) && !fs.existsSync(tmpOut)) {
+            await fs.promises.copyFile(outputPath, tmpOut);
+          }
+        } catch {}
+
         await fs.promises.writeFile(
           jobFilePath,
           JSON.stringify({
             status: 'completed',
-            videoUrl: `/videos/${outputFileName}`,
+            videoUrl: `/api/converted-video?fileId=${sanitizedId}`,
             message: 'Chuyển đổi thành công sang chuẩn MP4 H.264!',
           }),
           'utf-8'
@@ -142,11 +150,18 @@ export async function POST(req: NextRequest) {
         });
         ffFallback.on('close', async (fbCode) => {
           if (fbCode === 0) {
+            try {
+              const tmpOut = path.join(os.tmpdir(), outputFileName);
+              if (fs.existsSync(outputPath) && !fs.existsSync(tmpOut)) {
+                await fs.promises.copyFile(outputPath, tmpOut);
+              }
+            } catch {}
+
             await fs.promises.writeFile(
               jobFilePath,
               JSON.stringify({
                 status: 'completed',
-                videoUrl: `/videos/${outputFileName}`,
+                videoUrl: `/api/converted-video?fileId=${sanitizedId}`,
                 message: 'Chuyển đổi thành công sang chuẩn MP4 H.264!',
               }),
               'utf-8'

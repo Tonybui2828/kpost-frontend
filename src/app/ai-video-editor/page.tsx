@@ -1918,7 +1918,7 @@ export default function AiVideoEditorPage() {
                 videoTitle: videoName || "Video Douyin Viral",
                 sourceLang: "Tiếng Trung, Tiếng Anh, Pháp hoặc ngoại ngữ bất kỳ",
                 frameSnapshots: frameSnapshots.length > 0 ? frameSnapshots : undefined,
-                model: "gemini-3.8-flash",
+                model: "gemini-2.5-flash",
                 groqApiKey: customGroqKey || (typeof window !== "undefined" ? localStorage.getItem("GROQ_API_KEY") : "") || undefined,
                 geminiApiKey: customGeminiKey || (typeof window !== "undefined" ? localStorage.getItem("GEMINI_API_KEY") : "") || undefined,
               },
@@ -2066,18 +2066,54 @@ export default function AiVideoEditorPage() {
           }
         }, 500);
       } else {
-        // ⚠️ BÁO LỖI RÕ RÀNG CHO NGƯỜI DÙNG BIẾT CHÍNH XÁC NGUYÊN NHÂN
         setIsTranscribing(false);
         setTranscribeProgress(0);
         setTranscribeStatus("");
-        const errorDetail = globalLastErrorMsg || "Mô hình AI chưa nhận diện được tiếng nói hoặc không thể kết nối tới Google Gemini.";
-        alert(
-          `⚠️ Không tìm thấy hoặc chưa dịch được lời thoại từ video!\n\n` +
-          `Chi tiết lỗi: ${errorDetail}\n\n` +
-          `👉 Bạn hãy kiểm tra:\n` +
-          `1. Đã cấu hình biến GEMINI_API_KEY trong Environment Variables của kpost-frontend trên Coolify chưa (và đã bấm Redeploy chưa)?\n` +
-          `2. Video tải lên có chứa tiếng nói đối thoại rõ ràng không?`
+
+        // Kiểm tra xem có lỗi API thật không hay chỉ là video không có giọng người nói
+        const isApiKeyError = globalLastErrorMsg && (
+          globalLastErrorMsg.includes("API key") ||
+          globalLastErrorMsg.includes("GEMINI") ||
+          globalLastErrorMsg.includes("leaked") ||
+          globalLastErrorMsg.includes("credits")
         );
+
+        if (isApiKeyError) {
+          alert(
+            `⚠️ Kiểm tra cấu hình API Key:\n\n${globalLastErrorMsg}\n\nVui lòng kiểm tra lại khóa API trong mục '⚙️ Cài Đặt API Key' hoặc biến môi trường trên Coolify!`
+          );
+        } else {
+          // Video không có lời thoại người nói rõ ràng (ví dụ: video phóng sự chiến trường, tiếng súng nổ, clip âm nhạc)
+          const switchReview = confirm(
+            `💡 Video này chủ yếu là âm thanh bối cảnh/tiếng súng đạn/nhạc nền và không chứa lời thoại người nói rõ ràng để bóc băng nguyên văn.\n\n` +
+            `👉 Bạn có muốn chuyển sang chế độ "🎬 AI Review Hài Hước" để AI tự sáng tạo kịch bản thuyết minh cuốn hút theo cốt truyện của video không?`
+          );
+
+          if (switchReview) {
+            handleStartAiVideoReview();
+          } else {
+            // Tự động tạo kịch bản thuyết minh điện ảnh thông minh để người dùng có thể lồng tiếng và xuất video ngay lập tức
+            const fallback = generateSmartFallbackReview({
+              duration: fullDuration,
+              startOffset: 0,
+              totalVideoDuration: fullDuration,
+              usedSentencesSet: new Set(),
+              reviewStyle: "dramatic_cinema",
+              density: "medium",
+            });
+            const autoCues = fallback.cues.map((c: any, i: number) => ({
+              id: `sub_cue_${i + 1}`,
+              startSec: Number(c.startSec),
+              endSec: Number(c.endSec),
+              text: String(c.text || "").trim(),
+              timeLabel: `${formatSecToTime(c.startSec)} - ${formatSecToTime(c.endSec)}`,
+            }));
+            setSubtitleCues(autoCues);
+            setSubtitleConfig((prev) => ({ ...prev, enabled: true }));
+            setVoiceoverConfig((prev) => ({ ...prev, enabled: true, originalVolume: 10 }));
+            setTranscribeSuccessMsg(`⚡ Đã tự động tạo kịch bản thuyết minh điện ảnh cho video (${autoCues.length} câu thoại)! Sẵn sàng lồng tiếng.`);
+          }
+        }
       }
     } catch (err: any) {
       console.error("Lỗi AI Dịch & Lồng tiếng:", err);
@@ -2993,7 +3029,9 @@ NGUYÊN TẮC:
                 });
 
                 if (statusRes.data?.status === "completed" && statusRes.data.videoUrl) {
-                  setVideoUrl(statusRes.data.videoUrl);
+                  const finalConvUrl = statusRes.data.videoUrl;
+                  setVideoUrl(finalConvUrl);
+                  setSelectedFile(null); // Đổi sang sử dụng video H.264 đã chuyển mã
                   setHasNoVideoTrack(false);
                   setVideoLoadError(null);
                   setIsDetectedHevc(false);

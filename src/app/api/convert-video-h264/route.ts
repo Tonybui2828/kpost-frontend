@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     let inputBuffer: Buffer | null = null;
+    let filename = 'video.mp4';
+
     const contentType = req.headers.get('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
@@ -20,54 +22,103 @@ export async function POST(req: NextRequest) {
       if (file && typeof file.arrayBuffer === 'function') {
         const arr = await file.arrayBuffer();
         inputBuffer = Buffer.from(arr);
-      } else if (url) {
-        const fetchRes = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
-            ...(url.includes('douyin.com') ? { Referer: 'https://www.douyin.com/' } : {}),
-          },
-        });
-        if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
+        filename = file.name || 'video.mp4';
+      } else if (url && typeof url === 'string') {
+        const headers: Record<string, string> = {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        };
+        if (url.includes('douyin.com')) headers['Referer'] = 'https://www.douyin.com/';
+        const fetchRes = await fetch(url, { headers });
+        if (fetchRes.ok) {
+          const arr = await fetchRes.arrayBuffer();
+          inputBuffer = Buffer.from(arr);
+        }
       }
     } else {
+      // JSON with url
       const body = await req.json().catch(() => ({}));
-      if (body?.url) {
-        const fetchRes = await fetch(body.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
-            ...(body.url.includes('douyin.com') ? { Referer: 'https://www.douyin.com/' } : {}),
-          },
-        });
-        if (fetchRes.ok) inputBuffer = Buffer.from(await fetchRes.arrayBuffer());
+      const url = body?.url;
+      if (url) {
+        const headers: Record<string, string> = {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        };
+        if (url.includes('douyin.com')) headers['Referer'] = 'https://www.douyin.com/';
+        const fetchRes = await fetch(url, { headers });
+        if (fetchRes.ok) {
+          const arr = await fetchRes.arrayBuffer();
+          inputBuffer = Buffer.from(arr);
+        }
       }
     }
 
     if (!inputBuffer || inputBuffer.length === 0) {
-      return NextResponse.json({ error: 'Không tìm thấy dữ liệu video' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Không tìm thấy dữ liệu video để chuyển đổi sang H.264' },
+        { status: 400 }
+      );
     }
 
-    const tmpInput = path.join(os.tmpdir(), `in_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
-    const tmpOutput = path.join(os.tmpdir(), `out_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
+    const tmpInputPath = path.join(
+      os.tmpdir(),
+      `input_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`
+    );
+    const tmpOutputPath = path.join(
+      os.tmpdir(),
+      `output_h264_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`
+    );
 
-    await fs.promises.writeFile(tmpInput, inputBuffer);
+    await fs.promises.writeFile(tmpInputPath, inputBuffer);
 
-    // Chuyển mã H.264 (yuv420p) + AAC siêu tốc
+    // Chạy ffmpeg chuyển mã sang H.264 (libx264, yuv420p) + AAC tương thích 100% mọi trình duyệt
+    const args = [
+      '-y',
+      '-i',
+      tmpInputPath,
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-preset',
+      'ultrafast',
+      '-crf',
+      '23',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '128k',
+      '-movflags',
+      '+faststart',
+      tmpOutputPath,
+    ];
+
+    let ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+      if (ffmpegInstaller && ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path)) {
+        ffmpegPath = ffmpegInstaller.path;
+      }
+    } catch {}
+
     await new Promise<void>((resolve, reject) => {
-      const ff = spawn('ffmpeg', [
-        '-y', '-i', tmpInput,
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-crf', '23',
-        '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart',
-        tmpOutput
-      ]);
+      const ff = spawn(ffmpegPath, args);
       let errLog = '';
-      ff.stderr.on('data', (d) => { errLog += d.toString(); });
-      ff.on('close', (code) => (code === 0 ? resolve() : reject(new Error(errLog.slice(-300)))));
-      ff.on('error', reject);
+      ff.stderr.on('data', (d) => {
+        errLog += d.toString();
+      });
+      ff.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`FFmpeg error code ${code}: ${errLog.slice(-300)}`));
+      });
+      ff.on('error', (err) => reject(err));
     });
 
-    const outputBuffer = await fs.promises.readFile(tmpOutput);
-    fs.unlink(tmpInput, () => {});
-    fs.unlink(tmpOutput, () => {});
+    const outputBuffer = await fs.promises.readFile(tmpOutputPath);
+
+    fs.unlink(tmpInputPath, () => {});
+    fs.unlink(tmpOutputPath, () => {});
 
     return new NextResponse(outputBuffer, {
       status: 200,
@@ -79,6 +130,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Lỗi chuyển đổi video' }, { status: 500 });
+    console.error('[Convert Video H264 Next.js Error]:', err);
+    return NextResponse.json(
+      { error: err.message || 'Lỗi chuyển đổi video sang chuẩn H.264' },
+      { status: 500 }
+    );
   }
 }

@@ -19,19 +19,18 @@ export async function GET(req: NextRequest) {
     const jobFilePath = path.join(os.tmpdir(), `job_${sanitizedId}.json`);
     const outputFileName = `converted_${sanitizedId}.mp4`;
     const outputPath = path.join(process.cwd(), 'public', 'videos', outputFileName);
+    const tmpOutputPath = path.join(os.tmpdir(), outputFileName);
 
-    // Kiểm tra xem file video đầu ra đã hoàn tất chưa
-    if (fs.existsSync(outputPath)) {
-      try {
-        const stats = fs.statSync(outputPath);
-        if (stats.size > 1024) {
-          return NextResponse.json({
-            status: 'completed',
-            videoUrl: `/videos/${outputFileName}`,
-            message: 'Chuyển đổi thành công sang chuẩn MP4 H.264!',
-          });
-        }
-      } catch {}
+    // Kiểm tra xem file video đầu ra đã hoàn tất chưa (ở cả public/videos và os.tmpdir)
+    const exists = (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1024) ||
+                   (fs.existsSync(tmpOutputPath) && fs.statSync(tmpOutputPath).size > 1024);
+
+    if (exists) {
+      return NextResponse.json({
+        status: 'completed',
+        videoUrl: `/api/converted-video?fileId=${sanitizedId}`,
+        message: 'Chuyển đổi thành công sang chuẩn MP4 H.264!',
+      });
     }
 
     // Đọc trạng thái từ file job JSON
