@@ -3450,100 +3450,62 @@ NGUYÊN TẮC:
                   endSec: matchedCue.endSec,
                 }));
 
-        // Thuật toán tự động ngắt dòng thông minh (CapCut standard: tối đa 2 dòng, ngắt cân xứng đẹp mắt)
         interface SubLine {
           words: { word: string; startSec: number; endSec: number; width: number }[];
           totalWidth: number;
           text: string;
         }
 
-        let lines: SubLine[] = [];
-        let spaceWidth = 0;
-
-        // Vòng lặp tự động co nhỏ font nếu câu quá dài để luôn nằm gọn trong 2 dòng và trong maxSafeWidth
-        let attempts = 0;
-        while (attempts < 8) {
-          attempts++;
-          ctx.font = `bold ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
-          spaceWidth = ctx.measureText(" ").width;
-
-          const measuredWords = rawWords.map((rw) => ({
+        // Thuật toán ngắt dòng thông minh chuẩn CapCut (Greedy wrap + Font scale-down)
+        const computeLinesForFontSize = (fSize: number): SubLine[] => {
+          ctx.font = `bold ${fSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+          const spWidth = ctx.measureText(" ").width;
+          const measured = rawWords.map((rw) => ({
             ...rw,
             width: ctx.measureText(rw.word).width,
           }));
 
-          const totalSingleLineWidth =
-            measuredWords.reduce((sum, w) => sum + w.width, 0) +
-            Math.max(0, measuredWords.length - 1) * spaceWidth;
+          const resLines: SubLine[] = [];
+          let curLineWords: typeof measured = [];
+          let curLineWidth = 0;
 
-          if (totalSingleLineWidth <= maxSafeWidth) {
-            // Vừa vặn trên 1 dòng
-            lines = [
-              {
-                words: measuredWords,
-                totalWidth: totalSingleLineWidth,
-                text: measuredWords.map((w) => w.word).join(" "),
-              },
-            ];
-            break;
-          }
-
-          // Cần chia thành 2 dòng cân xứng (Balanced wrap chuẩn CapCut)
-          let bestSplitIdx = Math.ceil(measuredWords.length / 2);
-          let minDiff = Infinity;
-
-          for (let i = 1; i < measuredWords.length; i++) {
-            const line1Words = measuredWords.slice(0, i);
-            const line2Words = measuredWords.slice(i);
-
-            const w1 =
-              line1Words.reduce((sum, w) => sum + w.width, 0) +
-              Math.max(0, line1Words.length - 1) * spaceWidth;
-            const w2 =
-              line2Words.reduce((sum, w) => sum + w.width, 0) +
-              Math.max(0, line2Words.length - 1) * spaceWidth;
-
-            if (w1 <= maxSafeWidth && w2 <= maxSafeWidth) {
-              const diff = Math.abs(w1 - w2);
-              if (diff < minDiff) {
-                minDiff = diff;
-                bestSplitIdx = i;
-              }
+          for (const item of measured) {
+            const addedWidth = curLineWords.length === 0 ? item.width : curLineWidth + spWidth + item.width;
+            if (addedWidth <= maxSafeWidth || curLineWords.length === 0) {
+              curLineWords.push(item);
+              curLineWidth = addedWidth;
+            } else {
+              resLines.push({
+                words: curLineWords,
+                totalWidth: curLineWidth,
+                text: curLineWords.map((x) => x.word).join(" "),
+              });
+              curLineWords = [item];
+              curLineWidth = item.width;
             }
           }
-
-          const l1Words = measuredWords.slice(0, bestSplitIdx);
-          const l2Words = measuredWords.slice(bestSplitIdx);
-
-          const l1Width =
-            l1Words.reduce((sum, w) => sum + w.width, 0) +
-            Math.max(0, l1Words.length - 1) * spaceWidth;
-          const l2Width =
-            l2Words.reduce((sum, w) => sum + w.width, 0) +
-            Math.max(0, l2Words.length - 1) * spaceWidth;
-
-          if (l1Width <= maxSafeWidth && l2Width <= maxSafeWidth) {
-            lines = [
-              { words: l1Words, totalWidth: l1Width, text: l1Words.map((w) => w.word).join(" ") },
-              { words: l2Words, totalWidth: l2Width, text: l2Words.map((w) => w.word).join(" ") },
-            ];
-            break;
+          if (curLineWords.length > 0) {
+            resLines.push({
+              words: curLineWords,
+              totalWidth: curLineWidth,
+              text: curLineWords.map((x) => x.word).join(" "),
+            });
           }
+          return resLines;
+        };
 
-          // Nếu vẫn vượt quá, tự động giảm cỡ chữ xuống 10% và thử lại
+        // Tự động co nhỏ font để tối đa 2 dòng và hoàn toàn nằm gọn trong maxSafeWidth
+        let lines = computeLinesForFontSize(fontSize);
+        let attempts = 0;
+        while ((lines.length > 2 || lines.some((l) => l.totalWidth > maxSafeWidth)) && fontSize > 14 && attempts < 10) {
+          attempts++;
           fontSize = Math.max(14, Math.round(fontSize * 0.9));
+          lines = computeLinesForFontSize(fontSize);
         }
 
-        if (lines.length === 0) {
-          ctx.font = `bold ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
-          lines = [
-            {
-              words: rawWords.map((rw) => ({ ...rw, width: ctx.measureText(rw.word).width })),
-              totalWidth: maxSafeWidth,
-              text: matchedCue.text,
-            },
-          ];
-        }
+        // Cập nhật lại font và khoảng cách chuẩn sau khi đã chốt fontSize
+        ctx.font = `bold ${fontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+        const spaceWidth = ctx.measureText(" ").width;
 
         // Tính toán kích thước hộp nền phụ đề CapCut
         const maxLineWidth = Math.max(...lines.map((l) => l.totalWidth));
