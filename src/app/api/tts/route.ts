@@ -8,10 +8,11 @@ export async function GET(req: Request) {
       return new NextResponse('Missing text', { status: 400 });
     }
 
-    const ttsUrl = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=vi&q=${encodeURIComponent(text.slice(0, 300))}`;
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(text.slice(0, 300))}`;
     const response = await fetch(ttsUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://translate.google.com/',
       },
     });
 
@@ -22,8 +23,6 @@ export async function GET(req: Request) {
     const arrayBuffer = await response.arrayBuffer();
     return new NextResponse(arrayBuffer, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Content-Type': 'audio/mpeg',
         'Cache-Control': 'public, max-age=86400',
       },

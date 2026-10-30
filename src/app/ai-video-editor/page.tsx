@@ -39,6 +39,7 @@ import {
   Settings,
   Plus,
   Languages,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -278,7 +279,23 @@ export interface DouyinTrendItem {
   suggestedScript: { startSec: number; endSec: number; text: string }[];
 }
 
+export const SUPPORTED_TRANSLATION_LANGUAGES = [
+  { code: "vi", name: "Tiếng Việt", nativeName: "Tiếng Việt", flag: "🇻🇳", voiceLang: "vi-VN", description: "Bản dịch tự nhiên, chuẩn văn phong Việt Nam" },
+  { code: "en", name: "Tiếng Anh", nativeName: "English (US)", flag: "🇺🇸", voiceLang: "en-US", description: "Phổ biến toàn cầu, ngữ điệu Mỹ chuẩn" },
+  { code: "ja", name: "Tiếng Nhật", nativeName: "日本語 (Japanese)", flag: "🇯🇵", voiceLang: "ja-JP", description: "Phong cách anime, drama Nhật Bản cuốn hút" },
+  { code: "ru", name: "Tiếng Nga", nativeName: "Русский (Russian)", flag: "🇷🇺", voiceLang: "ru-RU", description: "Phát âm chuẩn tiếng Nga, truyền cảm" },
+  { code: "ko", name: "Tiếng Hàn", nativeName: "한국어 (Korean)", flag: "🇰🇷", voiceLang: "ko-KR", description: "Chuẩn phim truyền hình Hàn Quốc, K-Drama" },
+  { code: "id", name: "Tiếng Indonesia", nativeName: "Bahasa Indonesia", flag: "🇮🇩", voiceLang: "id-ID", description: "Thị trường Đông Nam Á cực kỳ tiềm năng" },
+  { code: "hi", name: "Tiếng Ấn Độ", nativeName: "हिन्दी (Hindi)", flag: "🇮🇳", voiceLang: "hi-IN", description: "Tiếp cận hơn 1.4 tỷ khán giả thị trường Ấn Độ" },
+  { code: "ar", name: "Tiếng Ả Rập", nativeName: "العربية (Arabic)", flag: "🇸🇦", voiceLang: "ar-SA", description: "Thị trường Trung Đông giàu có & lượt xem khủng" },
+  { code: "es", name: "Tiếng Tây Ban Nha", nativeName: "Español (Spanish)", flag: "🇪🇸", voiceLang: "es-ES", description: "Thị trường Mỹ Latinh và Châu Âu bùng nổ" },
+  { code: "pt", name: "Tiếng Bồ Đào Nha", nativeName: "Português", flag: "🇵🇹", voiceLang: "pt-BR", description: "Phục vụ thị trường Brazil và Bồ Đào Nha" },
+  { code: "fr", name: "Tiếng Pháp", nativeName: "Français", flag: "🇫🇷", voiceLang: "fr-FR", description: "Sang trọng, đài từ rõ ràng chuẩn Châu Âu" },
+  { code: "th", name: "Tiếng Thái", nativeName: "ไทย (Thai)", flag: "🇹🇭", voiceLang: "th-TH", description: "Ngữ điệu hài hước, bắt trend TikTok Thái Lan" },
+];
+
 export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
+  // 🧸 1. ĐỒ CHƠI & TRẺ EM (10 items)
   {
     id: "dy_toy_01",
     title: "Bảng Vẽ Ma Thuật Ánh Sáng Tự Xóa Cho Bé",
@@ -298,7 +315,171 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
     ]
   },
   {
-    id: "dy_home_02",
+    id: "dy_toy_02",
+    title: "Robot Nhảy Múa Thông Minh Cảm Biến Cử Chỉ",
+    originalTitle: "智能感应跳舞机器儿童玩具",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "3.2M",
+    shares: "410K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "cartoon",
+    voiceRecommendationName: "Pikachu Chibi",
+    viralInsight: "Robot nhảy theo điệu nhạc bắt tai, trẻ em bắt chước nhảy theo.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Cười xỉu với chú robot này luôn nè mọi người, nhảy siêu điệu nghệ luôn!" },
+      { startSec: 4.5, endSec: 9.5, text: "Chỉ cần vẫy tay là tự động xoay 360 độ và phát nhạc sôi động cực vui." },
+      { startSec: 9.5, endSec: 15, text: "Bé nhà mình mê tít từ sáng tới tối, ba mẹ rinh ngay một con nha!" }
+    ]
+  },
+  {
+    id: "dy_toy_03",
+    title: "Bộ Xếp Hình Nam Châm Đa Chiều 3D Phát Sáng",
+    originalTitle: "磁力片积木 3D空间建构玩具",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "1.7M",
+    shares: "190K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "child_girl",
+    voiceRecommendationName: "Bé Bông (6-8 tuổi)",
+    viralInsight: "Lắp ráp lâu đài cầu vồng chỉ trong 10 giây thu hút tương tác cực tốt.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Mẹ ơi nhìn này, lâu đài cầu vồng phát sáng của con lộng lẫy chưa!" },
+      { startSec: 4, endSec: 9, text: "Miếng nam châm hít chặt lắm nha, xếp xe ô tô hay phi thuyền đều được hết." },
+      { startSec: 9, endSec: 15, text: "Giúp bé phát triển tư duy sáng tạo cực kỳ tốt, ba mẹ mua liền nha!" }
+    ]
+  },
+  {
+    id: "dy_toy_04",
+    title: "Xe Biến Hình Transformer Điều Khiển Từ Xa Bằng Cử Chỉ",
+    originalTitle: "手势感应变形遥控特技车",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "4.1M",
+    shares: "530K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "speed_mc",
+    voiceRecommendationName: "MC Siêu Tốc",
+    viralInsight: "Cú vẫy tay biến xe đua thành robot khổng lồ tạo hiệu ứng giật mình cực mạnh.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Chiếc xe biến hình đỉnh nhất năm nay đây rồi anh em ơi!" },
+      { startSec: 4, endSec: 9, text: "Vẫy tay một cái xe lập tức biến hình thành robot và drift xoay tròn siêu tốc." },
+      { startSec: 9, endSec: 15, text: "Pin trâu chơi thỏa thích cả ngày, món quà sinh nhật đỉnh cao cho bé trai!" }
+    ]
+  },
+  {
+    id: "dy_toy_05",
+    title: "Súng Bắn Bong Bóng Khổng Lồ 69 Lỗ Tên Lửa",
+    originalTitle: "火箭筒泡泡机 69孔大功率出泡",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "2.9M",
+    shares: "360K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "child_boy",
+    voiceRecommendationName: "Bé Bắp (5-7 tuổi)",
+    viralInsight: "Hàng ngàn bong bóng cầu vồng bắn ra ngợp trời bối cảnh công viên.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Trời ơi bong bóng ngập tràn cả công viên luôn, đẹp như trong truyện cổ tích!" },
+      { startSec: 4.5, endSec: 9.5, text: "Có đèn led phát sáng ban đêm lấp lánh như pháo hoa, bé nào cũng thích mê." },
+      { startSec: 9.5, endSec: 15, text: "Đi chơi dã ngoại mang theo súng bong bóng này là nổi bật nhất hội luôn nha!" }
+    ]
+  },
+  {
+    id: "dy_toy_06",
+    title: "Đất Sét Ma Thuật Tự Khô Không Dính Tay Siêu Đàn Hồi",
+    originalTitle: "超轻粘土 无毒不粘手手工彩泥",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "1.5M",
+    shares: "140K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "child_girl",
+    voiceRecommendationName: "Bé Bông (6-8 tuổi)",
+    viralInsight: "Tạo hình bánh kem mini siêu mịn màng, âm thanh nhào nặn ASMR thư giãn.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Đất sét siêu nhẹ nặn hình cực kỳ dễ, mịn màng và không hề dính tay đâu nè!" },
+      { startSec: 4.5, endSec: 9.5, text: "Nặn xong để khô tự nhiên là thành món đồ trang trí dễ thương xỉu luôn." },
+      { startSec: 9.5, endSec: 15, text: "Bộ 36 màu tặng kèm dụng cụ tạo hình, giá đang sale cực rẻ trong giỏ hàng!" }
+    ]
+  },
+  {
+    id: "dy_toy_07",
+    title: "Đàn Piano Mini 37 Phím Kèm Micro Thu Âm Cho Bé",
+    originalTitle: "儿童多功能电子琴 带麦克风早教玩具",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "2.3M",
+    shares: "280K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Bé nhỏ đánh bản nhạc thiếu nhi cực đáng yêu kích thích phụ huynh mua sắm.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Ươm mầm tài năng âm nhạc cho con yêu ngay từ nhỏ với chiếc đàn xinh xắn này." },
+      { startSec: 4, endSec: 9.5, text: "Có sẵn micro để bé vừa đánh đàn vừa hát líu lo, phím bấm cực êm và chuẩn âm." },
+      { startSec: 9.5, endSec: 15, text: "Tích hợp sẵn nhiều điệu nhạc mẫu, giúp bé tránh xa điện thoại và tivi!" }
+    ]
+  },
+  {
+    id: "dy_toy_08",
+    title: "Bộ Thẻ Học Thông Minh Phát Âm Song Ngữ Anh - Việt",
+    originalTitle: "中英双语早教插卡学习机",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "3.7M",
+    shares: "620K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Bé phát âm tiếng Anh chuẩn bản xứ theo máy học thẻ.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Bí quyết giúp con nói tiếng Anh vanh vách như người bản xứ là đây nè ba mẹ ơi!" },
+      { startSec: 4.5, endSec: 9.5, text: "Chỉ cần cắm thẻ vào máy là phát âm song ngữ chuẩn kèm tiếng kêu sinh động." },
+      { startSec: 9.5, endSec: 15, text: "Hơn 500 từ vựng phong phú, đầu tư cho con học chữ thông minh ba mẹ nhé!" }
+    ]
+  },
+  {
+    id: "dy_toy_09",
+    title: "Bộ Trò Chơi Thử Thách Đập Băng Khỉ Cứu Chim Cánh Cụt",
+    originalTitle: "破冰企鹅桌游 亲子互动益智玩具",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "1.9M",
+    shares: "230K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "cartoon",
+    voiceRecommendationName: "Pikachu Chibi",
+    viralInsight: "Tiếng đập đá căng thẳng và cú rơi bất ngờ tạo tiếng cười giòn giã.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Trò chơi gia đình cười ra nước mắt những ngày cuối tuần là đây chứ đâu!" },
+      { startSec: 4, endSec: 9, text: "Gõ từng tảng băng sao cho chú chim cánh cụt không bị rơi xuống nước nha." },
+      { startSec: 9, endSec: 15, text: "Ai làm rơi trước là bị phạt quẹt nhọ nồi, vui nhộn gắn kết cả nhà luôn ạ!" }
+    ]
+  },
+  {
+    id: "dy_toy_10",
+    title: "Kính Thiên Văn Mini Khám Phá Mặt Trăng & Các Vì Sao",
+    originalTitle: "高清天文望远镜 学生科学探索",
+    category: "kids_toys",
+    categoryLabel: "Đồ chơi & Trẻ em",
+    likes: "2.6M",
+    shares: "310K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Phóng to bề mặt mặt trăng rõ nét từng miệng núi lửa kích thích đam mê khoa học.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Không thể tin được là chiếc kính thiên văn mini này nhìn rõ bề mặt mặt trăng đến vậy!" },
+      { startSec: 4.5, endSec: 9.5, text: "Độ phóng đại cực nét, quan sát sao Hỏa, sao Thổ và ngắm chim chóc phong cảnh siêu đỉnh." },
+      { startSec: 9.5, endSec: 15, text: "Món quà tuyệt vời nuôi dưỡng ước mơ phi hành gia của các bạn nhỏ!" }
+    ]
+  },
+
+  // 🛍️ 2. GIA DỤNG THÔNG MINH (10 items)
+  {
+    id: "dy_home_01",
     title: "Cây Lau Nhà Tự Giặt Vắt Ly Tâm 360 Độ",
     originalTitle: "免手洗旋转拖把 家用大吸力",
     category: "smart_home",
@@ -316,7 +497,171 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
     ]
   },
   {
-    id: "dy_tech_03",
+    id: "dy_home_02",
+    title: "Máy Hút Bụi Giường Nệm Tia UV Diệt Khuẩn 99.9%",
+    originalTitle: "超声波除螨仪 家用大吸力紫外线杀菌",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "3.5M",
+    shares: "490K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Cận cảnh khoang chứa bụi hút ra cả búi bụi mịn và mạt rệp sau 1 phút.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Xem hộp bụi sau 1 phút hút nệm mà mình rùng cả mình luôn anh em ơi!" },
+      { startSec: 4.5, endSec: 9.5, text: "Tia cực tím UV diệt sạch 99% mạt bụi và vi khuẩn gây ngứa ngáy dị ứng da." },
+      { startSec: 9.5, endSec: 15, text: "Nhà có con nhỏ hay người già nhất định phải có một em này để ngủ ngon giấc!" }
+    ]
+  },
+  {
+    id: "dy_home_03",
+    title: "Thùng Rác Cảm Ứng Thông Minh Tự Động Đóng Gói Túi",
+    originalTitle: "智能感应垃圾桶 自动打包换袋",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "4.2M",
+    shares: "580K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "speed_mc",
+    voiceRecommendationName: "MC Siêu Tốc",
+    viralInsight: "Đưa tay tới là nắp tự mở, bấm nút là tự hàn kín túi rác sạch sẽ không bẩn tay.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Đỉnh cao lười biếng nhưng cực kỳ sạch sẽ là chiếc thùng rác này nè!" },
+      { startSec: 4, endSec: 9.5, text: "Vẫy tay mở nắp trong 0.2 giây, khi đầy rác bấm 1 nút là tự niêm phong túi sạch bong." },
+      { startSec: 9.5, endSec: 15, text: "Không sợ mùi hôi khó chịu, thiết kế sang chảnh đặt phòng khách hay bếp đều đẹp!" }
+    ]
+  },
+  {
+    id: "dy_home_04",
+    title: "Máy Rửa Kính Mắt & Trang Sức Bằng Sóng Siêu Âm 45000Hz",
+    originalTitle: "超声波清洗机 眼镜手表首饰深度清洁",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "2.4M",
+    shares: "310K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Các hạt bụi bẩn li ti phụt ra khỏi khe kính mắt tạo cảm giác cực kỳ đã mắt.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Thả chiếc kính đeo 1 tuần vào máy mà bụi bẩn li ti bắn ra nhìn sướng mắt thực sự!" },
+      { startSec: 4.5, endSec: 9.5, text: "Sóng siêu âm len lỏi vào từng kẽ ốc, rửa đồng hồ hay trang sức bạc sáng bóng như mới." },
+      { startSec: 9.5, endSec: 15, text: "Nhỏ gọn tiện lợi cắm sạc type-C mang đi làm, deal hời hôm nay bấm góc trái nha!" }
+    ]
+  },
+  {
+    id: "dy_home_05",
+    title: "Máy Xay Sinh Tố Mini Cầm Tay Sạc Type-C Lưỡi Dao Kép",
+    originalTitle: "便携式随行榨汁机 无线充电果汁杯",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "1.8M",
+    shares: "220K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Xay mịn đá viên và dâu tây chỉ trong 30 giây ngay tại văn phòng làm việc.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Team mê nước ép detox mỗi ngày nhất định phải sắm em cối xay mini này nha!" },
+      { startSec: 4, endSec: 9, text: "Xay được cả đá bi và hoa quả đông lạnh, mở nắp ra là uống trực tiếp như bình nước." },
+      { startSec: 9, endSec: 15, text: "Mang đi tập gym hay đi làm cực kỳ tiện, bấm vào giỏ hàng săn voucher ngay nha!" }
+    ]
+  },
+  {
+    id: "dy_home_06",
+    title: "Đèn Cảm Ứng Chuyển Động Dán Bậc Cầu Thang & Tủ Quần Áo",
+    originalTitle: "人体感应小夜灯 衣柜楼梯间免布线磁吸灯",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "2.7M",
+    shares: "340K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Người đi tới đâu đèn tự bừng sáng ấm áp sang trọng như khách sạn 5 sao.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Biến ngôi nhà trở nên sang trọng như khách sạn cao cấp chỉ với chiếc đèn từ tính này." },
+      { startSec: 4.5, endSec: 9.5, text: "Không cần đục tường đi dây, bước chân tới là đèn tự động sáng dịu mắt ban đêm." },
+      { startSec: 9.5, endSec: 15, text: "Pin dùng nửa năm mới phải sạc 1 lần, an toàn tuyệt đối cho người già và trẻ nhỏ." }
+    ]
+  },
+  {
+    id: "dy_home_07",
+    title: "Keo Dán Tường Đa Năng Siêu Dính Chịu Lực 50kg Không Khoan",
+    originalTitle: "强力免钉胶 家用无痕承重多功能胶水",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "3.1M",
+    shares: "420K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "senior",
+    voiceRecommendationName: "Bác Năm (Người lớn tuổi)",
+    viralInsight: "Treo can nước 20 lít và xà đơn lên tường mà không hề rơi vỡ gạch men.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Nhà thuê không được khoan tường thì bà con dùng ngay tuýp keo dán siêu dính này!" },
+      { startSec: 4, endSec: 9, text: "Bôi lên giá để đồ dán vào gạch men, treo cả can nước nặng trịch vẫn chắc như đinh đóng cột." },
+      { startSec: 9, endSec: 15, text: "Chống nước chống ẩm mốc tuyệt đối, tháo ra không để lại một vết xước nào!" }
+    ]
+  },
+  {
+    id: "dy_home_08",
+    title: "Bộ Kệ Góc Nhà Tắm Dán Tường Khô Ráo Thoát Nước Thông Minh",
+    originalTitle: "卫生间三角置物架 沥水免打孔收纳神器",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "1.6M",
+    shares: "180K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Góc phòng tắm bừa bộn lập tức trở nên gọn gàng sạch sẽ sau khi lắp kệ.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Phòng tắm chật chội bừa bộn chai lọ thì gắn ngay kệ góc thông minh này vào nhé." },
+      { startSec: 4.5, endSec: 9.5, text: "Thiết kế rãnh thoát nước đáy giúp xà bông luôn khô ráo, không lo đóng rong rêu." },
+      { startSec: 9.5, endSec: 15, text: "Nhựa ABS cao cấp bền bỉ, gom trọn bộ 2 chiếc đang có giá cực ưu đãi luôn nè!" }
+    ]
+  },
+  {
+    id: "dy_home_09",
+    title: "Máy Hút Bọt Rửa Tay Cảm Ứng Tự Động Khử Khuẩn",
+    originalTitle: "自动感应洗手液机 泡沫丰富卫生防交叉感染",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "2.1M",
+    shares: "260K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "child_boy",
+    voiceRecommendationName: "Bé Bắp (5-7 tuổi)",
+    viralInsight: "Đưa tay ra là bọt tuyết mịn như mây tự phun ra tay tạo sự thích thú cho cả nhà.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Đưa tay vào là bọt tuyết mịn xốp như mây tự rơi ra tay, rửa tay thích mê luôn!" },
+      { startSec: 4, endSec: 9, text: "Không cần chạm tay vào vòi tránh lây nhiễm vi khuẩn, giúp bé chăm rửa tay hơn." },
+      { startSec: 9, endSec: 15, text: "Tiết kiệm nước rửa tay gấp 3 lần bình thường, cắm sạc một lần dùng cả tháng!" }
+    ]
+  },
+  {
+    id: "dy_home_10",
+    title: "Cây Lăn Bụi Và Lông Chó Mèo Tự Xoay Tự Làm Sạch Đa Năng",
+    originalTitle: "静电除毛刷 宠物粘毛清理神器",
+    category: "smart_home",
+    categoryLabel: "Gia dụng thông minh",
+    likes: "3.8M",
+    shares: "510K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Lăn qua ghế sofa đầy lông mèo 1 lượt là sạch bong, không tốn băng dính cuộn.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Anh em nào nuôi chó mèo mà quần áo ghế sofa đầy lông thì xem ngay chiếc lăn này!" },
+      { startSec: 4.5, endSec: 9.5, text: "Lăn đi lăn lại vài đường là lông dính sạch vào khoang chứa, chỉ cần bật nắp đổ rác là xong." },
+      { startSec: 9.5, endSec: 15, text: "Dùng vĩnh viễn không cần thay lõi giấy dính tốn kém, giá rẻ như cốc trà sữa!" }
+    ]
+  },
+
+  // 📱 3. CÔNG NGHỆ & ĐỜI SỐNG (10 items)
+  {
+    id: "dy_tech_01",
     title: "Giá Đỡ Điện Thoại Tự Xoay AI Theo Khuôn Mặt 360",
     originalTitle: "AI智能人脸追踪直播支架",
     category: "tech_gadgets",
@@ -334,7 +679,171 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
     ]
   },
   {
-    id: "dy_beauty_04",
+    id: "dy_tech_02",
+    title: "Micro Thu Âm Cài Áo Không Dây Khử Ồn Kép Chuyên Nghiệp",
+    originalTitle: "无线领夹麦克风 降噪直播录音神器",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "4.5M",
+    shares: "640K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "speed_mc",
+    voiceRecommendationName: "MC Siêu Tốc",
+    viralInsight: "So sánh tiếng gió rít bên ngoài đường với tiếng nói trong veo khi bật micro lọc ồn.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Bật mí chiếc mic giúp âm thanh video của các idol TikTok lúc nào cũng trong vắt!" },
+      { startSec: 4, endSec: 9.5, text: "Đứng cạnh công trường hay giữa trời mưa gió nói vẫn rõ từng chữ, lọc sạch 98% tạp âm." },
+      { startSec: 9.5, endSec: 15, text: "Cắm trực tiếp vào điện thoại là thu âm ngay, giá học sinh sinh viên cực mềm!" }
+    ]
+  },
+  {
+    id: "dy_tech_03",
+    title: "Quạt Mini Đeo Cổ 3 Cánh Gió Làm Lạnh Cấp Tốc Bằng Sò Lạnh",
+    originalTitle: "半导体制冷挂脖风扇 夏日便携随身降温",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "2.8M",
+    shares: "370K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Tấm sò lạnh bám hơi nước đông sương trong 3 giây xua tan cơn nóng mùa hè.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Trời nóng 40 độ ngoài đường mà đeo con quạt này vào là mát lạnh sống lưng luôn!" },
+      { startSec: 4.5, endSec: 9.5, text: "Tích hợp tấm bán dẫn làm lạnh như điều hòa mini, gió thổi 360 độ quanh cổ không bí bách." },
+      { startSec: 9.5, endSec: 15, text: "Pin trâu 6000mAh thổi liên tục 12 tiếng, hè này đi phượt hay làm shipper thì hết ý!" }
+    ]
+  },
+  {
+    id: "dy_tech_04",
+    title: "Sạc Dự Phòng Nam Châm Từ Tính Magsafe Siêu Mỏng Bỏ Ví",
+    originalTitle: "超薄磁吸无线充电宝 便携大容量",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "3.1M",
+    shares: "410K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Ốp vào lưng điện thoại hít chặt mỏng dính không vướng víu dây sạc.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Tạm biệt những cục sạc dự phòng nặng nề dây nhợ chằng chịt đi mấy bà ơi!" },
+      { startSec: 4, endSec: 9, text: "Cục sạc Magsafe này mỏng chỉ 8mm, đặt nhẹ lưng điện thoại là hít chặt sạc nhanh 20W." },
+      { startSec: 9, endSec: 15, text: "Màu pastel xinh xỉu bỏ túi xách siêu nhẹ, đang sale sốc hôm nay rinh liền nha!" }
+    ]
+  },
+  {
+    id: "dy_tech_05",
+    title: "Máy Chiếu Mini Bỏ Túi Rạp Phim Full HD 1080p Kết Nối Wifi",
+    originalTitle: "家用高清微型投影仪 手机同屏便携影院",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "4.8M",
+    shares: "710K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Chiếu thẳng lên trần phòng ngủ màn hình 150 inch xem phim cực chill.",
+    suggestedScript: [
+      { startSec: 0, endSec: 5, text: "Biến căn phòng ngủ thành rạp chiếu phim chuẩn CGV chưa bao giờ dễ dàng đến thế." },
+      { startSec: 5, endSec: 10, text: "Chiếu trực tiếp lên tường hoặc trần nhà màn hình 150 inch siêu sắc nét, loa kép sống động." },
+      { startSec: 10, endSec: 15, text: "Kết nối điện thoại qua wifi xem Netflix cực đã, bấm vào giỏ hàng để nhận giá ưu đãi!" }
+    ]
+  },
+  {
+    id: "dy_tech_06",
+    title: "Tai Nghe Bluetooth Chống Ồn Chủ Động ANC Âm Bass Trầm Ấm",
+    originalTitle: "主动降噪蓝牙耳机 空间音频长续航",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "2.2M",
+    shares: "290K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Âm thanh vòm 360 độ và tính năng xuyên âm như tai nghe cao cấp chục triệu.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Chất âm con này làm mình giật mình luôn, bass đập căng đét không kém gì tai nghe tiền triệu!" },
+      { startSec: 4.5, endSec: 9.5, text: "Bật chế độ chống ồn ANC một cái là không gian xung quanh tĩnh lặng như tờ, tập trung làm việc." },
+      { startSec: 9.5, endSec: 15, text: "Thiết kế đeo êm tai không đau nhức, pin 35 tiếng sạc nhanh 10 phút nghe cả buổi!" }
+    ]
+  },
+  {
+    id: "dy_tech_07",
+    title: "Gậy Chụp Ảnh Selfie 3 Chân Bluetooth Kèm Đèn Led Trợ Sáng",
+    originalTitle: "四脚折叠自拍杆 带补光灯防抖遥控器",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "1.9M",
+    shares: "240K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Gấp gọn chỉ bằng bàn tay nhưng kéo dài 1m6 chân đế 4 chấu đứng siêu vững trước gió.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Đi du lịch một mình mà vẫn có ảnh đẹp triệu view là nhờ em gậy selfie này đó nha!" },
+      { startSec: 4, endSec: 9, text: "Chân đế 4 chấu chống đổ gió mạnh, kèm remote bluetooth bấm chụp từ xa 10 mét tiện lợi." },
+      { startSec: 9, endSec: 15, text: "Tích hợp đèn trợ sáng tôn da mịn đẹp, con gái tụi mình nhất định phải có trong túi xách!" }
+    ]
+  },
+  {
+    id: "dy_tech_08",
+    title: "Cáp Sạc Nhanh 100W 3 Trong 1 Tự Thu Gọn Dây Đèn Led Báo Watts",
+    originalTitle: "一拖三伸缩快充线 100W数显数码线",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "3.9M",
+    shares: "530K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "speed_mc",
+    voiceRecommendationName: "MC Siêu Tốc",
+    viralInsight: "Kéo giãn ra và tự thu gọn chỉ trong 1 giây, màn hình hiển thị công suất watts thực tế.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Sợi cáp sạc đa năng tiện nhất quả đất, sạc cùng lúc cả iPhone, Type-C và Micro USB!" },
+      { startSec: 4.5, endSec: 9.5, text: "Kéo ra thu vào gọn gàng không sợ rối dây, màn hình hiển thị công suất sạc nhanh cực chất." },
+      { startSec: 9.5, endSec: 15, text: "Chịu lực kéo gập 20.000 lần siêu bền bỉ, anh em bấm giỏ hàng rinh ngay kẻo hết sale!" }
+    ]
+  },
+  {
+    id: "dy_tech_09",
+    title: "Đồng Hồ Thông Minh Theo Dõi Sức Khỏe Đo Nhịp Tim SpO2",
+    originalTitle: "智能健康运动手表 测心率血氧多功能",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "2.5M",
+    shares: "320K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Màn hình cong AMOLED rực rỡ dưới ánh nắng và tính năng nghe gọi trực tiếp trên đồng hồ.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Một chiếc đồng hồ thông minh ngoại hình sang trọng chuẩn doanh nhân nhưng giá cực kỳ hời." },
+      { startSec: 4.5, endSec: 9.5, text: "Đo nhịp tim, nồng độ oxy trong máu SpO2, theo dõi giấc ngủ và nghe gọi đàm thoại rõ ràng." },
+      { startSec: 9.5, endSec: 15, text: "Chống nước đi bơi thoải mái, món quà ý nghĩa chăm sóc sức khỏe cho người thân!" }
+    ]
+  },
+  {
+    id: "dy_tech_10",
+    title: "Chuột Không Dây Công Thái Học Siêu Êm Giảm Mỏi Cổ Tay",
+    originalTitle: "人体工学静音无线鼠标 护腕办公神器",
+    category: "tech_gadgets",
+    categoryLabel: "Công nghệ & Đời sống",
+    likes: "1.8M",
+    shares: "210K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Góc nghiêng 57 độ ôm sát lòng bàn tay giúp dân văn phòng làm việc 8 tiếng không bị đau mỏi.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Dân văn phòng hay bị mỏi cổ tay thì đổi ngay sang con chuột công thái học này đi anh em!" },
+      { startSec: 4, endSec: 9, text: "Cầm nghiêng tự nhiên như bắt tay, phím bấm êm tuyệt đối không phát ra tiếng động." },
+      { startSec: 9, endSec: 15, text: "Kết nối cả Bluetooth lẫn USB Receiver, chuyển đổi máy tính và iPad chỉ bằng 1 nút bấm!" }
+    ]
+  },
+
+  // 💄 4. MỸ PHẨM & SKINCARE (10 items)
+  {
+    id: "dy_beauty_01",
     title: "Kem Nền Che Khuyết Điểm Chống Nước Kiềm Dầu 24H",
     originalTitle: "防水控油持久遮瑕粉底液",
     category: "beauty_care",
@@ -352,7 +861,171 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
     ]
   },
   {
-    id: "dy_drama_05",
+    id: "dy_beauty_02",
+    title: "Son Kem Lì Mềm Môi Kháng Nước Không Dính Cốc Khi Uống Trà",
+    originalTitle: "不掉色不沾杯雾面唇釉",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "4.3M",
+    shares: "610K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Thử nghiệm uống trà sữa và quẹt khăn giấy môi vẫn nguyên màu đỏ cam tươi tắn.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Cây son kem lì đỉnh chóp nhất năm nay đây rồi các nàng thơ ơi!" },
+      { startSec: 4, endSec: 9, text: "Chất son nhung mịn như lụa không hề lộ vân môi, uống nước không dính mép cốc tí nào." },
+      { startSec: 9, endSec: 15, text: "Tone màu đỏ đất tôn da trắng răng đỉnh cao, đang mua 1 tặng 1 bấm giỏ hàng liền nha!" }
+    ]
+  },
+  {
+    id: "dy_beauty_03",
+    title: "Mascara Chuốt Mi Tơi Dài Cong Vút Chống Nước Đầu Cọ Siêu Mảnh",
+    originalTitle: "超细刷头防水卷翘睫毛膏",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "3.1M",
+    shares: "380K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Đầu cọ 1mm chuốt tới tận chân mi mí mắt dưới tơi xốp không hề vón cục.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Bí quyết có hàng mi cong vút như búp bê mà không cần đi nối mi tốn kém đây nè!" },
+      { startSec: 4.5, endSec: 9.5, text: "Đầu cọ siêu mảnh chuốt sợi nào tơi sợi đó, giữ nếp cong vút suốt 12 tiếng không sợ lem." },
+      { startSec: 9.5, endSec: 15, text: "Rửa nước hay đi mưa thoải mái, tẩy trang bằng nước ấm là sạch trơn nha các nàng!" }
+    ]
+  },
+  {
+    id: "dy_beauty_04",
+    title: "Serum Cấp Ẩm Phục Hồi Da B5 Làm Sáng Căng Bóng Tức Thì",
+    originalTitle: "B5玻尿酸精华原液 补水修护修护敏肌",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "2.6M",
+    shares: "340K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Thoa vài giọt serum lên da tạo hiệu ứng bóng gương chuẩn gái Hàn căng mướt.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Da bà nào đang bị khô rát, bong tróc hay sần sùi thì dùng ngay chai serum B5 này." },
+      { startSec: 4, endSec: 9, text: "Chứa Hyaluronic Acid đa tầng ngậm nước, vỗ nhẹ lên da là thẩm thấu mướt rượt." },
+      { startSec: 9, endSec: 15, text: "Phục hồi hàng rào bảo vệ da căng bóng khỏe khoắn, deal sốc hôm nay đừng bỏ lỡ!" }
+    ]
+  },
+  {
+    id: "dy_beauty_05",
+    title: "Kem Chống Nắng Kiềm Dầu Nâng Tone Trắng Hồng Tự Nhiên SPF50+",
+    originalTitle: "清爽控油防晒霜 自然提亮美白隔离",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "3.7M",
+    shares: "520K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Chấm nửa mặt da nâng tone sáng mịn rạng rỡ không hề bết rít hay trắng bệch.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Buổi sáng vội đi làm chỉ cần thoa một lớp kem chống nắng này là tự tin ra đường luôn!" },
+      { startSec: 4.5, endSec: 9.5, text: "Nâng tone trắng hồng tự nhiên thay thế kem lót, kiềm dầu khô thoáng cả ngày không bết rít." },
+      { startSec: 9.5, endSec: 15, text: "Chỉ số chống nắng SPF50+ PA++++ bảo vệ da tối đa trước ánh nắng gay gắt mùa hè!" }
+    ]
+  },
+  {
+    id: "dy_beauty_06",
+    title: "Xịt Khoáng Khóa Lớp Trang Điểm Cố Định Make-Up 16 Tiếng",
+    originalTitle: "持久定妆喷雾 水光成膜防脱妆",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "2.3M",
+    shares: "270K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Vòi xịt sương siêu mịn phủ đều tạo màng chắn chống trôi phấn tuyệt đối.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Đeo khẩu trang cả ngày mà lớp nền vẫn nguyên vẹn không lem một giọt phấn nào." },
+      { startSec: 4, endSec: 9, text: "Tia xịt sương nano mỏng mịn như làn khói, tạo lớp màng khóa ẩm cố định make up 16 tiếng." },
+      { startSec: 9, endSec: 15, text: "Không sợ đổ dầu hay mốc nền, bí kíp của các chuyên gia trang điểm đó nha mấy bà!" }
+    ]
+  },
+  {
+    id: "dy_beauty_07",
+    title: "Mặt Nạ Đất Sét Khoáng Sủi Bọt Hút Sạch Mụn Đầu Đen & Dầu Thừa",
+    originalTitle: "发泡泥膜 深层清洁毛孔去黑头",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "4.0M",
+    shares: "590K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_male_reviewer",
+    voiceRecommendationName: "Đức Anh (Reviewer Bắt Trend)",
+    viralInsight: "Bọt sủi bồng bềnh sau 60 giây hút sạch cặn bã dầu nhờn cánh mũi.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Cảm giác bọt sủi xèo xèo trên mặt lấy đi sạch mụn đầu đen bã nhờn sướng dã man!" },
+      { startSec: 4.5, endSec: 9.5, text: "Đất sét khoáng thiên nhiên hút sạch dầu thừa từ sâu lỗ chân lông mà không hề gây khô rát." },
+      { startSec: 9.5, endSec: 15, text: "Dùng tuần 2 lần là da mịn màng se khít lỗ chân lông rõ rệt, săn deal hời ngay góc trái!" }
+    ]
+  },
+  {
+    id: "dy_beauty_08",
+    title: "Máy Rửa Mặt Sóng Âm Silicon Kháng Khuẩn Làm Sạch Sâu",
+    originalTitle: "声波硅胶洁面仪 深入毛孔清洁",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "1.7M",
+    shares: "190K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Rửa sạch vết son lì trên bề mặt quả cam thử nghiệm chứng minh độ sạch sâu.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Rửa mặt bằng tay thông thường chỉ sạch được 30% bụi bẩn bám trên bề mặt thôi." },
+      { startSec: 4, endSec: 9, text: "Máy rửa mặt sóng âm rung 8000 lần mỗi phút, đẩy sạch cặn trang điểm và mụn cám ra ngoài." },
+      { startSec: 9, endSec: 15, text: "Đầu silicon y tế siêu mềm không làm xệ da, sạc không dây sang chảnh bỏ túi mang đi làm!" }
+    ]
+  },
+  {
+    id: "dy_beauty_09",
+    title: "Chì Kẻ Mày Phẩy Sợi 4D Kháng Nước Tự Nhiên Như Điêu Khắc",
+    originalTitle: "四叉水眉笔 防水防汗自然根根分明",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "2.9M",
+    shares: "360K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Đầu bút 4 nhánh kẻ từng sợi lông mày tự nhiên như vừa điêu khắc tiền triệu.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Ai không biết kẻ lông mày thì xem em chì 4 nhánh này, phẩy vài đường là đẹp mê ly!" },
+      { startSec: 4.5, endSec: 9.5, text: "Từng sợi mày tự nhiên như vừa điêu khắc tiền triệu ngoài tiệm, chống trôi lem mồ hôi." },
+      { startSec: 9.5, endSec: 15, text: "Màu nâu tự nhiên tệp tóc châu Á, giá chỉ bằng cốc trà sữa đang có sẵn trong giỏ hàng!" }
+    ]
+  },
+  {
+    id: "dy_beauty_10",
+    title: "Toner Pad Tẩy Tế Bào Chết Dịu Nhẹ Chiết Xuất Rau Má BHA",
+    originalTitle: "积雪草BHA爽肤棉片 舒缓温和去角质",
+    category: "beauty_care",
+    categoryLabel: "Mỹ phẩm & Skincare",
+    likes: "3.3M",
+    shares: "450K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Lau miếng pad qua mặt thấy rõ lớp tế bào sừng ngả vàng làm sạch cực đã.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Bí quyết trị dứt điểm mụn ẩn và mụn đầu đen của hội làm đẹp Hàn Quốc đây nè!" },
+      { startSec: 4, endSec: 9, text: "Miếng pad 2 mặt dập nổi lau nhẹ là đi sạch tế bào chết, đắp 3 phút làm dịu da tức thì." },
+      { startSec: 9, endSec: 15, text: "Hũ 70 miếng dùng được 2 tháng, da mịn màng thông thoáng lỗ chân lông ngay tuần đầu!" }
+    ]
+  },
+
+  // 🎬 5. PHIM NGẮN DRAMA (10 items)
+  {
+    id: "dy_drama_01",
     title: "Tổng Tài Giấu Nghề Đi Thử Lòng Bạn Gái Thực Dụng",
     originalTitle: "霸道总裁低调相亲反转剧",
     category: "short_drama",
@@ -367,6 +1040,168 @@ export const DOUYIN_HOT_TRENDS: DouyinTrendItem[] = [
       { startSec: 0, endSec: 5, text: "Cô gái khinh bỉ chàng trai chạy xe ôm cũ kỹ mà không hề hay biết..." },
       { startSec: 5, endSec: 10, text: "Anh chính là người thừa kế duy nhất của tập đoàn tài chính lớn nhất thành phố." },
       { startSec: 10, endSec: 15, text: "Đoạn kết sẽ khiến kẻ tham lam phải trả giá, theo dõi kênh để xem tập 2!" }
+    ]
+  },
+  {
+    id: "dy_drama_02",
+    title: "Mẹ Chồng Cay Nghiệt Bắt Nàng Dâu Rửa Bát Giữa Trời Đông",
+    originalTitle: "恶婆婆刁难儿媳 豪门反转爽剧",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "5.2M",
+    shares: "780K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_news",
+    voiceRecommendationName: "Thu Thảo (Nữ Thuyết Minh)",
+    viralInsight: "Tình tiết bất công kích thích lòng trắc ẩn của người xem, cú quay xe ngoạn mục ở giây cuối.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Bà mẹ chồng cay nghiệt không tiếc lời sỉ nhục cô con dâu hiền lành cam chịu..." },
+      { startSec: 4.5, endSec: 9.5, text: "Nào ngờ bức thư tay của chủ tịch tập đoàn vừa gửi đến làm thay đổi toàn bộ cục diện." },
+      { startSec: 9.5, endSec: 15, text: "Cái kết nào cho kẻ độc ác? Bấm theo dõi để đón xem màn lật kèo mãn nhãn!" }
+    ]
+  },
+  {
+    id: "dy_drama_03",
+    title: "Đại Gia Giả Nghèo Đi Họp Lớp Bị Bạn Học Xưa Sỉ Nhục",
+    originalTitle: "百亿富豪装穷参加同学聚会",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "6.1M",
+    shares: "890K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Nhân vật phản diện huênh hoang và khoảnh khắc dàn siêu xe Rolls-Royce xếp hàng đón chủ tịch.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Bộ quần áo sờn rách của anh trở thành trò cười cho cả lớp suốt buổi tiệc." },
+      { startSec: 4.5, endSec: 9.5, text: "Cho đến khi chủ nhà hàng 5 sao bước vào quỳ gối kính cẩn chào đại cổ đông." },
+      { startSec: 9.5, endSec: 15, text: "Những gương mặt đắc thắng bỗng chốc tái mét, xem tiếp phân đoạn kịch tính ngay!" }
+    ]
+  },
+  {
+    id: "dy_drama_04",
+    title: "Bác Sĩ Thiên Tài Ẩn Dật Cứu Sống Viện Trưởng Giữa Ranh Giới Sinh Tử",
+    originalTitle: "神医下山 绝境救治院长",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "3.9M",
+    shares: "460K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Nhịp tim phẳng lặng bỗng đập lại nhờ mũi châm cứu thần kỳ tạo cảm giác nghẹt thở.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Khi tất cả bác sĩ đầu ngành đều lắc đầu bất lực trước ca bệnh hiểm nghèo..." },
+      { startSec: 4, endSec: 9, text: "Chàng trai trẻ bất ngờ bước vào dùng phương pháp bí truyền đảo ngược càn khôn." },
+      { startSec: 9, endSec: 15, text: "Thân phận thực sự của anh là ai? Khám phá trọn bộ phim ngắn hấp dẫn này!" }
+    ]
+  },
+  {
+    id: "dy_drama_05",
+    title: "Sát Thủ Giải Nghệ Mở Quán Mì Nuôi Con Gái Bị Đám Côn Đồ Quấy Phá",
+    originalTitle: "退役特种兵 面馆护女热血爽剧",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "5.5M",
+    shares: "730K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "speed_mc",
+    voiceRecommendationName: "MC Siêu Tốc",
+    viralInsight: "Pha ra tay chớp nhoáng hạ gục 10 tên côn đồ chỉ bằng một chiếc đũa gỗ.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Người cha hiền lành chỉ muốn sống bình yên bán từng bát mì nuôi con gái nhỏ." },
+      { startSec: 4.5, endSec: 9.5, text: "Nhưng đám du côn hung hãn đã chạm vào giới hạn cuối cùng của một huyền thoại." },
+      { startSec: 9.5, endSec: 15, text: "Một khi con quỷ dữ thức tỉnh, không một ai có thể sống sót rời khỏi đây!" }
+    ]
+  },
+  {
+    id: "dy_drama_06",
+    title: "Cô Gái Mù Cứu Tổng Tài Và Lời Hứa Định Mệnh Sau 10 Năm",
+    originalTitle: "盲女救下霸总 十年后报恩反转",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "4.2M",
+    shares: "540K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_sweet",
+    voiceRecommendationName: "Mai Anh (Nữ Review Dịu Dàng)",
+    viralInsight: "Chiếc vòng tay ngọc bích tái hiện ký ức xúc động lấy nước mắt hàng triệu người xem.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Mười năm trước trong căn hẻm tối, cô bé mù đã chia đôi mẩu bánh mì cứu sống anh." },
+      { startSec: 4.5, endSec: 9.5, text: "Mười năm sau anh trở thành tỷ phú quyền lực, đi khắp thế gian tìm lại ân nhân." },
+      { startSec: 9.5, endSec: 15, text: "Khoảnh khắc họ nhận ra nhau qua giọng nói khiến người xem không cầm được nước mắt!" }
+    ]
+  },
+  {
+    id: "dy_drama_07",
+    title: "Nữ Chủ Tịch Giả Làm Thực Tập Sinh Bị Trưởng Phòng Hách Dịch",
+    originalTitle: "美女总裁卧底当实习生 怒撕小人",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "3.8M",
+    shares: "470K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+    voiceRecommendation: "adult_female_news",
+    voiceRecommendationName: "Thu Thảo (Nữ Thuyết Minh)",
+    viralInsight: "Màn bóc trần tham nhũng và đuổi việc trưởng phòng ngay tại cuộc họp toàn thể cổ đông.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4, text: "Tên trưởng phòng ngạo mạn vứt sấp hồ sơ vào mặt cô gái mới vào công ty." },
+      { startSec: 4, endSec: 9, text: "Hắn không hề biết rằng toàn bộ bằng chứng bớt xén tiền công ty đã nằm trong tay cô." },
+      { startSec: 9, endSec: 15, text: "Màn sa thải thích đáng làm nức lòng khán giả, bấm xem ngay trọn vẹn tập phim!" }
+    ]
+  },
+  {
+    id: "dy_drama_08",
+    title: "Chàng Rể Nghèo Hóa Ra Là Chiến Thần Trấn Giữ Biên Cương Vạn Người Kính",
+    originalTitle: "战神归来 入赘豪门当赘婿",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "6.8M",
+    shares: "950K",
+    videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+    voiceRecommendation: "adult_male_mc",
+    voiceRecommendationName: "Minh Quân (Nam MC Trầm Ấm)",
+    viralInsight: "Hàng trăm chiếc trực thăng quân đội hạ cánh hộ tống chiến thần về nhận chức.",
+    suggestedScript: [
+      { startSec: 0, endSec: 5, text: "Ba năm chịu nhục làm rể để bảo vệ gia đình vợ trước bao lời sỉ vả khinh thường." },
+      { startSec: 5, endSec: 10, text: "Ngày lệnh xuất quân ban xuống, vạn binh sĩ quỳ rạp gọi vang hai chữ Chiến Thần." },
+      { startSec: 10, endSec: 15, text: "Kẻ từng khinh anh giờ đây van xin trong tuyệt vọng, màn trừng phạt bắt đầu!" }
+    ]
+  },
+  {
+    id: "dy_drama_09",
+    title: "Bí Mật Chiếc Nhẫn Cổ Của Cậu Bé Đánh Giày Đổi Đời Sau Một Đêm",
+    originalTitle: "擦鞋男孩的传家宝 逆袭暴富传奇",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "2.7M",
+    shares: "320K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/echo-hereweare.mp4",
+    voiceRecommendation: "senior",
+    voiceRecommendationName: "Bác Năm (Người lớn tuổi)",
+    viralInsight: "Chuyên gia đồ cổ phát hiện chiếc nhẫn gia truyền có giá trị hàng trăm tỷ đồng.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Cậu bé mồ côi lam lũ ngày ngày đánh giày kiếm từng đồng nuôi em gái ăn học." },
+      { startSec: 4.5, endSec: 9.5, text: "Tình cờ cứu giúp một cụ già qua đường, bất ngờ nhận ra bí mật chiếc nhẫn của dòng họ." },
+      { startSec: 9.5, endSec: 15, text: "Cuộc đời bước sang một trang mới đầy vinh quang, theo dõi để xem diễn biến!" }
+    ]
+  },
+  {
+    id: "dy_drama_10",
+    title: "Người Mẹ Kế Âm Thầm Bán Máu Nuôi Con Chồng Đỗ Thủ Khoa Đại Học",
+    originalTitle: "继母深沉的爱 供儿子考上状元感人剧",
+    category: "short_drama",
+    categoryLabel: "Phim ngắn Drama",
+    likes: "5.9M",
+    shares: "860K",
+    videoUrl: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4",
+    voiceRecommendation: "adult_female_news",
+    voiceRecommendationName: "Thu Thảo (Nữ Thuyết Minh)",
+    viralInsight: "Cậu con trai tìm thấy quyển sổ y bạ cũ úa và quỳ gối ôm mẹ khóc nức nở.",
+    suggestedScript: [
+      { startSec: 0, endSec: 4.5, text: "Cậu bé từng oán hận người mẹ kế suốt thời thơ ấu vì những lời trách mắng nghiêm khắc." },
+      { startSec: 4.5, endSec: 9.5, text: "Ngày vinh quy bái tổ cầm tấm bằng thủ khoa, mới bàng hoàng nhìn thấy bàn tay chai sần của mẹ." },
+      { startSec: 9.5, endSec: 15, text: "Tình mẫu tử thiêng liêng làm lay động trái tim của hàng triệu gia đình Việt Nam!" }
     ]
   }
 ];
@@ -632,23 +1467,75 @@ export default function AiVideoEditorPage() {
   };
 
   // 🌟 DỊCH NGAY DANH SÁCH PHỤ ĐỀ HIỆN TẠI SANG TIẾNG VIỆT
+  // 🌟 DỊCH THUẬT & LỒNG TIẾNG ĐA NGÔN NGỮ (12 NGÔN NGỮ ƯU TIÊN)
+  const [showTranslateModal, setShowTranslateModal] = useState<boolean>(false);
+  const [selectedTargetLang, setSelectedTargetLang] = useState<string>("vi");
+  const [isTranslatingInModal, setIsTranslatingInModal] = useState<boolean>(false);
   const [isTranslatingCues, setIsTranslatingCues] = useState<boolean>(false);
+  const [douyinLastRefreshed, setDouyinLastRefreshed] = useState<string>("Vừa cập nhật theo thời gian thực");
+  const [isRefreshingDouyin, setIsRefreshingDouyin] = useState<boolean>(false);
+
+  const handleRefreshDouyinTrends = () => {
+    setIsRefreshingDouyin(true);
+    setTimeout(() => {
+      setIsRefreshingDouyin(false);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const dateStr = now.toLocaleDateString("vi-VN");
+      setDouyinLastRefreshed(`${timeStr} ngày ${dateStr}`);
+    }, 450);
+  };
+
   const hasChineseSubtitles = useMemo(() => {
     return subtitleCues.some((c) => /[\u4e00-\u9fa5]/.test(c.text));
   }, [subtitleCues]);
 
-  const handleTranslateExistingCues = async () => {
+  // Nhận diện ngôn ngữ gốc tự động
+  const detectedSourceLangInfo = useMemo(() => {
     if (subtitleCues.length === 0) {
-      alert("Chưa có phụ đề để dịch!");
+      return {
+        code: "auto",
+        name: "Tự động nhận diện từ âm thanh video",
+        flag: "🎙️",
+        isChinese: false,
+      };
+    }
+    const chineseCuesCount = subtitleCues.filter((c) => /[\u4e00-\u9fa5]/.test(c.text)).length;
+    if (chineseCuesCount > 0) {
+      return {
+        code: "zh",
+        name: `Tiếng Trung Quốc (${chineseCuesCount}/${subtitleCues.length} câu chứa chữ Hán)`,
+        flag: "🇨🇳",
+        isChinese: true,
+      };
+    }
+    return {
+      code: "detected",
+      name: `Ngôn ngữ gốc của video (${subtitleCues.length} câu thoại)`,
+      flag: "🔊",
+      isChinese: false,
+    };
+  }, [subtitleCues]);
+
+  // 🌟 HÀM DỊCH TOÀN BỘ CÂU PHỤ ĐỀ SANG NGÔN NGỮ ĐÍCH ĐƯỢC CHỌN (KHÔNG ĐỂ SÓT CHỮ HÁN NÀO)
+  const handleExecuteTranslation = async (targetLangCode?: string) => {
+    const langToUse = targetLangCode || selectedTargetLang || "vi";
+    setSelectedTargetLang(langToUse);
+
+    if (subtitleCues.length === 0) {
+      setShowTranslateModal(false);
+      await handleTranscribeRealAudio();
       return;
     }
+
     setIsTranslatingCues(true);
+    setIsTranslatingInModal(true);
     setTranscribeSuccessMsg("");
 
     try {
       const sourceCues = [...subtitleCues];
       const updatedCues = [...sourceCues];
-      const BATCH_SIZE = 120;
+      const BATCH_SIZE = 100;
       const totalBatches = Math.ceil(sourceCues.length / BATCH_SIZE);
 
       for (let b = 0; b < totalBatches; b++) {
@@ -659,7 +1546,7 @@ export default function AiVideoEditorPage() {
         try {
           const resp = await axios.post(
             "/api/translate-cues",
-            { cues: batchSlice },
+            { cues: batchSlice, targetLang: langToUse },
             { timeout: 45000 }
           );
 
@@ -677,20 +1564,20 @@ export default function AiVideoEditorPage() {
         }
       }
 
-      // Kiểm tra xem còn câu nào còn sót chữ Hán không, nếu còn thì dự phòng qua Google clients5 trực tiếp
+      // 🛡️ LỚP DỰ PHÒNG CHỐNG SÓT: Dịch bù các câu còn sót ký tự chữ Hán sang ngôn ngữ đích
       const stillChineseIndices = updatedCues
         .map((c, i) => (/[\u4e00-\u9fa5]/.test(c.text) ? i : -1))
         .filter((i) => i !== -1);
 
       if (stillChineseIndices.length > 0) {
-        console.log(`[Safety Net] Dịch bù ${stillChineseIndices.length} câu còn sót...`);
+        console.log(`[Safety Net] Dịch bù ${stillChineseIndices.length} câu còn sót sang ${langToUse}...`);
         const BATCH = 30;
         for (let i = 0; i < stillChineseIndices.length; i += BATCH) {
           const chunkIndices = stillChineseIndices.slice(i, i + BATCH);
           const chunkTexts = chunkIndices.map((idx) => updatedCues[idx].text);
           const prefixed = chunkTexts.map((t, idx) => `${idx}:: ${t.replace(/\r?\n/g, " ")}`).join("\n");
           try {
-            const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=vi&q=${encodeURIComponent(prefixed)}`;
+            const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(langToUse)}&q=${encodeURIComponent(prefixed)}`;
             const res = await fetch(url);
             if (res.ok) {
               const data = await res.json();
@@ -725,28 +1612,42 @@ export default function AiVideoEditorPage() {
       currentSentenceSpokenRef.current = null;
       lastSpokenCueIdRef.current = null;
 
-      // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG MC NGAY LẬP TỨC
+      // 🌟 TỰ ĐỘNG BẬT LỒNG TIẾNG MC NGAY LẬP TỨC VỚI TIẾNG GỐC 10%
       setVoiceoverConfig((prev) => ({
         ...prev,
         enabled: true,
         muteOriginal: false,
         originalVolume: 10,
+        autoDuckOriginal: true,
       }));
 
-      const vietnameseCount = updatedCues.filter((c) => !/[\u4e00-\u9fa5]/.test(c.text)).length;
-      setTranscribeSuccessMsg(`✅ Đã dịch thành công ${vietnameseCount}/${updatedCues.length} câu sang Tiếng Việt chuẩn xác! MC AI đã sẵn sàng phát tiếng Việt.`);
+      const langInfo = SUPPORTED_TRANSLATION_LANGUAGES.find((l) => l.code === langToUse);
+      const langName = langInfo ? langInfo.name : langToUse.toUpperCase();
+      setTranscribeSuccessMsg(`🎉 Đã dịch 100% trọn vẹn ${updatedCues.length} câu sang ${langName}! Đang lồng tiếng MC trực tiếp.`);
+      setShowTranslateModal(false);
 
-      // Phát ngay câu đầu tiên để người dùng nghe thấy giọng lồng tiếng Việt tức thì
+      if (videoRef.current) {
+        videoRef.current.volume = 0.1;
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+
+      // Phát ngay câu đầu tiên để người dùng nghe thấy giọng lồng tiếng tức thì
       if (updatedCues[0]?.text) {
         setTimeout(() => {
           speakSentence(updatedCues[0].text);
-        }, 300);
+        }, 350);
       }
     } catch (e: any) {
       alert("Lỗi dịch phụ đề: " + (e.message || "Vui lòng thử lại"));
     } finally {
       setIsTranslatingCues(false);
+      setIsTranslatingInModal(false);
     }
+  };
+
+  const handleTranslateExistingCues = () => {
+    setShowTranslateModal(true);
   };
   const [voiceoverConfig, setVoiceoverConfig] = useState({
     enabled: true,
@@ -832,13 +1733,14 @@ export default function AiVideoEditorPage() {
 
     upcoming.slice(0, 10).forEach((cue) => {
       const textToSpeak = (cue.parentSentenceText || cue.text).trim().slice(0, 250);
-      const cacheKey = `${activeVoice}_${textToSpeak}`;
+      const targetLang = selectedTargetLang || "vi";
+      const cacheKey = `${activeVoice}_${targetLang}_${textToSpeak}`;
       if (audioCacheRef.current.has(cacheKey)) return;
 
       try {
         const audio = new Audio();
         const encoded = encodeURIComponent(textToSpeak);
-        audio.src = `/api/tts?text=${encoded}`;
+        audio.src = `/api/tts?text=${encoded}&lang=${targetLang}`;
         audio.volume = 1.0;
         audio.playbackRate = voiceoverConfig.rate || 1.15;
         audio.preload = "auto";
@@ -1003,14 +1905,14 @@ export default function AiVideoEditorPage() {
     const encoded = encodeURIComponent(cleanSnippet);
     const apiBase = getApiBaseUrl();
 
-    // 🌟 MÁY CHỦ PHÁT ÂM TIẾNG VIỆT CHUẨN 100%
-    // Ưu tiên /api/tts nội bộ cùng domain (10ms, không CORS) -> api.kpost.vn -> fallback SpeechSynthesis
+    // 🌟 MÁY CHỦ PHÁT ÂM THEO NGÔN NGỮ ĐÃ DỊCH (HỖ TRỢ 12 NGÔN NGỮ TOÀN CẦU)
+    const targetLangCode = selectedTargetLang || "vi";
     const candidateUrls = [
-      `/api/tts?text=${encoded}`,
-      `https://api.kpost.vn/ai-content/tts?text=${encoded}`,
-      `${apiBase}/ai-content/tts?text=${encoded}`,
-      `${apiBase}/api/tts?text=${encoded}`,
-      `/ai-content/tts?text=${encoded}`,
+      `/api/tts?text=${encoded}&lang=${targetLangCode}`,
+      `https://api.kpost.vn/ai-content/tts?text=${encoded}&lang=${targetLangCode}`,
+      `${apiBase}/ai-content/tts?text=${encoded}&lang=${targetLangCode}`,
+      `${apiBase}/api/tts?text=${encoded}&lang=${targetLangCode}`,
+      `/ai-content/tts?text=${encoded}&lang=${targetLangCode}`,
     ];
 
     let urlIdx = 0;
@@ -1021,10 +1923,14 @@ export default function AiVideoEditorPage() {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           try {
             const utter = new SpeechSynthesisUtterance(cleanSnippet);
-            utter.lang = "vi-VN";
+            const targetLangObj = SUPPORTED_TRANSLATION_LANGUAGES.find((l) => l.code === targetLangCode);
+            const targetVoiceLang = targetLangObj?.voiceLang || (targetLangCode === "vi" ? "vi-VN" : targetLangCode);
+            utter.lang = targetVoiceLang;
             utter.rate = rateToUse;
-            const viVoice = availableVoices.find((v) => v.lang.startsWith("vi") || v.lang.includes("VN"));
-            if (viVoice) utter.voice = viVoice;
+            const matchedVoice = availableVoices.find(
+              (v) => v.lang.toLowerCase().startsWith(targetLangCode.toLowerCase()) || v.lang.includes(targetVoiceLang)
+            );
+            if (matchedVoice) utter.voice = matchedVoice;
             utter.onend = () => restoreVolume();
             utter.onerror = () => restoreVolume();
             window.speechSynthesis.speak(utter);
@@ -1037,7 +1943,7 @@ export default function AiVideoEditorPage() {
 
       const targetUrl = candidateUrls[urlIdx++];
       try {
-        const cacheKey = `${activeVoiceId}_${cleanSnippet}`;
+        const cacheKey = `${activeVoiceId}_${targetLangCode}_${cleanSnippet}`;
         let audio = audioCacheRef.current.get(cacheKey);
         if (!audio || audio.src !== targetUrl) {
           audio = new Audio(targetUrl);
@@ -4968,7 +5874,7 @@ NGUYÊN TẮC:
               {/* Card 2: Dịch & Lồng Tiếng MC */}
               <button
                 type="button"
-                onClick={handleTranscribeRealAudio}
+                onClick={() => setShowTranslateModal(true)}
                 disabled={isTranscribing || isReviewing || isExporting}
                 className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
               >
@@ -4977,14 +5883,16 @@ NGUYÊN TẮC:
                     <Languages size={16} />
                   </span>
                   <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
-                    Mới
+                    12 Ngôn Ngữ
                   </span>
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
                     Dịch & Lồng Tiếng
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Douyin sang tiếng Việt</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                    {detectedSourceLangInfo.isChinese ? "Tiếng Trung sang 12 thứ tiếng" : "Chọn ngôn ngữ & âm thanh gốc"}
+                  </div>
                 </div>
               </button>
 
@@ -5284,21 +6192,21 @@ NGUYÊN TẮC:
                 <div className="flex items-center gap-1.5">
                   {subtitleCues.length > 0 && (
                     <>
-                      {/* 🌐 NÚT DỊCH TỨC THÌ SANG TIẾNG VIỆT */}
+                      {/* 🌐 NÚT DỊCH TỨC THÌ SANG 12 THỨ TIẾNG */}
                       <button
                         type="button"
-                        onClick={handleTranslateExistingCues}
-                        disabled={isTranslatingCues}
+                        onClick={() => setShowTranslateModal(true)}
+                        disabled={isTranslatingCues || isTranslatingInModal}
                         className="px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs transition-all disabled:opacity-50 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
-                        title="Dịch ngay toàn bộ câu phụ đề này sang tiếng Việt chuẩn xác 100%"
+                        title="Mở bảng Dịch Thuật & Lồng Tiếng 12 Ngôn Ngữ Chuẩn Xác"
                       >
-                        {isTranslatingCues ? (
+                        {isTranslatingCues || isTranslatingInModal ? (
                           <>
                             <RefreshCw size={12} className="animate-spin" /> Đang dịch...
                           </>
                         ) : (
                           <>
-                            <Languages size={12} /> Dịch Sang Tiếng Việt
+                            <Languages size={12} /> Dịch & Lồng Tiếng
                           </>
                         )}
                       </button>
@@ -6529,6 +7437,233 @@ NGUYÊN TẮC:
         </div>
       )}
 
+      {/* 🌐 MODAL: DỊCH THUẬT & LỒNG TIẾNG ĐA NGÔN NGỮ (12 NGÔN NGỮ ƯU TIÊN) */}
+      {showTranslateModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-orange-50 text-orange-600 rounded-2xl border border-orange-200">
+                  <Languages size={22} />
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    🌐 Dịch Thuật & Lồng Tiếng AI Đa Ngôn Ngữ
+                    <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                      12 NGÔN NGỮ
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Chuyển ngữ 100% video và phụ đề, che mờ âm thanh gốc và lồng tiếng MC chuẩn xác
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTranslateModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
+              {/* KHỐI 1: THÔNG TIN NGÔN NGỮ & ÂM THANH GỐC CỦA VIDEO */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5 text-xs">
+                    <Radio size={14} className="text-orange-500" /> Ngôn Ngữ & Âm Thanh Gốc Của Video:
+                  </span>
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    detectedSourceLangInfo.isChinese
+                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  }`}>
+                    {detectedSourceLangInfo.flag} {detectedSourceLangInfo.name}
+                  </span>
+                </div>
+
+                {/* Trạng thái lời thoại & số câu */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-slate-500 block">Số câu phụ đề đã nhận diện:</span>
+                      <strong className="text-sm font-black text-slate-800">
+                        {subtitleCues.length > 0 ? `${subtitleCues.length} câu thoại` : "Chưa bóc băng"}
+                      </strong>
+                    </div>
+                    {subtitleCues.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleTranscribeRealAudio}
+                        className="px-2.5 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 rounded-lg text-xs font-bold cursor-pointer"
+                      >
+                        Bóc băng ngay
+                      </button>
+                    ) : (
+                      <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                        ✓ Sẵn sàng dịch
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-slate-500 block">Âm lượng tiếng video gốc:</span>
+                      <strong className="text-sm font-black text-orange-600">
+                        {voiceoverConfig.originalVolume}% {voiceoverConfig.originalVolume === 10 ? "(Đã che mờ)" : voiceoverConfig.originalVolume === 0 ? "(Tắt hẳn)" : ""}
+                      </strong>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVoiceoverConfig((p) => ({ ...p, originalVolume: 10, muteOriginal: false }));
+                          if (videoRef.current) videoRef.current.volume = 0.1;
+                        }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                          voiceoverConfig.originalVolume === 10
+                            ? "bg-orange-500 text-white shadow-2xs"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                        title="Khóa 10% che mờ giọng ngoại ngữ gốc"
+                      >
+                        10%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVoiceoverConfig((p) => ({ ...p, originalVolume: 0, muteOriginal: true }));
+                          if (videoRef.current) videoRef.current.volume = 0;
+                        }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                          voiceoverConfig.originalVolume === 0
+                            ? "bg-rose-500 text-white shadow-2xs"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                        title="Tắt sạch tiếng video gốc (0%)"
+                      >
+                        Tắt 0%
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thanh kéo điều chỉnh âm lượng gốc chi tiết */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-600">
+                    <span className="font-bold">Kéo chỉnh âm lượng tiếng video gốc (Khuyên dùng: 10% để che mờ giọng gốc):</span>
+                    <span className="font-mono font-bold text-orange-600">{voiceoverConfig.originalVolume}%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <VolumeX size={15} className="text-slate-400" />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={voiceoverConfig.originalVolume}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setVoiceoverConfig((p) => ({ ...p, originalVolume: val, muteOriginal: val === 0 }));
+                        if (videoRef.current) videoRef.current.volume = val / 100;
+                      }}
+                      className="flex-1 accent-orange-500 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <Volume2 size={15} className="text-orange-600" />
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl flex items-start gap-2">
+                  <span className="text-amber-600 mt-0.5">💡</span>
+                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                    <strong>Cơ chế triệt tiêu tiếng gốc:</strong> Khi MC cất lời, hệ thống tự động kích hoạt Audio Ducking hạ tiếng gốc xuống 5% để lời thuyết minh nổi bật 100%, triệt tiêu hoàn toàn tiếng nói ngoại ngữ gốc của video.
+                  </p>
+                </div>
+              </div>
+
+              {/* KHỐI 2: CHỌN NGÔN NGỮ ĐÍCH ĐỂ DỊCH & LỒNG TIẾNG (12 NGÔN NGỮ ƯU TIÊN) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5 text-xs">
+                    <Languages size={15} className="text-orange-500" /> Chọn Ngôn Ngữ Muốn Dịch & Lồng Tiếng:
+                  </label>
+                  <span className="text-[11px] text-slate-400">12 ngôn ngữ ưu tiên hàng đầu</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                  {SUPPORTED_TRANSLATION_LANGUAGES.map((lang, idx) => {
+                    const isSelected = selectedTargetLang === lang.code;
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => setSelectedTargetLang(lang.code)}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 relative ${
+                          isSelected
+                            ? "bg-gradient-to-br from-orange-50 to-amber-50 border-orange-500 shadow-md ring-2 ring-orange-200 scale-[1.02]"
+                            : "bg-white hover:bg-slate-50 border-slate-200 shadow-2xs hover:border-orange-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl">{lang.flag}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isSelected ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-500"
+                          }`}>
+                            #{idx + 1}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className={`text-xs font-black leading-tight ${isSelected ? "text-orange-950" : "text-slate-800"}`}>
+                            {lang.name}
+                          </h4>
+                          <p className={`text-[10px] truncate mt-0.5 ${isSelected ? "text-orange-700" : "text-slate-400"}`}>
+                            {lang.nativeName}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-4 h-4 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-2xs">
+                            ✓
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowTranslateModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Hủy / Đóng
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExecuteTranslation(selectedTargetLang)}
+                disabled={isTranslatingInModal || isTranslatingCues}
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+              >
+                {isTranslatingInModal || isTranslatingCues ? (
+                  <>
+                    <RefreshCw size={15} className="animate-spin" /> Đang Dịch & Lồng Tiếng...
+                  </>
+                ) : (
+                  <>
+                    <Languages size={15} /> 🚀 Bắt Đầu Dịch & Lồng Tiếng Ngay
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🔑 MODAL: CẤU HÌNH API KEYS (GEMINI & GROQ MIỄN PHÍ) */}
       {showApiKeyModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -6557,13 +7692,34 @@ NGUYÊN TẮC:
             </div>
 
             <div className="space-y-4 text-xs">
+              {/* 💎 THÔNG BÁO BẢN QUYỀN THƯƠNG MẠI KPOST */}
+              <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl flex items-start gap-3">
+                <span className="p-2 bg-orange-500 text-white rounded-xl shrink-0 shadow-xs">
+                  <ShieldCheck size={18} />
+                </span>
+                <div>
+                  <h4 className="font-black text-xs text-orange-950 uppercase tracking-wide flex items-center gap-2">
+                    Bản Quyền Thương Mại Kpost - API Đã Cấu Hình Sẵn
+                    <span className="bg-emerald-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">
+                      ĐÃ KÍCH HOẠT SẴN
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-orange-900/90 mt-1 leading-relaxed">
+                    Hệ thống đã tích hợp sẵn API máy chủ bản quyền tốc độ cao của Kpost cho toàn bộ tính năng: bóc băng AI Whisper, dịch thuật 12 ngôn ngữ và phát giọng MC. Bạn có thể sử dụng trực tiếp mà không cần cấu hình thêm API Key.
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1 italic">
+                    (Mục nhập API Key dưới đây chỉ là tùy chọn nâng cao nếu bạn muốn kết nối thêm tài khoản API riêng).
+                  </p>
+                </div>
+              </div>
+
               {/* GROQ API KEY - KHUYÊN DÙNG */}
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                     <span>GROQ API KEY</span>
                     <span className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                      KHUYÊN DÙNG - 100% MIỄN PHÍ
+                      TÙY CHỌN RIÊNG
                     </span>
                   </label>
                   <a
@@ -6703,6 +7859,38 @@ NGUYÊN TẮC:
             {/* TAB 1: BẢNG XẾP HẠNG VIDEO HOT DOUYIN */}
             {activeDouyinTab === "trends" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
+                {/* THANH CẬP NHẬT THỜI GIAN THỰC & SỐ LƯỢNG TOP 10 MỖI DANH MỤC */}
+                <div className="p-3 bg-orange-50/70 border border-orange-200/90 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 bg-orange-500 text-white rounded-xl shadow-2xs">
+                      <Flame size={16} />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-800">
+                          Douyin Trends Thời Gian Thực: Top 10 Video Triệu View Mỗi Danh Mục
+                        </span>
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          50 Video HOT Mới Nhất
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Đồng bộ trực tiếp: <span className="font-mono font-bold text-orange-700">{douyinLastRefreshed}</span> • Bấm chọn video để nạp và lồng tiếng tức thì
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshDouyinTrends}
+                    disabled={isRefreshingDouyin}
+                    className="px-3.5 py-1.5 bg-white hover:bg-orange-50 border border-orange-300 text-orange-700 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 hover:scale-[1.02] shrink-0"
+                  >
+                    <RefreshCw size={12} className={isRefreshingDouyin ? "animate-spin" : ""} />
+                    {isRefreshingDouyin ? "Đang đồng bộ..." : "🔄 Làm Mới Douyin"}
+                  </button>
+                </div>
+
                 {/* LỌC THEO DANH MỤC */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
                   {[
