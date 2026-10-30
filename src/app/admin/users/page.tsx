@@ -55,7 +55,6 @@ export default function AdminUsersPage() {
 
   // =========================================================================
   // 🌟 HÀM PHÂN LOẠI CHÍNH XÁC GÓI CƯỚC (ĐỒNG NHẤT 100% VỚI SIDEBAR & SETTINGS)
-  // Khắc phục triệt để lỗi: Khách mua lên PRO vẫn bị hiển thị là "PRO TRIAL"
   // =========================================================================
   const resolveUserPlan = (user: any) => {
     if (!user) return { displayPlan: 'FREE', isTrial: false, isPaid: false, remainingDays: 0 };
@@ -73,13 +72,18 @@ export default function AdminUsersPage() {
       }
     }
 
+    // 0. Nếu Admin đặt gói FREE
+    if (rawPlan === 'FREE' && user.isTrial !== true) {
+      return { displayPlan: 'FREE', isTrial: false, isPaid: false, remainingDays: 0 };
+    }
+
     // 1. Nếu tài khoản đã thanh toán rõ ràng (isPaid: true hoặc isTrial: false)
     if (user.isPaid === true || user.isTrial === false) {
       const paidPlan = (rawPlan === 'GOLD' || rawPlan === 'DIAMOND') ? rawPlan : 'PRO';
       return { displayPlan: paidPlan, isTrial: false, isPaid: true, remainingDays };
     }
 
-    // 2. Nếu hạn dùng còn > 7 ngày (Dùng thử chỉ có tối đa 7 ngày, nên > 7 ngày 100% là gói trả phí đã mua)
+    // 2. Nếu hạn dùng còn > 7 ngày (Dùng thử chỉ có tối đa 7 ngày, nên > 7 ngày là gói trả phí đã mua)
     if (hasValidExpiry && remainingDays > 7) {
       const paidPlan = (rawPlan === 'GOLD' || rawPlan === 'DIAMOND') ? rawPlan : 'PRO';
       return { displayPlan: paidPlan, isTrial: false, isPaid: true, remainingDays };
@@ -185,50 +189,205 @@ export default function AdminUsersPage() {
     );
   };
 
+  // Helper lấy mốc ngày tính hạn dùng hiện tại của user
+  const getUserBaseExpiryDate = (user: any): Date => {
+    if (!user) return new Date();
+    const currentExpiryStr = user.planExpire || user.planExpiry || user.expireDate;
+    if (currentExpiryStr) {
+      const parsed = new Date(currentExpiryStr);
+      if (!isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+        return parsed;
+      }
+    }
+    return new Date();
+  };
+
+  const toInputDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Mở modal nâng cấp gói
   const openUpgradeModal = (user: any) => {
     setSelectedUser(user);
     
-    let formattedDate = '';
-    if (user.planExpire) {
-      const d = new Date(user.planExpire);
-      if (!isNaN(d.getTime())) {
-        formattedDate = d.toISOString().split('T')[0];
+    // Mặc định cộng 30 ngày từ mốc hạn hiện tại
+    const baseDate = getUserBaseExpiryDate(user);
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(targetDate.getDate() + 30);
+
+    const currentPlan = user.displayPlan === 'PRO TRIAL' ? 'PRO' : (user.displayPlan || user.plan || 'PRO');
+
+    setPlanForm({
+      plan: currentPlan,
+      extraDays: 30,
+      customExpireDate: toInputDateString(targetDate)
+    });
+    setShowPlanModal(true);
+  };
+
+  // Hàm xử lý khi bấm các nút cộng/trừ ngày (-5, -1, +7, +30)
+  const handleAdjustDays = (days: number) => {
+    if (!selectedUser) return;
+    const baseDate = getUserBaseExpiryDate(selectedUser);
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(targetDate.getDate() + days);
+
+    setPlanForm(prev => ({
+      ...prev,
+      extraDays: days,
+      customExpireDate: toInputDateString(targetDate)
+    }));
+  };
+
+  // Hàm xử lý khi nhập số ngày tự do vào input
+  const handleDaysInputChange = (val: number) => {
+    if (!selectedUser) return;
+    const baseDate = getUserBaseExpiryDate(selectedUser);
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(targetDate.getDate() + val);
+
+    setPlanForm(prev => ({
+      ...prev,
+      extraDays: val,
+      customExpireDate: toInputDateString(targetDate)
+    }));
+  };
+
+  // Hàm xử lý khi chọn ngày trên lịch
+  const handleCustomDateChange = (dateStr: string) => {
+    if (!selectedUser) return;
+    const baseDate = getUserBaseExpiryDate(selectedUser);
+    let diffDays = 0;
+    if (dateStr) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const chosen = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (!isNaN(chosen.getTime())) {
+          diffDays = Math.round((chosen.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
       }
     }
 
-    setPlanForm({
-      plan: user.displayPlan === 'PRO TRIAL' ? 'PRO' : user.displayPlan || 'PRO',
-      extraDays: 30,
-      customExpireDate: formattedDate
-    });
-    setShowPlanModal(true);
+    setPlanForm(prev => ({
+      ...prev,
+      customExpireDate: dateStr,
+      extraDays: diffDays
+    }));
+  };
+
+  // Hàm xử lý chọn gói cước
+  const handleSelectPlan = (p: string) => {
+    if (p === 'FREE') {
+      setPlanForm(prev => ({
+        ...prev,
+        plan: p,
+        extraDays: 0,
+        customExpireDate: ''
+      }));
+    } else if (p === 'PRO TRIAL') {
+      handleAdjustDays(7);
+      setPlanForm(prev => ({ ...prev, plan: p }));
+    } else {
+      if (planForm.extraDays === 0 || !planForm.customExpireDate) {
+        handleAdjustDays(30);
+      }
+      setPlanForm(prev => ({ ...prev, plan: p }));
+    }
   };
 
   // Xử lý lưu nâng cấp gói
   const handleUpgradePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+
+    const targetPlan = (planForm.plan || 'PRO').toUpperCase();
+    let targetExpiryIso: string | null = null;
+    if (targetPlan !== 'FREE' && planForm.customExpireDate) {
+      const parts = planForm.customExpireDate.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+        targetExpiryIso = d.toISOString();
+      }
+    } else if (targetPlan !== 'FREE' && planForm.extraDays) {
+      const base = getUserBaseExpiryDate(selectedUser);
+      const d = new Date(base);
+      d.setDate(d.getDate() + planForm.extraDays);
+      d.setHours(23, 59, 59, 999);
+      targetExpiryIso = d.toISOString();
+    }
+
+    const isTrialVal = targetPlan === 'PRO TRIAL';
+    const isPaidVal = targetPlan !== 'FREE' && targetPlan !== 'PRO TRIAL';
+
+    // 1. Cập nhật lạc quan (Optimistic update) ngay lập tức trên UI
+    setUsers(prevUsers => prevUsers.map(u => {
+      if (u.id === selectedUser.id) {
+        return {
+          ...u,
+          plan: targetPlan,
+          displayPlan: targetPlan,
+          rawPlan: targetPlan,
+          planExpire: targetExpiryIso,
+          isTrial: isTrialVal,
+          isPaid: isPaidVal
+        };
+      }
+      return u;
+    }));
+
+    const payload = {
+      plan: targetPlan,
+      extraDays: planForm.extraDays,
+      customExpireDate: planForm.customExpireDate,
+      isTrial: isTrialVal,
+      isPaid: isPaidVal
+    };
+
     try {
-      const res = await fetch(`${API_URL}/admin/users/${selectedUser.id}/plan`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...planForm,
-          isTrial: planForm.plan === 'PRO TRIAL',
-          isPaid: planForm.plan !== 'FREE' && planForm.plan !== 'PRO TRIAL'
-        })
-      });
-      if (res.ok) {
-        toast.success('Cập nhật gói và hạn dùng thành công!');
+      let res: Response | null = null;
+
+      // 1. Thử gọi API_URL cấu hình
+      try {
+        res = await fetch(`${API_URL}/admin/users/${selectedUser.id}/plan`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.warn('API_URL fetch failed, fallback to relative URL...');
+      }
+
+      // 2. Fallback sang endpoint tương đối nếu API_URL không phản hồi hoặc lỗi
+      if (!res || !res.ok) {
+        try {
+          const fallbackRes = await fetch(`/api/admin/users/${selectedUser.id}/plan`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (fallbackRes.ok) {
+            res = fallbackRes;
+          }
+        } catch (subErr) {
+          // ignore
+        }
+      }
+
+      if (res && res.ok) {
+        toast.success(`Đã cập nhật gói ${targetPlan} và hạn dùng thành công!`);
         setShowPlanModal(false);
         fetchUsers();
       } else {
-        const errorData = await res.json().catch(() => ({}));
+        const errorData = res ? await res.json().catch(() => ({})) : {};
         toast.error(errorData.message || 'Lỗi cập nhật');
+        fetchUsers();
       }
     } catch (err) {
       toast.error('Lỗi kết nối máy chủ');
+      fetchUsers();
     }
   };
 
@@ -397,13 +556,13 @@ export default function AdminUsersPage() {
             Đã chọn <span className="text-blue-600 font-bold">{selectedUserIds.length}</span> khách hàng
           </span>
           <div className="flex gap-2">
-            <button onClick={() => handleBulkAction('lock')} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition shadow-2xs">
+            <button onClick={() => handleBulkAction('lock')} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition shadow-2xs cursor-pointer">
               Khóa tài khoản
             </button>
-            <button onClick={() => handleBulkAction('restore')} className="px-3 py-1.5 bg-white border border-gray-200 text-green-600 text-xs font-semibold rounded-lg hover:bg-green-50 transition shadow-2xs">
+            <button onClick={() => handleBulkAction('restore')} className="px-3 py-1.5 bg-white border border-gray-200 text-green-600 text-xs font-semibold rounded-lg hover:bg-green-50 transition shadow-2xs cursor-pointer">
               Khôi phục
             </button>
-            <button onClick={() => handleBulkAction('hard-delete')} className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition shadow-2xs">
+            <button onClick={() => handleBulkAction('hard-delete')} className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition shadow-2xs cursor-pointer">
               Xóa vĩnh viễn
             </button>
           </div>
@@ -552,25 +711,25 @@ export default function AdminUsersPage() {
                     <td className="p-4 text-right whitespace-nowrap">
                       {user.status === 'active' ? (
                         <div className="flex gap-2 justify-end">
-                          <button onClick={() => openUpgradeModal(user)} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-semibold transition">
+                          <button onClick={() => openUpgradeModal(user)} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-semibold transition cursor-pointer">
                             Nâng cấp
                           </button>
-                          <button onClick={() => { setSelectedUser(user); setShowVoucherModal(true); }} className="text-xs px-3 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg font-semibold transition">
+                          <button onClick={() => { setSelectedUser(user); setShowVoucherModal(true); }} className="text-xs px-3 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg font-semibold transition cursor-pointer">
                             Tặng Voucher
                           </button>
-                          <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg font-semibold transition">
+                          <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg font-semibold transition cursor-pointer">
                             Khóa
                           </button>
-                          <button onClick={() => hardDeleteUser(user.id)} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-semibold transition">
+                          <button onClick={() => hardDeleteUser(user.id)} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-semibold transition cursor-pointer">
                             Xóa hẳn
                           </button>
                         </div>
                       ) : (
                         <div className="flex gap-2 justify-end">
-                          <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg font-semibold transition">
+                          <button onClick={() => toggleUserStatus(user)} className="text-xs px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg font-semibold transition cursor-pointer">
                             Khôi phục
                           </button>
-                          <button onClick={() => hardDeleteUser(user.id)} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-semibold transition">
+                          <button onClick={() => hardDeleteUser(user.id)} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-semibold transition cursor-pointer">
                             Xóa hẳn
                           </button>
                         </div>
@@ -596,7 +755,7 @@ export default function AdminUsersPage() {
               <button 
                 type="button" 
                 onClick={() => setShowPlanModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg font-bold p-1"
+                className="text-gray-400 hover:text-gray-600 text-lg font-bold p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -618,12 +777,8 @@ export default function AdminUsersPage() {
                   <button
                     key={p}
                     type="button"
-                    onClick={() => setPlanForm({ 
-                      ...planForm, 
-                      plan: p,
-                      extraDays: p === 'PRO TRIAL' ? 7 : (p === 'FREE' ? 0 : 30)
-                    })}
-                    className={`py-2 text-[11px] font-bold rounded-xl border transition-all ${
+                    onClick={() => handleSelectPlan(p)}
+                    className={`py-2 text-[11px] font-bold rounded-xl border transition-all cursor-pointer ${
                       planForm.plan === p 
                         ? (p === 'PRO TRIAL' ? 'bg-orange-500 text-white border-orange-500 shadow-xs' : 'bg-blue-600 text-white border-blue-600 shadow-xs')
                         : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
@@ -635,98 +790,119 @@ export default function AdminUsersPage() {
               </div>
             </div>
 
-            {/* Tăng / giảm ngày nhanh */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">
-                Cộng thêm / Trừ bớt số ngày
-              </label>
-              
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => setPlanForm({ ...planForm, extraDays: -5 })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    planForm.extraDays === -5 
-                      ? 'bg-red-600 text-white border-red-600 shadow-xs' 
-                      : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                  }`}
-                >
-                  -5 Ngày
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlanForm({ ...planForm, extraDays: -1 })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    planForm.extraDays === -1 
-                      ? 'bg-orange-600 text-white border-orange-600 shadow-xs' 
-                      : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
-                  }`}
-                >
-                  -1 Ngày
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlanForm({ ...planForm, extraDays: 7 })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    planForm.extraDays === 7 
-                      ? 'bg-green-600 text-white border-green-600 shadow-xs' 
-                      : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-                  }`}
-                >
-                  +7 Ngày
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlanForm({ ...planForm, extraDays: 30 })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    planForm.extraDays === 30 
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
-                      : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
-                  }`}
-                >
-                  +30 Ngày
-                </button>
-              </div>
+            {/* Tăng / giảm ngày nhanh (chỉ hiển thị khi không phải FREE) */}
+            {planForm.plan !== 'FREE' && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">
+                  Cộng thêm / Trừ bớt số ngày
+                </label>
+                
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustDays(-5)}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                      planForm.extraDays === -5 
+                        ? 'bg-red-600 text-white border-red-600 shadow-xs' 
+                        : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                    }`}
+                  >
+                    -5 Ngày
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustDays(-1)}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                      planForm.extraDays === -1 
+                        ? 'bg-orange-600 text-white border-orange-600 shadow-xs' 
+                        : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                    }`}
+                  >
+                    -1 Ngày
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustDays(7)}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                      planForm.extraDays === 7 
+                        ? 'bg-green-600 text-white border-green-600 shadow-xs' 
+                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                    }`}
+                  >
+                    +7 Ngày
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustDays(30)}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                      planForm.extraDays === 30 
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                        : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                    }`}
+                  >
+                    +30 Ngày
+                  </button>
+                </div>
 
-              {/* Nhập số ngày tự do */}
-              <div className="relative">
-                <input 
-                  type="number" 
-                  placeholder="Gõ số ngày (VD: 30 hoặc -5)"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800"
-                  value={planForm.extraDays} 
-                  onChange={e => setPlanForm({ ...planForm, extraDays: Number(e.target.value) })}
-                />
-                <span className="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">
-                  {planForm.extraDays < 0 ? 'Giảm' : 'Tăng'} {Math.abs(planForm.extraDays)} ngày
-                </span>
+                {/* Nhập số ngày tự do */}
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    placeholder="Gõ số ngày (VD: 30 hoặc -5)"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800"
+                    value={planForm.extraDays} 
+                    onChange={e => handleDaysInputChange(Number(e.target.value))}
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">
+                    {planForm.extraDays < 0 ? 'Giảm' : 'Tăng'} {Math.abs(planForm.extraDays)} ngày
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Chọn ngày hết hạn cụ thể */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">
-                Hoặc chọn trực tiếp ngày hết hạn trên lịch
-              </label>
-              <input 
-                type="date" 
-                className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 font-medium"
-                value={planForm.customExpireDate} 
-                onChange={e => setPlanForm({ ...planForm, customExpireDate: e.target.value })}
-              />
-            </div>
+            {planForm.plan !== 'FREE' && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">
+                  Hoặc chọn trực tiếp ngày hết hạn trên lịch
+                </label>
+                <input 
+                  type="date" 
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 font-medium cursor-pointer"
+                  value={planForm.customExpireDate} 
+                  onChange={e => handleCustomDateChange(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Preview ngày hết hạn mới dự kiến */}
+            {planForm.plan !== 'FREE' && planForm.customExpireDate && (
+              <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl flex items-center justify-between text-xs">
+                <span className="font-semibold text-emerald-800">Hạn dùng mới dự kiến:</span>
+                <span className="font-bold text-emerald-900 text-sm">
+                  {(() => {
+                    const parts = planForm.customExpireDate.split('-');
+                    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    return planForm.customExpireDate;
+                  })()}
+                  <span className="text-xs font-medium text-emerald-700 ml-1.5">
+                    ({planForm.extraDays >= 0 ? `+${planForm.extraDays}` : planForm.extraDays} ngày)
+                  </span>
+                </span>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <button 
                 type="button" 
                 onClick={() => setShowPlanModal(false)} 
-                className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
               >
                 Hủy
               </button>
               <button 
                 type="submit" 
-                className="flex-1 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-200 active:scale-95"
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-200 active:scale-95 cursor-pointer"
               >
                 Xác nhận
               </button>
@@ -753,10 +929,10 @@ export default function AdminUsersPage() {
               />
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setShowVoucherModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+              <button type="button" onClick={() => setShowVoucherModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer">
                 Hủy
               </button>
-              <button type="submit" className="flex-1 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-200">
+              <button type="submit" className="flex-1 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-200 cursor-pointer">
                 Tặng mã
               </button>
             </div>
