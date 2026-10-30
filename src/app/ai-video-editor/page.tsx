@@ -12,7 +12,6 @@ import {
   Image as ImageIcon,
   Mic,
   CheckCircle2,
-  Sparkles,
   Volume2,
   VolumeX,
   X,
@@ -38,7 +37,8 @@ import {
   Layers,
   ExternalLink,
   Settings,
-  Plus
+  Plus,
+  Languages,
 } from "lucide-react";
 
 export interface SubtitleWord {
@@ -4845,7 +4845,7 @@ NGUYÊN TẮC:
   return (
     <div className="flex-1 bg-[#F8FAFC] min-h-screen p-3 md:p-6 font-sans text-slate-800 overflow-y-auto selection:bg-orange-500 selection:text-white">
       <div className="max-w-[1540px] mx-auto pb-24">
-        {/* HEADER CAPCUT PRO STUDIO - TONE CAM & TRẮNG HIỆN ĐẠI */}
+        {/* HEADER PRO STUDIO - TONE CAM & TRẮNG HIỆN ĐẠI */}
         <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200/90 shadow-sm p-4 md:p-6 mb-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
@@ -4858,7 +4858,7 @@ NGUYÊN TẮC:
                     KPOST AI VIDEO EDITOR
                   </h1>
                   <span className="bg-orange-50 border border-orange-200 text-orange-600 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-2xs">
-                    CAPCUT STUDIO PRO
+                    PRO STUDIO
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -4890,15 +4890,15 @@ NGUYÊN TẮC:
                   setShowDouyinModal(true);
                   setActiveDouyinTab("scraper");
                 }}
-                className="px-4 py-2.5 bg-white hover:bg-orange-50/50 text-slate-700 hover:text-orange-600 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 hover:border-orange-200 shadow-2xs cursor-pointer active:scale-95"
+                className="px-4 py-2.5 bg-white hover:bg-orange-50/50 text-slate-700 hover:text-orange-600 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 hover:border-orange-300 shadow-2xs cursor-pointer active:scale-95"
               >
-                <Link2 size={16} /> <span>Dán Link Video</span>
+                <Link2 size={16} className="text-orange-500" /> <span>Dán Link Video</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowApiKeyModal(true)}
-                className="px-3.5 py-2.5 bg-white hover:bg-orange-50/50 text-slate-700 hover:text-orange-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 hover:border-orange-200 shadow-2xs transition-all cursor-pointer"
+                className="px-3.5 py-2.5 bg-white hover:bg-orange-50/50 text-slate-700 hover:text-orange-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 hover:border-orange-300 shadow-2xs transition-all cursor-pointer"
                 title="Cài đặt GEMINI_API_KEY hoặc GROQ_API_KEY (miễn phí)"
               >
                 <Settings size={15} className="text-orange-500" />
@@ -4918,29 +4918,26 @@ NGUYÊN TẮC:
                 }`}
                 title="Bật/Tắt dải che mờ đè lên phụ đề tiếng Trung gốc"
               >
-                <Eye size={15} />
+                <Eye size={15} className={maskConfig.enabled ? "text-white" : "text-orange-500"} />
                 <span>Che Sub Gốc: {maskConfig.enabled ? "BẬT" : "TẮT"}</span>
               </button>
 
               <a
                 href="/fullcode-ai-video-editor.zip"
                 download="fullcode-ai-video-editor.zip"
-                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                className="px-3.5 py-2.5 bg-white hover:bg-orange-50 text-slate-700 hover:text-orange-600 border border-slate-200 hover:border-orange-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
                 title="Tải toàn bộ source code ZIP"
               >
-                <Download size={14} className="text-amber-700" /> <span>Tải Code ZIP</span>
+                <Download size={14} className="text-orange-500" /> <span>Tải Code ZIP</span>
               </a>
             </div>
           </div>
 
-          {/* CAPCUT TOOL SHOWCASE RIBBON (LẤY CẢM HỨNG TỪ CAPCUT WEB) */}
+          {/* TOOL SHOWCASE RIBBON */}
           <div className="mt-5 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-black uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
-                <Sparkles size={14} className="text-orange-500" /> Công Cụ Biên Tập AI Nhanh:
-              </span>
-              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                Chuẩn phong cách CapCut Studio chuyên nghiệp
+              <span className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-1.5">
+                <Sliders size={14} className="text-orange-500" /> Công Cụ Biên Tập AI Nhanh:
               </span>
             </div>
 
@@ -4950,13 +4947,13 @@ NGUYÊN TẮC:
                 type="button"
                 onClick={handleTranscribeWhisper}
                 disabled={isTranscribing || isExporting}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
                     <Mic size={16} />
                   </span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded-full">
                     Miễn phí
                   </span>
                 </div>
@@ -4973,11 +4970,11 @@ NGUYÊN TẮC:
                 type="button"
                 onClick={handleTranscribeRealAudio}
                 disabled={isTranscribing || isReviewing || isExporting}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
-                    <Sparkles size={16} />
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
+                    <Languages size={16} />
                   </span>
                   <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
                     Mới
@@ -5025,14 +5022,14 @@ NGUYÊN TẮC:
                 type="button"
                 onClick={() => setShowExportModal(true)}
                 disabled={!videoUrl || isExporting}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer disabled:opacity-50 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
                     <Scissors size={16} />
                   </span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full">
-                    CapCut Studio
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
+                    Mới
                   </span>
                 </div>
                 <div>
@@ -5047,11 +5044,11 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowVoiceoverModal(true)}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
-                    <Radio size={16} />
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
+                    <Volume2 size={16} />
                   </span>
                   <span className="text-xs">
                     {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.avatar || "👩"}
@@ -5069,10 +5066,10 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
                     <ImageIcon size={16} />
                   </span>
                 </div>
@@ -5088,10 +5085,10 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowEffectsModal(true)}
-                className="p-3 bg-white hover:bg-orange-50/40 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
+                className="p-3 bg-white hover:bg-orange-50/50 border border-slate-200/90 hover:border-orange-300 rounded-2xl text-left transition-all group shadow-2xs cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="p-2 bg-rose-50 text-rose-600 rounded-xl group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                  <span className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
                     <Palette size={16} />
                   </span>
                 </div>
@@ -5301,7 +5298,7 @@ NGUYÊN TẮC:
                           </>
                         ) : (
                           <>
-                            <Sparkles size={12} /> Dịch Sang Tiếng Việt
+                            <Languages size={12} /> Dịch Sang Tiếng Việt
                           </>
                         )}
                       </button>
@@ -5477,7 +5474,7 @@ NGUYÊN TẮC:
                     />
                     <div className="flex flex-col">
                       <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                        <Sparkles size={12} className="text-orange-500" />
+                        <Wand2 size={12} className="text-orange-500" />
                         Chỉ lồng tiếng hội thoại chính (Chống xung đột giọng)
                       </span>
                       <span className="text-[10px] text-slate-400">
@@ -5493,7 +5490,7 @@ NGUYÊN TẮC:
                       className="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-[11px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
                       title="Lọc sạch danh sách câu: Chỉ giữ lại lời thoại đắt giá, loại bỏ tiếng đệm"
                     >
-                      <Sparkles size={11} /> 🧹 Tinh Gọn Lời Thoại
+                      <Sliders size={11} /> 🧹 Tinh Gọn Lời Thoại
                     </button>
                   )}
                 </div>
@@ -5505,7 +5502,7 @@ NGUYÊN TẮC:
                       <Radio size={13} className="text-orange-500" /> Chọn Giọng MC (Đổi Là Ăn Ngay):
                     </span>
                     <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                      ⚡ Không cần dịch lại
+                      ✓ Không cần dịch lại
                     </span>
                   </div>
 
@@ -5706,7 +5703,7 @@ NGUYÊN TẮC:
 
               {transcribeSuccessMsg && (
                 <div className="mt-3.5 p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-start gap-2 animate-in fade-in">
-                  <Sparkles size={16} className="text-purple-600 shrink-0 mt-0.5" />
+                  <Check size={16} className="text-purple-600 shrink-0 mt-0.5" />
                   <p className="text-xs font-bold text-purple-900 leading-relaxed">{transcribeSuccessMsg}</p>
                 </div>
               )}
@@ -5764,9 +5761,9 @@ NGUYÊN TẮC:
                   <button
                     type="button"
                     onClick={() => setShowEffectsModal(true)}
-                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Palette size={13} />
+                    <Palette size={13} className="text-orange-500" />
                     {visualEffects.filterType !== "none" ? "Hiệu ứng" : "Bộ lọc"}
                   </button>
 
@@ -5792,17 +5789,6 @@ NGUYÊN TẮC:
                     <Eye size={13} />
                     {compareOriginal ? "Xem GỐC" : "Bản gốc"}
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={handleFixBlackScreenH264}
-                    disabled={isConvertingH264 || !videoUrl}
-                    className="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xs active:scale-95 disabled:opacity-50"
-                    title="Khắc phục video Douyin/HEVC H.265 chỉ có tiếng & sub nhưng bị đen hình"
-                  >
-                    <Sparkles size={13} className={isConvertingH264 ? "animate-spin" : ""} />
-                    {isConvertingH264 ? "Đang sửa..." : "Sửa Lỗi Đen Hình"}
-                  </button>
                 </div>
               </div>
 
@@ -5816,47 +5802,6 @@ NGUYÊN TẮC:
               >
                 {videoUrl && (
                   <>
-                    {/* OVERLAY ĐANG CHUYỂN MÃ H.264 */}
-                    {isConvertingH264 && (
-                      <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center text-white animate-in fade-in">
-                        <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-3 shadow-lg" />
-                        <h4 className="font-black text-sm text-orange-400 mb-1 uppercase tracking-wide">
-                          Đang Khắc Phục Lỗi Màn Hình Đen
-                        </h4>
-                        <p className="text-xs text-slate-300 max-w-xs leading-relaxed">
-                          {convertStatusMsg || "Hệ thống đang chuyển mã video Douyin H.265 sang MP4 H.264 tương thích 100% với trình duyệt..."}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* 🌟 NÚT NỔI SỬA LỖI ĐEN HÌNH TRỰC DIỆN (CHỐNG BỊ BỎ LỠ HOẶC CHE KHUẤT) */}
-                    {isDetectedHevc && !isConvertingH264 && (
-                      <div className="absolute inset-x-3 bottom-16 sm:bottom-20 z-40 flex justify-center animate-in fade-in slide-in-from-bottom-2">
-                        <div className="bg-white/95 border-2 border-orange-400 rounded-2xl p-3 shadow-xl backdrop-blur-md max-w-lg w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-800">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="p-2 bg-orange-100 text-orange-600 rounded-xl shrink-0">
-                              <Sparkles size={18} className="animate-spin text-orange-500" />
-                            </span>
-                            <div>
-                              <h5 className="text-xs font-black text-orange-600 uppercase tracking-wide flex items-center gap-1.5">
-                                Video Bị Đen Hình (Do Mã H.265 Douyin)
-                              </h5>
-                              <p className="text-[11px] text-slate-600">
-                                Trình duyệt không đọc được H.265. Bấm nút để chuyển sang MP4 chuẩn xem được ngay!
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleFixBlackScreenH264}
-                            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl shadow-xs shrink-0 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                          >
-                            <Sparkles size={14} />
-                            BẤM ĐỂ HIỆN HÌNH NGAY
-                          </button>
-                        </div>
-                      </div>
-                    )}
 
                     <video
                       ref={videoRef}
@@ -6000,7 +5945,7 @@ NGUYÊN TẮC:
                           />
                         ) : (
                           <div className="px-3 py-1 bg-orange-500/90 text-white font-black text-xs rounded-xl shadow-md border border-white/20 backdrop-blur-xs flex items-center gap-1.5 tracking-wider uppercase">
-                            <Sparkles size={11} className="text-amber-300" />
+                            <Wand2 size={11} className="text-white" />
                             {logoConfig.name}
                           </div>
                         )}
@@ -6167,26 +6112,26 @@ NGUYÊN TẮC:
         </div>
       </div>
 
-      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) - XANH FACEBOOK */}
+      {/* 🌟 MODAL 1: AI LỒNG TIẾNG ĐA CHẤT GIỌNG (TỪ TRẺ EM ĐẾN NGƯỜI LỚN) - CAM TRẮNG */}
       {showVoiceoverModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867] shrink-0">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
+                <span className="p-2 bg-orange-50 text-orange-600 rounded-xl">
                   <Radio size={18} />
                 </span>
                 <div>
-                  <h3 className="text-base font-black text-white">
+                  <h3 className="text-base font-black text-slate-800">
                     AI Lồng Tiếng Cho Video (Từ Trẻ Em Đến Người Lớn)
                   </h3>
-                  <p className="text-xs text-blue-200/70">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
+                  <p className="text-xs text-slate-500">Tự động nói theo phụ đề timeline, hỗ trợ Audio Ducking hạ âm lượng video gốc</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowVoiceoverModal(false)}
-                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -6194,34 +6139,34 @@ NGUYÊN TẮC:
 
             <div className="space-y-4 overflow-y-auto pr-1 flex-1">
               {/* BẬT / TẮT & AUDIO DUCKING */}
-              <div className="p-3 bg-[#0B1527] border border-[#1E3867] rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <label className="flex items-center gap-2 font-bold text-slate-100 cursor-pointer">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={voiceoverConfig.enabled}
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                    className="w-4 h-4 accent-[#1877F2] rounded"
+                    className="w-4 h-4 accent-orange-500 rounded"
                   />
                   Bật AI tự động lồng tiếng khi phát video
                 </label>
-                <label className="flex items-center gap-2 font-bold text-blue-200 cursor-pointer">
+                <label className="flex items-center gap-2 font-bold text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={voiceoverConfig.autoDuckOriginal}
                     onChange={(e) => setVoiceoverConfig((p) => ({ ...p, autoDuckOriginal: e.target.checked }))}
-                    className="w-4 h-4 accent-[#1877F2] rounded"
+                    className="w-4 h-4 accent-orange-500 rounded"
                   />
                   Tự động giảm âm lượng video gốc khi AI nói (Audio Ducking)
                 </label>
               </div>
 
               {/* 🌟 ĐIỀU CHỈNH ÂM LƯỢNG TIẾNG GỐC VIDEO */}
-              <div className="p-3.5 bg-[#0B1527] border border-[#1E3867] rounded-2xl space-y-2">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
                     🔇 Âm lượng tiếng video gốc (Che mờ ngoại ngữ):
                   </span>
-                  <span className="font-black text-amber-300 text-sm">
+                  <span className="font-black text-orange-600 text-sm">
                     {voiceoverConfig.originalVolume}% {voiceoverConfig.originalVolume === 10 ? "(Đã che mờ)" : voiceoverConfig.originalVolume === 0 ? "(Đã tắt sạch)" : ""}
                   </span>
                 </div>
@@ -6236,7 +6181,7 @@ NGUYÊN TẮC:
                       setVoiceoverConfig((p) => ({ ...p, originalVolume: vol, muteOriginal: vol === 0 }));
                       if (videoRef.current) videoRef.current.volume = vol / 100;
                     }}
-                    className="flex-1 accent-amber-400 cursor-pointer h-2"
+                    className="flex-1 accent-orange-500 cursor-pointer h-2"
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-1 text-[11px]">
@@ -6248,8 +6193,8 @@ NGUYÊN TẮC:
                     }}
                     className={`px-2.5 py-1 rounded-lg border font-bold cursor-pointer transition-all ${
                       voiceoverConfig.originalVolume === 0
-                        ? "bg-rose-950/80 border-rose-500 text-rose-300"
-                        : "bg-[#13223F] border-[#1E3867] text-slate-300 hover:bg-[#1A3059]"
+                        ? "bg-rose-50 border-rose-300 text-rose-700"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     🔇 Tắt hẳn (0%)
@@ -6262,11 +6207,11 @@ NGUYÊN TẮC:
                     }}
                     className={`px-3 py-1 rounded-lg border font-black cursor-pointer transition-all ${
                       voiceoverConfig.originalVolume === 10
-                        ? "bg-amber-400 border-amber-300 text-slate-950 shadow-xs"
-                        : "bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50"
+                        ? "bg-orange-500 border-orange-600 text-white shadow-xs"
+                        : "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
                     }`}
                   >
-                    ⭐ Che mờ giọng gốc (10% - Khuyên Dùng)
+                    Che mờ giọng gốc (10% - Khuyên Dùng)
                   </button>
                   <button
                     type="button"
@@ -6276,8 +6221,8 @@ NGUYÊN TẮC:
                     }}
                     className={`px-2.5 py-1 rounded-lg border font-bold cursor-pointer transition-all ${
                       voiceoverConfig.originalVolume === 25
-                        ? "bg-blue-950 border-[#1877F2] text-blue-200"
-                        : "bg-[#13223F] border-[#1E3867] text-slate-300 hover:bg-[#1A3059]"
+                        ? "bg-orange-500 border-orange-600 text-white shadow-xs"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     🔉 Nhạc nền vừa (25%)
@@ -6295,8 +6240,8 @@ NGUYÊN TẮC:
                       onClick={() => handleQuickChangeVoice(char.id, char.rate, char.pitch)}
                       className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? "border-[#1877F2] bg-[#1565C0]/30 shadow-md shadow-blue-950/60"
-                          : "border-[#1E3867] hover:border-[#1877F2]/50 bg-[#0B1527]"
+                          ? "border-orange-500 bg-orange-50/70 shadow-sm"
+                          : "border-slate-200 hover:border-orange-300 bg-white"
                       }`}
                     >
                       <div>
@@ -6304,33 +6249,33 @@ NGUYÊN TẮC:
                           <span className="text-2xl">{char.avatar}</span>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             char.group === "kids"
-                              ? "bg-amber-950/60 text-amber-300 border border-amber-500/30"
+                              ? "bg-amber-100 text-amber-800 border border-amber-200"
                               : char.group === "adults"
-                              ? "bg-blue-950/60 text-blue-200 border border-[#1877F2]/30"
-                              : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                              ? "bg-orange-100 text-orange-800 border border-orange-200"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                           }`}>
                             {char.badge} • {char.ageRange}
                           </span>
                         </div>
-                        <h4 className="text-xs font-black text-white">{char.name}</h4>
-                        <p className="text-[11px] text-blue-200/70 mt-1 line-clamp-2 leading-relaxed">
+                        <h4 className="text-xs font-black text-slate-800">{char.name}</h4>
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                           {char.description}
                         </p>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-[#1A3059] flex items-center justify-between">
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             speakSentence(char.sampleText, char.id, char.rate);
                           }}
-                          className="px-2.5 py-1 bg-[#152649] hover:bg-[#1A3059] text-slate-200 border border-[#1E3867] text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <Volume2 size={12} /> Nghe thử mẫu
                         </button>
                         {isSelected && (
-                          <span className="text-[10px] font-black text-amber-300 uppercase flex items-center gap-1">
+                          <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-1">
                             <Check size={12} /> Đang chọn
                           </span>
                         )}
@@ -6341,17 +6286,17 @@ NGUYÊN TẮC:
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#1E3867] flex items-center justify-between shrink-0">
-              <span className="text-xs font-bold text-blue-200">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+              <span className="text-xs font-bold text-slate-600">
                 Nhân vật đang chọn:{" "}
-                <strong className="text-amber-300">
+                <strong className="text-orange-600">
                   {VOICE_CHARACTERS.find((c) => c.id === voiceoverConfig.selectedVoiceId)?.name}
                 </strong>
               </span>
               <button
                 type="button"
                 onClick={() => setShowVoiceoverModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
               >
                 Lưu & Áp Dụng
               </button>
@@ -6363,21 +6308,21 @@ NGUYÊN TẮC:
       {/* 🎬 MODAL: TÙY CHỌN AI REVIEW VIDEO & TÓM TẮT PHIM HÀI HƯỚC */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f172a] border border-fuchsia-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col shadow-fuchsia-950/50">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-fuchsia-500/20 shrink-0">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-gradient-to-tr from-purple-600 to-fuchsia-600 text-white rounded-2xl shadow-lg shadow-fuchsia-950/60">
-                  <Film size={22} className="animate-pulse" />
+                <span className="p-2.5 bg-orange-50 text-orange-600 rounded-2xl">
+                  <Film size={22} />
                 </span>
                 <div>
-                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
                     🎬 AI Review & Lồng Tiếng Video
-                    <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                    <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                       TRIỆU VIEW
                     </span>
                   </h3>
-                  <p className="text-xs text-fuchsia-200/80">
+                  <p className="text-xs text-slate-500">
                     AI tự động phân tích khung hình & cốt truyện, viết kịch bản review dí dỏm, lôi cuốn và lồng tiếng chuẩn TikTok / Shorts
                   </p>
                 </div>
@@ -6385,7 +6330,7 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowReviewModal(false)}
-                className="text-fuchsia-300 hover:text-white p-1 rounded-lg hover:bg-fuchsia-950/50 transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -6394,7 +6339,7 @@ NGUYÊN TẮC:
             <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
               {/* PHONG CÁCH REVIEW */}
               <div>
-                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-2">
+                <label className="block text-xs font-black uppercase text-orange-600 tracking-wider mb-2">
                   1. Chọn phong cách Review & Tóm tắt:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -6435,21 +6380,21 @@ NGUYÊN TẮC:
                         onClick={() => setReviewConfig((p) => ({ ...p, style: style.id as any }))}
                         className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? "border-fuchsia-500 bg-fuchsia-950/40 shadow-lg shadow-fuchsia-950/60"
-                            : "border-slate-800 hover:border-fuchsia-500/40 bg-slate-900/60"
+                            ? "border-orange-500 bg-orange-50/70 shadow-sm"
+                            : "border-slate-200 hover:border-orange-300 bg-slate-50/60"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-1 mb-1">
-                          <span className="font-black text-sm text-white flex items-center gap-1.5">
+                          <span className="font-black text-sm text-slate-800 flex items-center gap-1.5">
                             <span>{style.icon}</span> {style.title}
                           </span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                            isSelected ? "bg-fuchsia-500 text-white" : "bg-slate-800 text-slate-400"
+                            isSelected ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-600"
                           }`}>
                             {style.badge}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-300 leading-relaxed">{style.desc}</p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">{style.desc}</p>
                       </div>
                     );
                   })}
@@ -6459,8 +6404,8 @@ NGUYÊN TẮC:
               {/* MẬT ĐỘ LỜI BÌNH & ÂM LƯỢNG */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Mật độ */}
-                <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
-                  <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-1.5">
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <label className="block text-xs font-black uppercase text-orange-600 tracking-wider mb-1.5">
                     2. Mật độ lời bình Review:
                   </label>
                   <div className="flex gap-1.5">
@@ -6475,8 +6420,8 @@ NGUYÊN TẮC:
                         onClick={() => setReviewConfig((p) => ({ ...p, density: d.id as any }))}
                         className={`flex-1 py-1.5 px-2 rounded-xl text-center border font-bold transition-all cursor-pointer ${
                           reviewConfig.density === d.id
-                            ? "bg-fuchsia-600 text-white border-fuchsia-400 shadow-sm"
-                            : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
+                            ? "bg-orange-500 text-white border-orange-600 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                         }`}
                       >
                         <div className="text-xs">{d.label}</div>
@@ -6486,12 +6431,12 @@ NGUYÊN TẮC:
                 </div>
 
                 {/* Giảm âm lượng video gốc */}
-                <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-black uppercase text-fuchsia-300 tracking-wider">
+                    <label className="text-xs font-black uppercase text-orange-600 tracking-wider">
                       3. Âm lượng video gốc (Nhạc nền):
                     </label>
-                    <span className="font-mono font-bold text-amber-300 text-xs">
+                    <span className="font-mono font-bold text-orange-600 text-xs">
                       {reviewConfig.originalVolume}%
                     </span>
                   </div>
@@ -6502,17 +6447,17 @@ NGUYÊN TẮC:
                     step="5"
                     value={reviewConfig.originalVolume}
                     onChange={(e) => setReviewConfig((p) => ({ ...p, originalVolume: Number(e.target.value) }))}
-                    className="w-full accent-fuchsia-500 cursor-pointer"
+                    className="w-full accent-orange-500 cursor-pointer"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-500 mt-1">
                     Khuyên dùng 10-20% để giữ nhạc nền nhẹ cho giọng Review nổi bật rõ nét.
                   </p>
                 </div>
               </div>
 
               {/* CHỌN GIỌNG REVIEWER */}
-              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
-                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-2">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <label className="block text-xs font-black uppercase text-orange-600 tracking-wider mb-2">
                   4. Chọn giọng đọc Reviewer:
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -6531,14 +6476,14 @@ NGUYÊN TẮC:
                         onClick={() => setReviewConfig((p) => ({ ...p, selectedVoiceId: v.id }))}
                         className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                           isSelected
-                            ? "bg-fuchsia-600/30 border-fuchsia-500 text-white shadow-sm"
-                            : "bg-slate-800/60 border-slate-700/80 hover:border-slate-600 text-slate-300"
+                            ? "bg-orange-500 text-white border-orange-600 shadow-xs"
+                            : "bg-white border-slate-200 hover:border-orange-300 text-slate-700"
                         }`}
                       >
                         <span className="text-xl shrink-0">{v.avatar}</span>
                         <div className="min-w-0">
-                          <p className="font-bold text-xs truncate text-white">{v.name}</p>
-                          <p className="text-[10px] text-fuchsia-300 truncate">{v.role}</p>
+                          <p className={`font-bold text-xs truncate ${isSelected ? "text-white" : "text-slate-800"}`}>{v.name}</p>
+                          <p className={`text-[10px] truncate ${isSelected ? "text-orange-100" : "text-slate-500"}`}>{v.role}</p>
                         </div>
                       </div>
                     );
@@ -6548,7 +6493,7 @@ NGUYÊN TẮC:
 
               {/* GHI CHÚ BỔ SUNG */}
               <div>
-                <label className="block text-xs font-black uppercase text-fuchsia-300 tracking-wider mb-1.5">
+                <label className="block text-xs font-black uppercase text-orange-600 tracking-wider mb-1.5">
                   5. Gợi ý thêm cho AI (Tùy chọn):
                 </label>
                 <input
@@ -6556,17 +6501,17 @@ NGUYÊN TẮC:
                   value={reviewConfig.customPrompt}
                   onChange={(e) => setReviewConfig((p) => ({ ...p, customPrompt: e.target.value }))}
                   placeholder="Ví dụ: Đặt tên nhân vật là A Cường, nhấn mạnh cú ngã bất ngờ của anh ta..."
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-fuchsia-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500"
                 />
               </div>
             </div>
 
             {/* Footer Buttons */}
-            <div className="mt-5 pt-3 border-t border-fuchsia-500/20 flex items-center justify-between shrink-0">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => setShowReviewModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Đóng
               </button>
@@ -6575,7 +6520,7 @@ NGUYÊN TẮC:
                 type="button"
                 onClick={handleStartAiVideoReview}
                 disabled={isReviewing}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-fuchsia-950 flex items-center gap-2 hover:scale-[1.02]"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-2 hover:scale-[1.02]"
               >
                 <Film size={15} /> 🚀 Bắt Đầu Tạo AI Review
               </button>
@@ -6584,20 +6529,20 @@ NGUYÊN TẮC:
         </div>
       )}
 
-      {/* ⚡ MODAL: CẤU HÌNH API KEYS (GEMINI & GROQ MIỄN PHÍ) */}
+      {/* 🔑 MODAL: CẤU HÌNH API KEYS (GEMINI & GROQ MIỄN PHÍ) */}
       {showApiKeyModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f172a] border border-blue-500/40 rounded-3xl max-w-xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-950/60">
-                  <Settings size={22} className="text-amber-300" />
+                <span className="p-2.5 bg-orange-50 text-orange-600 rounded-2xl">
+                  <Key size={22} />
                 </span>
                 <div>
-                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
                     🔑 Cấu Hình API Key AI (Gemini & Groq)
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Cấu hình khóa API để bóc băng Whisper, dịch thuật và review video
                   </p>
                 </div>
@@ -6605,7 +6550,7 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowApiKeyModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -6613,11 +6558,11 @@ NGUYÊN TẮC:
 
             <div className="space-y-4 text-xs">
               {/* GROQ API KEY - KHUYÊN DÙNG */}
-              <div className="p-3.5 bg-emerald-950/30 border border-emerald-500/40 rounded-2xl">
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-black text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⚡ GROQ API KEY</span>
-                    <span className="bg-emerald-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded font-black">
+                  <label className="font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>GROQ API KEY</span>
+                    <span className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                       KHUYÊN DÙNG - 100% MIỄN PHÍ
                     </span>
                   </label>
@@ -6625,12 +6570,12 @@ NGUYÊN TẮC:
                     href="https://console.groq.com/keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-emerald-400 underline hover:text-emerald-300 font-bold"
+                    className="text-emerald-700 underline hover:text-emerald-900 font-bold"
                   >
                     Lấy key miễn phí ↗
                   </a>
                 </div>
-                <p className="text-[11px] text-emerald-200/80 mb-2">
+                <p className="text-[11px] text-emerald-700/90 mb-2">
                   Groq Whisper Large v3 bóc băng âm thanh siêu tốc 1-2 giây & LLaMA 3.3 70B viết review. Hoàn toàn miễn phí không giới hạn.
                 </p>
                 <input
@@ -6638,21 +6583,21 @@ NGUYÊN TẮC:
                   value={customGroqKey}
                   onChange={(e) => setCustomGroqKey(e.target.value)}
                   placeholder="gsk_..."
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-emerald-500/50 rounded-xl text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 font-mono"
+                  className="w-full px-3.5 py-2.5 bg-white border border-emerald-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 font-mono shadow-2xs"
                 />
               </div>
 
               {/* GOOGLE GEMINI API KEY */}
-              <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
+              <div className="p-4 bg-orange-50/40 border border-orange-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-black text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🌐 GOOGLE GEMINI API KEY</span>
+                  <label className="font-black text-orange-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>GOOGLE GEMINI API KEY</span>
                   </label>
                   <a
                     href="https://aistudio.google.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 underline hover:text-blue-300 font-bold"
+                    className="text-orange-600 underline hover:text-orange-700 font-bold"
                   >
                     Lấy key tại aistudio ↗
                   </a>
@@ -6662,15 +6607,15 @@ NGUYÊN TẮC:
                   value={customGeminiKey}
                   onChange={(e) => setCustomGeminiKey(e.target.value)}
                   placeholder="AIzaSy..."
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-400 font-mono"
+                  className="w-full px-3.5 py-2.5 bg-white border border-orange-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 font-mono shadow-2xs"
                 />
 
                 {/* Hướng dẫn lỗi 402 */}
-                <div className="mt-2.5 p-2.5 bg-amber-950/40 border border-amber-500/40 rounded-xl">
-                  <p className="text-[11px] text-amber-200 leading-relaxed font-bold">
+                <div className="mt-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-[11px] text-amber-900 leading-relaxed font-bold">
                     💡 <strong>Lưu ý nếu Google báo lỗi 402 (prepayment credits are depleted):</strong>
                   </p>
-                  <p className="text-[11px] text-amber-200/90 leading-relaxed mt-1">
+                  <p className="text-[11px] text-amber-800 leading-relaxed mt-1">
                     Lỗi này xảy ra khi Project trên Google AI Studio bật chế độ Trả trước nhưng số dư là 0$. Bạn chỉ cần:
                     <br />• Cách 1: Thêm <strong>GROQ_API_KEY</strong> ở trên (hoàn toàn miễn phí, chạy siêu tốc).
                     <br />• Cách 2: Tạo API Key mới trong một <strong>Project Free Tier</strong> tại Google AI Studio.
@@ -6679,18 +6624,18 @@ NGUYÊN TẮC:
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setShowApiKeyModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Đóng
               </button>
               <button
                 type="button"
                 onClick={handleSaveApiKeys}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-blue-950 flex items-center gap-2 hover:scale-[1.02]"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-2 hover:scale-[1.02]"
               >
                 💾 Lưu Cấu Hình API Key
               </button>
@@ -6699,23 +6644,23 @@ NGUYÊN TẮC:
         </div>
       )}
 
-      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT - XANH FACEBOOK */}
+      {/* 🌟 MODAL 2: CÀO DỮ LIỆU DOUYIN.COM & ĐỀ XUẤT VIDEO HOT MỚI NHẤT - CAM TRẮNG */}
       {showDouyinModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-3xl w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867] shrink-0">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
-                  <Flame size={20} className="animate-pulse" />
+                <span className="p-2 bg-orange-50 text-orange-600 rounded-xl">
+                  <Flame size={20} />
                 </span>
                 <div>
-                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
                     Douyin Hot Trends & Cào Video Bán Hàng Triệu View
-                    <span className="bg-[#1877F2]/20 border border-[#1877F2] text-slate-200 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
                       DOUYIN.COM
                     </span>
                   </h3>
-                  <p className="text-xs text-blue-200/70">
+                  <p className="text-xs text-slate-500">
                     Đề xuất video hot mới nhất, tự động trích xuất kịch bản tiếng Việt và gán giọng lồng tiếng tối ưu
                   </p>
                 </div>
@@ -6723,21 +6668,21 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowDouyinModal(false)}
-                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* TAB CHUYỂN ĐỔI */}
-            <div className="flex items-center gap-2 mb-4 p-1 bg-[#0B1527] border border-[#1E3867] rounded-2xl shrink-0">
+            <div className="flex items-center gap-2 mb-4 p-1 bg-slate-100 border border-slate-200 rounded-2xl shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveDouyinTab("trends")}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeDouyinTab === "trends"
-                    ? "bg-[#1877F2] text-white shadow-md shadow-blue-950"
-                    : "text-blue-200 hover:text-white"
+                    ? "bg-orange-500 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Flame size={14} /> 🏆 Đề Xuất Video Hot Douyin Mới Nhất
@@ -6747,8 +6692,8 @@ NGUYÊN TẮC:
                 onClick={() => setActiveDouyinTab("scraper")}
                 className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeDouyinTab === "scraper"
-                    ? "bg-[#1877F2] text-white shadow-md shadow-blue-950"
-                    : "text-blue-200 hover:text-white"
+                    ? "bg-orange-500 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Link2 size={14} /> 🔗 Cào Video Từ Link Douyin Bất Kỳ
@@ -6774,8 +6719,8 @@ NGUYÊN TẮC:
                       onClick={() => setDouyinCategory(cat.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                         douyinCategory === cat.id
-                          ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
-                          : "bg-[#0B1527] text-slate-200 border-[#1E3867] hover:bg-[#13223F]"
+                          ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                       }`}
                     >
                       {cat.label}
@@ -6788,26 +6733,26 @@ NGUYÊN TẮC:
                   {filteredDouyinTrends.map((trend) => (
                     <div
                       key={trend.id}
-                      className="bg-[#0B1527] border border-[#1E3867] rounded-2xl p-4 flex flex-col justify-between gap-3 hover:border-[#1877F2] transition-all hover:shadow-lg hover:shadow-blue-950/40"
+                      className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between gap-3 hover:border-orange-400 transition-all hover:shadow-md shadow-2xs"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-black text-blue-200 bg-[#1877F2]/20 border border-[#1877F2]/40 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-black text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
                             {trend.categoryLabel}
                           </span>
-                          <span className="text-[10px] font-bold text-blue-300/80">❤️ {trend.likes} • ↗️ {trend.shares}</span>
+                          <span className="text-[10px] font-bold text-slate-400">❤️ {trend.likes} • ↗️ {trend.shares}</span>
                         </div>
-                        <h4 className="text-xs font-black text-white leading-snug">{trend.title}</h4>
-                        <p className="text-[10px] text-blue-300/60 font-mono italic mt-0.5">🇨🇳 {trend.originalTitle}</p>
+                        <h4 className="text-xs font-black text-slate-800 leading-snug">{trend.title}</h4>
+                        <p className="text-[10px] text-slate-400 font-mono italic mt-0.5">🇨🇳 {trend.originalTitle}</p>
 
-                        <div className="mt-2.5 p-2 bg-[#13223F] border border-[#1E3867] rounded-xl">
-                          <p className="text-[10px] text-amber-200 font-bold leading-relaxed">
+                        <div className="mt-2.5 p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl">
+                          <p className="text-[10px] text-amber-900 font-bold leading-relaxed">
                             💡 <strong>AI Viral:</strong> {trend.viralInsight}
                           </p>
                         </div>
 
-                        <div className="mt-2 text-[11px] font-bold text-slate-200 bg-[#1877F2]/20 p-2 rounded-xl border border-[#1877F2]/40 flex items-center gap-1.5">
-                          <Radio size={12} className="text-[#38BDF8] shrink-0" />
+                        <div className="mt-2 text-[11px] font-bold text-orange-800 bg-orange-50/70 p-2 rounded-xl border border-orange-200 flex items-center gap-1.5">
+                          <Radio size={12} className="text-orange-500 shrink-0" />
                           <span>Gợi ý giọng: {trend.voiceRecommendationName}</span>
                         </div>
                       </div>
@@ -6815,7 +6760,7 @@ NGUYÊN TẮC:
                       <button
                         type="button"
                         onClick={() => handleImportDouyinVideo(trend)}
-                        className="w-full py-2 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+                        className="w-full py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
                       >
                         🚀 Nhập Video & Bật Lồng Tiếng
                       </button>
@@ -6828,11 +6773,11 @@ NGUYÊN TẮC:
             {/* TAB 2: CÀO TỪ LINK BẤT KỲ HOẶC TẢI TRỰC TIẾP TỪ MÁY */}
             {activeDouyinTab === "scraper" && (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-                <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                  <label className="text-xs font-black uppercase tracking-wider text-white block mb-1">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-1">
                     Dán đường link Video (Hỗ trợ MP4, WebM, Google Drive, Dropbox, TikTok/Douyin...):
                   </label>
-                  <p className="text-[11px] text-blue-200/70 mb-2.5">
+                  <p className="text-[11px] text-slate-500 mb-2.5">
                     Hỗ trợ video thời lượng bất kỳ (8 phút, 15 phút, 30 phút). Hệ thống sẽ giữ nguyên 100% video của bạn, không cắt ngắn.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -6841,13 +6786,13 @@ NGUYÊN TẮC:
                       value={douyinUrlInput}
                       onChange={(e) => setDouyinUrlInput(e.target.value)}
                       placeholder="VD: https://... hoặc link Google Drive, CDN..."
-                      className="flex-1 text-xs font-bold px-3 py-2.5 bg-[#0e0305] border border-[#1E3867] rounded-xl text-white placeholder-rose-400/40 focus:border-[#1877F2] focus:outline-none font-mono"
+                      className="flex-1 text-xs font-bold px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:border-orange-500 focus:outline-none font-mono shadow-2xs"
                     />
                     <button
                       type="button"
                       onClick={handleScrapeDouyinLink}
                       disabled={isScrapingDouyin}
-                      className="px-5 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
                     >
                       {isScrapingDouyin ? (
                         <>
@@ -6863,12 +6808,12 @@ NGUYÊN TẮC:
                 </div>
 
                 {/* TUỲ CHỌN TẢI THẲNG FILE 8 PHÚT TỪ MÁY */}
-                <div className="p-4 bg-[#13223F] border border-[#1E3867] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-4 bg-orange-50/50 border border-orange-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-xs font-black text-slate-200 flex items-center gap-1.5">
-                      <Upload size={14} className="text-[#38BDF8]" /> Hoặc Chọn File Video Trực Tiếp Từ Máy Tính
+                    <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      <Upload size={14} className="text-orange-600" /> Hoặc Chọn File Video Trực Tiếp Từ Máy Tính
                     </h4>
-                    <p className="text-[11px] text-blue-200/70 mt-0.5">
+                    <p className="text-[11px] text-slate-500 mt-0.5">
                       Khuyên dùng: Tải file từ máy tính phát siêu mượt, trọn vẹn 100% thời lượng (8 phút, 15 phút) và không lo bị lỗi mạng.
                     </p>
                   </div>
@@ -6878,7 +6823,7 @@ NGUYÊN TẮC:
                       setShowDouyinModal(false);
                       fileInputRef.current?.click();
                     }}
-                    className="px-4 py-2.5 bg-[#1877F2] hover:bg-[#2563EB] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                    className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
                   >
                     <FolderOpen size={14} /> 📁 Chọn File Từ Máy
                   </button>
@@ -6886,11 +6831,11 @@ NGUYÊN TẮC:
               </div>
             )}
 
-            <div className="mt-5 pt-3 border-t border-[#1E3867] flex justify-end shrink-0">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDouyinModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
               >
                 Đóng
               </button>
@@ -6902,18 +6847,18 @@ NGUYÊN TẮC:
       {/* 🌟 MODAL CHÈN HIỆU ỨNG ÂM THANH & HÌNH ẢNH MỚI - XANH FACEBOOK */}
       {showEffectsModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867]">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
-                  <Sparkles size={18} />
+                <span className="p-2 bg-orange-50 text-orange-600 rounded-xl">
+                  <Palette size={18} />
                 </span>
-                <h3 className="text-base font-black text-white">Hiệu Ứng Hình Ảnh & Âm Thanh</h3>
+                <h3 className="text-base font-black text-slate-800">Hiệu Ứng Hình Ảnh & Âm Thanh</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowEffectsModal(false)}
-                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -6921,18 +6866,18 @@ NGUYÊN TẮC:
 
             <div className="space-y-4">
               {/* PHẦN 1: HIỆU ỨNG HÌNH ẢNH */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5 mb-3">
-                  <Palette size={14} className="text-[#1877F2]" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
+              <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
+                  <Palette size={14} className="text-orange-500" /> 1. Bộ Lọc Màu & Hiệu Ứng Hình Ảnh (Visual)
                 </span>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Tông màu điện ảnh:</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">Tông màu điện ảnh:</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: "none", label: "Mặc định" },
-                        { id: "bright", label: "✨ Sáng nét" },
+                        { id: "bright", label: "Sáng nét" },
                         { id: "cinematic", label: "🎬 Điện ảnh" },
                         { id: "vibrant", label: "🌈 Rực rỡ" },
                         { id: "golden", label: "☀️ Vàng ấm" },
@@ -6944,8 +6889,8 @@ NGUYÊN TẮC:
                           onClick={() => setVisualEffects((p) => ({ ...p, filterType: item.id as any }))}
                           className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                             visualEffects.filterType === item.id
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
-                              : "bg-[#13223F] text-slate-200 border-[#1E3867] hover:bg-[#1A3059]"
+                              ? "bg-orange-500 text-white border-orange-500 shadow-xs font-bold"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-orange-50/50"
                           }`}
                         >
                           {item.label}
@@ -6956,7 +6901,7 @@ NGUYÊN TẮC:
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
                         Độ sáng: {visualEffects.brightness}%
                       </label>
                       <input
@@ -6965,11 +6910,11 @@ NGUYÊN TẮC:
                         max={140}
                         value={visualEffects.brightness}
                         onChange={(e) => setVisualEffects((p) => ({ ...p, brightness: Number(e.target.value) }))}
-                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer"
+                        className="w-full accent-orange-500 h-2 bg-slate-200 rounded-lg cursor-pointer"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
                         Độ bão hòa màu: {visualEffects.saturation}%
                       </label>
                       <input
@@ -6978,13 +6923,13 @@ NGUYÊN TẮC:
                         max={180}
                         value={visualEffects.saturation}
                         onChange={(e) => setVisualEffects((p) => ({ ...p, saturation: Number(e.target.value) }))}
-                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer"
+                        className="w-full accent-orange-500 h-2 bg-slate-200 rounded-lg cursor-pointer"
                       />
                     </div>
                   </div>
 
                   <div className="pt-1">
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1">
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
                       Tốc độ phát: {visualEffects.speed}x (Tăng tốc để video TikTok cuốn hút hơn)
                     </label>
                     <div className="flex gap-2">
@@ -6995,8 +6940,8 @@ NGUYÊN TẮC:
                           onClick={() => setVisualEffects((p) => ({ ...p, speed: spd }))}
                           className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                             visualEffects.speed === spd
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm"
-                              : "bg-[#13223F] text-slate-200 border-[#1E3867] hover:bg-[#1A3059]"
+                              ? "bg-orange-500 text-white border-orange-500 shadow-2xs font-bold"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                           }`}
                         >
                           {spd}x
@@ -7008,48 +6953,48 @@ NGUYÊN TẮC:
               </div>
 
               {/* PHẦN 2: HIỆU ỨNG ÂM THANH */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5 mb-3">
-                  <Music size={14} className="text-emerald-400" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
+              <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-3">
+                  <Music size={14} className="text-orange-500" /> 2. Hiệu Ứng Âm Thanh & Khuếch Đại (Audio)
                 </span>
 
                 <div className="space-y-2.5">
-                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
+                  <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-orange-300 transition-all shadow-2xs">
                     <div>
-                      <p className="text-xs font-bold text-white">🎙️ Khuếch đại giọng nói (Voice Boost +40%)</p>
-                      <p className="text-[11px] text-blue-200/70">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
+                      <p className="text-xs font-bold text-slate-800">🎙️ Khuếch đại giọng nói (Voice Boost +40%)</p>
+                      <p className="text-[11px] text-slate-500">Giúp giọng nói rõ ràng, nổi bật hơn so với âm thanh tạp âm</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.boostVoiceVolume}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, boostVoiceVolume: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                   </label>
 
-                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
+                  <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-orange-300 transition-all shadow-2xs">
                     <div>
-                      <p className="text-xs font-bold text-white">🔔 Hiệu ứng Ding khi hiện Banner</p>
-                      <p className="text-[11px] text-blue-200/70">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
+                      <p className="text-xs font-bold text-slate-800">🔔 Hiệu ứng Ding khi hiện Banner</p>
+                      <p className="text-[11px] text-slate-500">Phát âm thanh thông báo thu hút mắt nhìn khi banner giảm giá xuất hiện</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.dingEffectEnabled}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, dingEffectEnabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                   </label>
 
-                  <label className="flex items-center justify-between p-2.5 bg-[#13223F] border border-[#1E3867] rounded-xl cursor-pointer hover:border-[#1877F2] transition-all">
+                  <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-orange-300 transition-all shadow-2xs">
                     <div>
-                      <p className="text-xs font-bold text-white">⚡ Hiệu ứng Whoosh lướt cảnh mở đầu</p>
-                      <p className="text-[11px] text-blue-200/70">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
+                      <p className="text-xs font-bold text-slate-800">💨 Hiệu ứng Whoosh lướt cảnh mở đầu</p>
+                      <p className="text-[11px] text-slate-500">Âm thanh lướt gió chuyên nghiệp trong 2 giây đầu video</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={soundEffects.whooshEffectEnabled}
                       onChange={(e) => setSoundEffects((p) => ({ ...p, whooshEffectEnabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                   </label>
                 </div>
@@ -7060,7 +7005,7 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowEffectsModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
               >
                 Lưu & Áp Dụng
               </button>
@@ -7072,18 +7017,18 @@ NGUYÊN TẮC:
       {/* MODAL THIẾT LẬP LOGO & BANNER - XANH FACEBOOK */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E3867]">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-gradient-to-tr from-[#1565C0] to-[#2563EB] text-white rounded-xl shadow-md shadow-blue-950">
+                <span className="p-2 bg-orange-50 text-orange-600 rounded-xl">
                   <ImageIcon size={18} />
                 </span>
-                <h3 className="text-base font-black text-white">Thiết Lập Logo & Banner Video</h3>
+                <h3 className="text-base font-black text-slate-800">Thiết Lập Logo & Banner Video</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-blue-300 hover:text-white p-1 rounded-lg hover:bg-[#1A3059] transition-colors"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -7091,17 +7036,17 @@ NGUYÊN TẮC:
 
             <div className="space-y-4">
               {/* PHẦN 1: LOGO */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+              <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#1877F2]" /> 1. Logo Thương Hiệu
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-orange-500" /> 1. Logo Thương Hiệu
                   </span>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={logoConfig.enabled}
                       onChange={(e) => setLogoConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                     Bật Logo
                   </label>
@@ -7109,12 +7054,12 @@ NGUYÊN TẮC:
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1.5">
                       Ảnh Logo (PNG trong suốt / JPG):
                     </label>
                     <div className="flex items-center gap-3">
                       {logoConfig.imageSrc ? (
-                        <div className="relative group w-14 h-14 bg-[#13223F] border border-[#1E3867] rounded-xl p-1 flex items-center justify-center shrink-0">
+                        <div className="relative group w-14 h-14 bg-white border border-slate-200 rounded-xl p-1 flex items-center justify-center shrink-0 shadow-2xs">
                           <img
                             src={logoConfig.imageSrc}
                             alt="Logo preview"
@@ -7123,7 +7068,7 @@ NGUYÊN TẮC:
                           <button
                             type="button"
                             onClick={() => setLogoConfig((p) => ({ ...p, imageSrc: "" }))}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 cursor-pointer"
                             title="Xóa logo"
                           >
                             <X size={11} />
@@ -7135,9 +7080,9 @@ NGUYÊN TẮC:
                         <button
                           type="button"
                           onClick={() => logoImageInputRef.current?.click()}
-                          className="w-full py-2.5 px-3 bg-[#13223F] hover:bg-[#1A3059] border border-dashed border-[#25447C] rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
+                          className="w-full py-2.5 px-3 bg-white hover:bg-orange-50/50 border border-dashed border-slate-300 hover:border-orange-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs"
                         >
-                          <UploadCloud size={16} className="text-blue-300" />
+                          <UploadCloud size={16} className="text-orange-500" />
                           {logoConfig.imageSrc ? "Đổi ảnh Logo khác" : "Chọn ảnh Logo từ máy tính..."}
                         </button>
                         <input
@@ -7153,7 +7098,7 @@ NGUYÊN TẮC:
 
                   {!logoConfig.imageSrc && (
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
                         Hoặc nhập Chữ Logo đại diện:
                       </label>
                       <input
@@ -7161,18 +7106,18 @@ NGUYÊN TẮC:
                         value={logoConfig.name}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, name: e.target.value }))}
                         placeholder="VD: KPOST AI"
-                        className="w-full text-xs font-bold px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-orange-500 focus:outline-none shadow-2xs"
                       />
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Vị trí góc:</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Vị trí góc:</label>
                       <select
                         value={logoConfig.position}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, position: e.target.value as any }))}
-                        className="w-full text-xs font-bold px-2.5 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none shadow-2xs"
                       >
                         <option value="top-right">Góc trên - Phải</option>
                         <option value="top-left">Góc trên - Trái</option>
@@ -7182,7 +7127,7 @@ NGUYÊN TẮC:
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
                         Kích thước: {logoConfig.size || 40}px
                       </label>
                       <input
@@ -7191,7 +7136,7 @@ NGUYÊN TẮC:
                         max={70}
                         value={logoConfig.size || 40}
                         onChange={(e) => setLogoConfig((p) => ({ ...p, size: Number(e.target.value) }))}
-                        className="w-full accent-[#1877F2] h-2 bg-[#152649] rounded-lg cursor-pointer mt-1"
+                        className="w-full accent-orange-500 h-2 bg-slate-200 rounded-lg cursor-pointer mt-1"
                       />
                     </div>
                   </div>
@@ -7199,17 +7144,17 @@ NGUYÊN TẮC:
               </div>
 
               {/* PHẦN 2: BANNER QUẢNG CÁO */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+              <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                     🏷️ 2. Banner Quảng Cáo / Giảm Giá
                   </span>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={bannerConfig.enabled}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, enabled: e.target.checked }))}
-                      className="w-4 h-4 accent-[#1877F2] rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                     Bật Banner
                   </label>
@@ -7217,48 +7162,48 @@ NGUYÊN TẮC:
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1">Tiêu đề chính:</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề chính:</label>
                     <input
                       type="text"
                       value={bannerConfig.title}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="VD: ⚡ FLASH SALE 50% - DUY NHẤT HÔM NAY"
-                      className="w-full text-xs font-bold px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
+                      placeholder="VD: FLASH SALE 50% - DUY NHẤT HÔM NAY"
+                      className="w-full text-xs font-bold px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-orange-500 focus:outline-none shadow-2xs"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1">Mô tả phụ (subtitle):</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Mô tả phụ (subtitle):</label>
                     <input
                       type="text"
                       value={bannerConfig.subtitle || ""}
                       onChange={(e) => setBannerConfig((p) => ({ ...p, subtitle: e.target.value }))}
                       placeholder="VD: Miễn phí giao hàng toàn quốc • Bảo hành chính hãng"
-                      className="w-full text-xs font-medium px-3 py-2 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:border-[#1877F2] focus:outline-none"
+                      className="w-full text-xs font-medium px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-orange-500 focus:outline-none shadow-2xs"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Bắt đầu (giây):</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Bắt đầu (giây):</label>
                       <input
                         type="number"
                         min={0}
                         max={videoDuration || 120}
                         value={bannerConfig.startSec}
                         onChange={(e) => setBannerConfig((p) => ({ ...p, startSec: Number(e.target.value) }))}
-                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none shadow-2xs"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-blue-200 block mb-1">Kết thúc (giây):</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Kết thúc (giây):</label>
                       <input
                         type="number"
                         min={0}
                         max={videoDuration || 120}
                         value={bannerConfig.endSec}
                         onChange={(e) => setBannerConfig((p) => ({ ...p, endSec: Number(e.target.value) }))}
-                        className="w-full text-xs font-bold px-3 py-1.5 bg-[#13223F] border border-[#1E3867] rounded-xl text-white focus:outline-none"
+                        className="w-full text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none shadow-2xs"
                       />
                     </div>
                   </div>
@@ -7270,7 +7215,7 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-6 py-2.5 bg-gradient-to-r from-[#1565C0] via-[#1877F2] to-[#2563EB] hover:from-[#1877F2] hover:to-[#38BDF8] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-950"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
               >
                 Lưu & Áp Dụng
               </button>
@@ -7282,21 +7227,21 @@ NGUYÊN TẮC:
       {/* ✂️ MODAL: AI CẮT VÀ GHÉP VIDEO PRO (SMART SPLIT & 3-STAGE MERGER) */}
       {showExportModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-[#0F1C33] border border-[#25447C] rounded-3xl max-w-3xl w-full p-5 md:p-6 shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 my-6 max-h-[92vh] flex flex-col">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full p-5 md:p-6 shadow-2xl text-slate-800 animate-in fade-in zoom-in-95 my-6 max-h-[92vh] flex flex-col">
             {/* Header Modal */}
-            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-[#1E3867] shrink-0">
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-2xl shadow-lg shadow-emerald-950/60">
+                <span className="p-2.5 bg-orange-50 text-orange-600 rounded-2xl">
                   <Scissors size={22} />
                 </span>
                 <div>
-                  <h3 className="text-base md:text-lg font-black text-white flex items-center gap-2">
+                  <h3 className="text-base md:text-lg font-black text-slate-800 flex items-center gap-2">
                     AI Cắt & Ghép Video Pro
-                    <span className="bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                    <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
                       KPOST AI
                     </span>
                   </h3>
-                  <p className="text-xs text-blue-200/70">
+                  <p className="text-xs text-slate-500">
                     Phân đoạn video dài thông minh có sửa tiêu đề từng tập, hoặc ghép 3 phần Intro - Thân bài - Outro với chuyển cảnh mượt mà
                   </p>
                 </div>
@@ -7304,21 +7249,21 @@ NGUYÊN TẮC:
               <button
                 type="button"
                 onClick={() => setShowExportModal(false)}
-                className="text-blue-300 hover:text-white p-1.5 rounded-xl hover:bg-[#1A3059] transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* 🌟 2 TAB CHÍNH: CẮT VIDEO VS GHÉP VIDEO */}
-            <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#0B1527] border border-[#1E3867] rounded-2xl mb-4 shrink-0">
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 border border-slate-200 rounded-2xl mb-4 shrink-0">
               <button
                 type="button"
                 onClick={() => setCutMergeTab("cut")}
                 className={`py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   cutMergeTab === "cut"
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-950"
-                    : "text-slate-300 hover:text-white hover:bg-[#13223F]"
+                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 }`}
               >
                 <Scissors size={15} /> ✂️ AI Cắt Video (Nhiều Tập & Sửa Tiêu Đề)
@@ -7328,8 +7273,8 @@ NGUYÊN TẮC:
                 onClick={() => setCutMergeTab("merge")}
                 className={`py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   cutMergeTab === "merge"
-                    ? "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 text-white shadow-lg shadow-purple-950"
-                    : "text-slate-300 hover:text-white hover:bg-[#13223F]"
+                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 }`}
               >
                 <Layers size={15} /> 🎞️ Ghép Video 3 Phần (Intro - Main - Outro)
@@ -7345,20 +7290,20 @@ NGUYÊN TẮC:
               {cutMergeTab === "cut" && (
                 <div className="space-y-4">
                   {/* AI Phân Tích & Đề Xuất Thời Lượng Cắt */}
-                  <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-slate-900 border border-emerald-500/40 rounded-2xl shadow-lg">
+                  <div className="p-4 bg-orange-50/50 border border-orange-200 rounded-2xl shadow-2xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl">
+                        <span className="p-2 bg-orange-100 text-orange-700 rounded-xl">
                           <Clock size={16} />
                         </span>
                         <div>
-                          <p className="font-black text-white text-xs">
+                          <p className="font-black text-slate-800 text-xs">
                             Thời lượng video gốc:{" "}
-                            <span className="text-emerald-300 font-mono text-sm">
+                            <span className="text-orange-600 font-mono text-sm font-black">
                               {formatSecToTime(videoDuration || 0)}
                             </span>
                           </p>
-                          <p className="text-[11px] text-blue-200/70">
+                          <p className="text-[11px] text-slate-500">
                             AI tự động đọc độ dài và đề xuất kích thước phân đoạn tối ưu cho nền tảng của bạn
                           </p>
                         </div>
@@ -7368,22 +7313,22 @@ NGUYÊN TẮC:
                         type="button"
                         onClick={handleAiSuggestSplit}
                         disabled={isAiSuggestingSplit || !videoDuration}
-                        className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-950/60 transition-all shrink-0 disabled:opacity-50"
+                        className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-xl cursor-pointer flex items-center gap-1.5 shadow-xs transition-all shrink-0 disabled:opacity-50"
                       >
-                        <Sparkles size={13} className={isAiSuggestingSplit ? "animate-spin" : ""} />
-                        <span>🤖 AI Đề Xuất Phân Đoạn</span>
+                        <Wand2 size={13} className={isAiSuggestingSplit ? "animate-spin" : ""} />
+                        <span>AI Đề Xuất Phân Đoạn</span>
                       </button>
                     </div>
 
                     {aiSplitNotice && (
-                      <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl mb-3 text-[11px] text-amber-200 font-medium leading-relaxed">
+                      <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-3 text-[11px] text-amber-800 font-medium leading-relaxed">
                         {aiSplitNotice}
                       </div>
                     )}
 
                     {/* Lựa chọn độ dài mỗi tập */}
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-200 block">
+                      <label className="text-[11px] font-bold text-slate-700 block">
                         Đề xuất cắt video thành các đoạn bao nhiêu phút:
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
@@ -7406,8 +7351,8 @@ NGUYÊN TẮC:
                             }}
                             className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                               exportOptions.partDurationMinutes === item.mins && exportOptions.splitMode === "auto_parts"
-                                ? "bg-emerald-600 text-white border-emerald-400 font-black shadow-md shadow-emerald-950"
-                                : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                                ? "bg-orange-500 text-white border-orange-600 font-black shadow-2xs"
+                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                             }`}
                           >
                             <span className="font-black text-xs">{item.label}</span>
@@ -7417,7 +7362,7 @@ NGUYÊN TẮC:
                       </div>
 
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[11px] text-slate-300">Hoặc tự chỉnh:</span>
+                        <span className="text-[11px] text-slate-600">Hoặc tự chỉnh:</span>
                         <input
                           type="number"
                           min={0.5}
@@ -7431,27 +7376,27 @@ NGUYÊN TẮC:
                               splitMode: "auto_parts",
                             }))
                           }
-                          className="w-16 px-2 py-1 bg-[#0F1C33] border border-[#1E3867] rounded-lg text-xs font-black text-emerald-300 text-center focus:outline-none"
+                          className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-black text-orange-600 text-center focus:outline-none focus:border-orange-500 shadow-2xs"
                         />
-                        <span className="text-[11px] text-slate-400">phút/tập (Dự kiến tạo thành <strong>{autoParts.length} tập</strong>)</span>
+                        <span className="text-[11px] text-slate-500">phút/tập (Dự kiến tạo thành <strong className="text-slate-800">{autoParts.length} tập</strong>)</span>
                       </div>
                     </div>
                   </div>
 
                   {/* BATCH EXPORT ACTION BAR */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 border border-amber-500/40 rounded-2xl shadow-lg">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-orange-50/80 border border-orange-200 rounded-2xl shadow-2xs">
                     <div className="flex items-center gap-2.5">
-                      <span className="p-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl shrink-0">
+                      <span className="p-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-xl shrink-0">
                         <Download size={18} />
                       </span>
                       <div>
-                        <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
-                          ⚡ Tải nhanh toàn bộ {autoParts.length} tập
-                          <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[10px] font-black uppercase">
+                        <p className="text-xs font-black text-orange-950 flex items-center gap-1.5">
+                          Tải nhanh toàn bộ {autoParts.length} tập
+                          <span className="px-1.5 py-0.2 rounded-md bg-orange-500 text-white text-[10px] font-black uppercase">
                             Tự động
                           </span>
                         </p>
-                        <p className="text-[11px] text-blue-200/80">
+                        <p className="text-[11px] text-slate-600">
                           Tự động render lần lượt và tải về máy từng tập theo đúng tiêu đề bạn đã sửa bên dưới.
                         </p>
                       </div>
@@ -7460,24 +7405,24 @@ NGUYÊN TẮC:
                       type="button"
                       onClick={handleExportAllParts}
                       disabled={!videoUrl || isExporting || isBatchExporting}
-                      className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-950/80 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50"
+                      className="px-4 py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50"
                     >
-                      <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                      <Download size={14} /> TẢI TẤT CẢ {autoParts.length} TẬP
                     </button>
                   </div>
 
                   {/* DANH SÁCH CÁC TẬP & SỬA TIÊU ĐỀ TỪNG TẬP */}
-                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                     <div className="flex items-center justify-between mb-2.5">
                       <div>
-                        <p className="text-xs font-black text-white flex items-center gap-1.5">
-                          <Layers size={14} className="text-emerald-400" /> Danh sách {autoParts.length} tập phim (Bạn có thể sửa tiêu đề riêng cho từng tập):
+                        <p className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                          <Layers size={14} className="text-orange-600" /> Danh sách {autoParts.length} tập phim (Bạn có thể sửa tiêu đề riêng cho từng tập):
                         </p>
-                        <p className="text-[11px] text-blue-200/70">
+                        <p className="text-[11px] text-slate-500">
                           Bấm vào ô tiêu đề để đổi tên tập trước khi bấm tải về máy
                         </p>
                       </div>
-                      <span className="text-[11px] text-emerald-400 font-bold uppercase">
+                      <span className="text-[11px] text-orange-600 font-bold uppercase">
                         {exportOptions.format.toUpperCase()} • {exportOptions.resolution.toUpperCase()}
                       </span>
                     </div>
@@ -7486,16 +7431,16 @@ NGUYÊN TẮC:
                       {autoParts.map((part) => (
                         <div
                           key={part.id}
-                          className="p-3 bg-[#13223F] hover:bg-[#172B50] border border-[#1E3867] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors"
+                          className="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors shadow-2xs"
                         >
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <span className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-xs font-black shrink-0">
+                            <span className="w-8 h-8 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 flex items-center justify-center text-xs font-black shrink-0">
                               #{part.partNumber}
                             </span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <label className="text-[10px] uppercase font-black text-slate-400">Tiêu đề tập {part.partNumber}:</label>
-                                <span className="text-[10px] font-mono text-emerald-400">⏱️ {part.timeLabel} • 💬 {part.cuesCount} câu</span>
+                                <label className="text-[10px] uppercase font-black text-slate-500">Tiêu đề tập {part.partNumber}:</label>
+                                <span className="text-[10px] font-mono text-orange-600">⏱️ {part.timeLabel} • 💬 {part.cuesCount} câu</span>
                               </div>
                               <input
                                 type="text"
@@ -7505,7 +7450,7 @@ NGUYÊN TẮC:
                                   setEpisodeTitles((prev) => ({ ...prev, [part.id]: val }));
                                 }}
                                 placeholder={`Nhập tiêu đề cho Tập ${part.partNumber}...`}
-                                className="w-full text-xs font-bold px-2.5 py-1.5 bg-[#0B1527] border border-[#1E3867] rounded-lg text-emerald-300 focus:border-emerald-400 focus:outline-none"
+                                className="w-full text-xs font-bold px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:border-orange-500 focus:outline-none"
                               />
                             </div>
                           </div>
@@ -7520,7 +7465,7 @@ NGUYÊN TẮC:
                                   setIsPlaying(true);
                                 }
                               }}
-                              className="px-2 py-1 bg-[#1A3059] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                               title="Xem trước tập này trong trình phát"
                             >
                               <Play size={11} /> Xem
@@ -7528,7 +7473,7 @@ NGUYÊN TẮC:
                             <button
                               type="button"
                               onClick={() => handleOpenPartInNewTab(part)}
-                              className="px-2 py-1 bg-[#152747] hover:bg-[#1E3867] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                               title="Mở tập này trong Tab mới"
                             >
                               <ExternalLink size={11} /> Tab mới
@@ -7545,7 +7490,7 @@ NGUYÊN TẮC:
                                   resolution: exportOptions.resolution,
                                 });
                               }}
-                              className="px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-black flex items-center gap-1 cursor-pointer shadow-sm transition-all"
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-xs font-black flex items-center gap-1 cursor-pointer shadow-2xs transition-all"
                             >
                               <Download size={11} /> Xuất Tập {part.partNumber}
                             </button>
@@ -7563,44 +7508,44 @@ NGUYÊN TẮC:
               {cutMergeTab === "merge" && (
                 <div className="space-y-4">
                   {/* PHẦN 1: MỞ ĐẦU (INTRO / QUẢNG CÁO) */}
-                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-pink-300 flex items-center gap-1.5">
-                        <Film size={14} className="text-pink-400" /> 1. Phần Mở Đầu Video (Giới thiệu kênh, Hook, Quảng cáo...)
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Film size={14} className="text-orange-600" /> 1. Phần Mở Đầu Video (Giới thiệu kênh, Hook, Quảng cáo...)
                       </span>
                       {introClip && (
-                        <span className="text-[11px] font-mono text-emerald-400">
+                        <span className="text-[11px] font-mono text-orange-600 font-bold">
                           ⏱️ {formatSecToTime(introClip.duration)}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-blue-200/70 mb-3">
+                    <p className="text-[11px] text-slate-500 mb-3">
                       Tải lên clip mở đầu có sẵn của bạn để ghép vào phần đầu của video hoàn chỉnh.
                     </p>
 
                     {introClip ? (
-                      <div className="p-3 bg-[#13223F] border border-pink-500/40 rounded-xl flex items-center justify-between gap-3">
+                      <div className="p-3 bg-white border border-orange-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="p-2 bg-pink-500/20 text-pink-300 rounded-lg shrink-0">
+                          <span className="p-2 bg-orange-50 text-orange-600 rounded-lg shrink-0">
                             <Film size={16} />
                           </span>
                           <div className="min-w-0">
-                            <p className="font-black text-white text-xs truncate">{introClip.name}</p>
-                            <p className="text-[11px] text-pink-300 font-mono">Thời lượng: {formatSecToTime(introClip.duration)}</p>
+                            <p className="font-black text-slate-800 text-xs truncate">{introClip.name}</p>
+                            <p className="text-[11px] text-orange-600 font-mono">Thời lượng: {formatSecToTime(introClip.duration)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => introInputRef.current?.click()}
-                            className="px-2.5 py-1 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
                           >
                             Đổi clip khác
                           </button>
                           <button
                             type="button"
                             onClick={() => setIntroClip(null)}
-                            className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer"
                             title="Xóa Intro"
                           >
                             <Trash2 size={13} />
@@ -7611,11 +7556,11 @@ NGUYÊN TẮC:
                       <button
                         type="button"
                         onClick={() => introInputRef.current?.click()}
-                        className="w-full py-4 px-3 bg-[#13223F]/60 hover:bg-[#13223F] border-2 border-dashed border-[#1E3867] hover:border-pink-500/60 rounded-xl text-center text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                        className="w-full py-4 px-3 bg-white hover:bg-orange-50/40 border-2 border-dashed border-slate-300 hover:border-orange-400 rounded-xl text-center text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 shadow-2xs"
                       >
-                        <UploadCloud size={20} className="text-pink-400" />
+                        <UploadCloud size={20} className="text-orange-500" />
                         <span>Bấm để chọn video mở đầu có sẵn (.mp4, .webm, .mov)</span>
-                        <span className="text-[10px] text-slate-500 font-normal">Video giới thiệu kênh hoặc teaser ngắn</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Video giới thiệu kênh hoặc teaser ngắn</span>
                       </button>
                     )}
                     <input
@@ -7628,20 +7573,20 @@ NGUYÊN TẮC:
                   </div>
 
                   {/* PHẦN 2: PHẦN GIỮA (VIDEO CHÍNH & CÁC VIDEO CẦN GHÉP BẤM DẤU +) */}
-                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-                        <Layers size={14} className="text-purple-400" /> 2. Phần Giữa (Video Chính & Các Video Cần Ghép)
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Layers size={14} className="text-orange-600" /> 2. Phần Giữa (Video Chính & Các Video Cần Ghép)
                       </span>
                       <button
                         type="button"
                         onClick={() => middleInputRef.current?.click()}
-                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-purple-950 cursor-pointer transition-all hover:scale-[1.02]"
+                        className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
                       >
                         <Plus size={14} /> ➕ Thêm Video Ghép
                       </button>
                     </div>
-                    <p className="text-[11px] text-blue-200/70 mb-3">
+                    <p className="text-[11px] text-slate-500 mb-3">
                       Video chính đang làm việc được tự động đưa vào danh sách. Bấm dấu <strong>+</strong> để tải thêm nhiều clip nối tiếp và sắp xếp thứ tự.
                     </p>
 
@@ -7649,15 +7594,15 @@ NGUYÊN TẮC:
                       {middleClips.map((clip, idx) => (
                         <div
                           key={clip.id}
-                          className="p-3 bg-[#13223F] border border-[#1E3867] rounded-xl flex items-center justify-between gap-3"
+                          className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center text-xs font-black shrink-0">
+                            <span className="w-7 h-7 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 flex items-center justify-center text-xs font-black shrink-0">
                               #{idx + 1}
                             </span>
                             <div className="min-w-0">
-                              <p className="font-black text-white text-xs truncate">{clip.name}</p>
-                              <p className="text-[11px] text-purple-300 font-mono">Thời lượng: {formatSecToTime(clip.duration)}</p>
+                              <p className="font-black text-slate-800 text-xs truncate">{clip.name}</p>
+                              <p className="text-[11px] text-orange-600 font-mono">Thời lượng: {formatSecToTime(clip.duration)}</p>
                             </div>
                           </div>
 
@@ -7666,7 +7611,7 @@ NGUYÊN TẮC:
                               type="button"
                               onClick={() => handleMoveMiddleClip(idx, "up")}
                               disabled={idx === 0}
-                              className="p-1.5 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg cursor-pointer disabled:opacity-30"
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer disabled:opacity-30"
                               title="Di chuyển lên trên"
                             >
                               ⬆️
@@ -7675,7 +7620,7 @@ NGUYÊN TẮC:
                               type="button"
                               onClick={() => handleMoveMiddleClip(idx, "down")}
                               disabled={idx === middleClips.length - 1}
-                              className="p-1.5 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg cursor-pointer disabled:opacity-30"
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer disabled:opacity-30"
                               title="Di chuyển xuống dưới"
                             >
                               ⬇️
@@ -7683,7 +7628,7 @@ NGUYÊN TẮC:
                             <button
                               type="button"
                               onClick={() => handleRemoveMiddleClip(clip.id)}
-                              className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer"
                               title="Xóa clip này"
                             >
                               <Trash2 size={13} />
@@ -7693,7 +7638,7 @@ NGUYÊN TẮC:
                       ))}
 
                       {middleClips.length === 0 && (
-                        <div className="p-3 text-center text-slate-400 bg-[#13223F]/40 rounded-xl">
+                        <div className="p-3 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
                           Chưa có clip nào trong phần giữa. Vui lòng bấm "➕ Thêm Video Ghép" bên trên.
                         </div>
                       )}
@@ -7708,44 +7653,44 @@ NGUYÊN TẮC:
                   </div>
 
                   {/* PHẦN 3: KẾT THÚC (OUTRO / KÊU GỌI HÀNH ĐỘNG) */}
-                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                        <Flame size={14} className="text-amber-400" /> 3. Phần Kết Thúc (Outro / Kêu gọi hành động CTA, Subscribe...)
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Flame size={14} className="text-orange-600" /> 3. Phần Kết Thúc (Outro / Kêu gọi hành động CTA, Subscribe...)
                       </span>
                       {outroClip && (
-                        <span className="text-[11px] font-mono text-emerald-400">
+                        <span className="text-[11px] font-mono text-orange-600 font-bold">
                           ⏱️ {formatSecToTime(outroClip.duration)}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-blue-200/70 mb-3">
+                    <p className="text-[11px] text-slate-500 mb-3">
                       Tải lên clip kết thúc video để kêu gọi người xem follow kênh, like, chia sẻ hoặc đặt mua hàng.
                     </p>
 
                     {outroClip ? (
-                      <div className="p-3 bg-[#13223F] border border-amber-500/40 rounded-xl flex items-center justify-between gap-3">
+                      <div className="p-3 bg-white border border-orange-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="p-2 bg-amber-500/20 text-amber-300 rounded-lg shrink-0">
+                          <span className="p-2 bg-orange-50 text-orange-600 rounded-lg shrink-0">
                             <Flame size={16} />
                           </span>
                           <div className="min-w-0">
-                            <p className="font-black text-white text-xs truncate">{outroClip.name}</p>
-                            <p className="text-[11px] text-amber-300 font-mono">Thời lượng: {formatSecToTime(outroClip.duration)}</p>
+                            <p className="font-black text-slate-800 text-xs truncate">{outroClip.name}</p>
+                            <p className="text-[11px] text-orange-600 font-mono">Thời lượng: {formatSecToTime(outroClip.duration)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => outroInputRef.current?.click()}
-                            className="px-2.5 py-1 bg-[#1E3867] hover:bg-[#25447C] text-blue-200 rounded-lg text-xs font-bold cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
                           >
                             Đổi clip khác
                           </button>
                           <button
                             type="button"
                             onClick={() => setOutroClip(null)}
-                            className="p-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg cursor-pointer"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer"
                             title="Xóa Outro"
                           >
                             <Trash2 size={13} />
@@ -7756,11 +7701,11 @@ NGUYÊN TẮC:
                       <button
                         type="button"
                         onClick={() => outroInputRef.current?.click()}
-                        className="w-full py-4 px-3 bg-[#13223F]/60 hover:bg-[#13223F] border-2 border-dashed border-[#1E3867] hover:border-amber-500/60 rounded-xl text-center text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                        className="w-full py-4 px-3 bg-white hover:bg-orange-50/40 border-2 border-dashed border-slate-300 hover:border-orange-400 rounded-xl text-center text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 shadow-2xs"
                       >
-                        <UploadCloud size={20} className="text-amber-400" />
+                        <UploadCloud size={20} className="text-orange-500" />
                         <span>Bấm để chọn video kết thúc (Outro / Kêu gọi hành động CTA)</span>
-                        <span className="text-[10px] text-slate-500 font-normal">Video kêu gọi like, đăng ký kênh, mua hàng</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Video kêu gọi like, đăng ký kênh, mua hàng</span>
                       </button>
                     )}
                     <input
@@ -7773,9 +7718,9 @@ NGUYÊN TẮC:
                   </div>
 
                   {/* CHUYỂN CẢNH MƯỢT MÀ */}
-                  <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl">
-                    <span className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1.5 mb-2.5">
-                      <Sparkles size={14} className="text-cyan-400" /> 4. Chuyển Cảnh Mượt Mà Giữa Các Phần:
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-2.5">
+                      <Sliders size={14} className="text-orange-600" /> 4. Chuyển Cảnh Mượt Mà Giữa Các Phần:
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
@@ -7789,12 +7734,12 @@ NGUYÊN TẮC:
                           onClick={() => setMergeTransition(t.id as any)}
                           className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                             mergeTransition === t.id
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-md"
-                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                              ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
-                          <p className="font-black text-xs text-white">{t.label}</p>
-                          <p className="text-[10px] opacity-80">{t.desc}</p>
+                          <p className="font-black text-xs">{t.label}</p>
+                          <p className={`text-[10px] ${mergeTransition === t.id ? "text-orange-100" : "text-slate-500"}`}>{t.desc}</p>
                         </button>
                       ))}
                     </div>
@@ -7805,28 +7750,28 @@ NGUYÊN TẮC:
               {/* ============================================================== */}
               {/* PHẦN CHUNG: LOGO, BANNER, ĐỊNH DẠNG & ĐỘ PHÂN GIẢI              */}
               {/* ============================================================== */}
-              <div className="p-4 bg-[#0B1527] border border-[#1E3867] rounded-2xl space-y-3">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                  <Film size={14} className="text-emerald-400" /> Tùy Chọn Xuất Bản Video (Logo, Banner & Khung Hình)
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <Film size={14} className="text-orange-600" /> Tùy Chọn Xuất Bản Video (Logo, Banner & Khung Hình)
                 </span>
 
                 {/* Tùy chọn chèn Logo & Banner */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 bg-[#13223F] border border-[#1E3867] rounded-xl">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
                     <input
                       type="checkbox"
                       checked={mergeBurnLogo}
                       onChange={(e) => setMergeBurnLogo(e.target.checked)}
-                      className="w-4 h-4 accent-emerald-500 rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                     <span>🏷️ Chèn Logo thương hiệu vào video</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
                     <input
                       type="checkbox"
                       checked={mergeBurnBanner}
                       onChange={(e) => setMergeBurnBanner(e.target.checked)}
-                      className="w-4 h-4 accent-emerald-500 rounded"
+                      className="w-4 h-4 accent-orange-500 rounded"
                     />
                     <span>🏷️ Chèn Banner quảng cáo trên/dưới</span>
                   </label>
@@ -7835,7 +7780,7 @@ NGUYÊN TẮC:
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   {/* Tỷ lệ khung hình */}
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Tỷ lệ khung hình:</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1.5">Tỷ lệ khung hình:</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {[
                         { id: "9:16", label: "📱 9:16", sub: "TikTok/Reels" },
@@ -7849,12 +7794,12 @@ NGUYÊN TẮC:
                           onClick={() => setExportOptions((p) => ({ ...p, aspectRatio: ratio.id as any }))}
                           className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-between ${
                             exportOptions.aspectRatio === ratio.id
-                              ? "bg-[#1877F2] text-white border-blue-400 shadow-sm font-black"
-                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                              ? "bg-orange-500 text-white border-orange-600 shadow-2xs font-black"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
                           <span className="font-black text-[11px]">{ratio.label}</span>
-                          <span className="text-[9px] opacity-75">{ratio.sub}</span>
+                          <span className={`text-[9px] ${exportOptions.aspectRatio === ratio.id ? "text-orange-100" : "text-slate-400"}`}>{ratio.sub}</span>
                         </button>
                       ))}
                     </div>
@@ -7863,8 +7808,8 @@ NGUYÊN TẮC:
                   {/* Độ phân giải */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-bold text-blue-200">Độ nét đầu ra:</label>
-                      <span className="text-[10px] text-emerald-400 font-extrabold uppercase">
+                      <label className="text-[11px] font-bold text-slate-700">Độ nét đầu ra:</label>
+                      <span className="text-[10px] text-orange-600 font-extrabold uppercase">
                         {exportOptions.resolution.toUpperCase()}
                       </span>
                     </div>
@@ -7881,12 +7826,12 @@ NGUYÊN TẮC:
                           onClick={() => setExportOptions((p) => ({ ...p, resolution: res.id as any }))}
                           className={`py-1 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-between ${
                             exportOptions.resolution === res.id
-                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 font-black shadow-sm"
-                              : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                              ? "bg-orange-500 text-white border-orange-600 font-black shadow-2xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
                           <span className="font-black text-[11px]">{res.label}</span>
-                          <span className="text-[9px] opacity-75">{res.sub}</span>
+                          <span className={`text-[9px] ${exportOptions.resolution === res.id ? "text-orange-100" : "text-slate-400"}`}>{res.sub}</span>
                         </button>
                       ))}
                     </div>
@@ -7894,31 +7839,31 @@ NGUYÊN TẮC:
 
                   {/* Định dạng file */}
                   <div>
-                    <label className="text-[11px] font-bold text-blue-200 block mb-1.5">Định dạng file:</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1.5">Định dạng file:</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
                         onClick={() => setExportOptions((p) => ({ ...p, format: "mp4" }))}
                         className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           exportOptions.format === "mp4"
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-sm"
-                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                            ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                         }`}
                       >
                         <span>MP4 (.mp4)</span>
-                        <span className="text-[9px] font-normal opacity-80">Phổ biến nhất</span>
+                        <span className={`text-[9px] font-normal ${exportOptions.format === "mp4" ? "text-orange-100" : "text-slate-400"}`}>Phổ biến nhất</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setExportOptions((p) => ({ ...p, format: "webm" }))}
                         className={`py-2 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           exportOptions.format === "webm"
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-sm"
-                            : "bg-[#13223F] text-slate-300 border-[#1E3867] hover:bg-[#1A3059]"
+                            ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                         }`}
                       >
                         <span>WebM (.webm)</span>
-                        <span className="text-[9px] font-normal opacity-80">Chất lượng cao</span>
+                        <span className={`text-[9px] font-normal ${exportOptions.format === "webm" ? "text-orange-100" : "text-slate-400"}`}>Chất lượng cao</span>
                       </button>
                     </div>
                   </div>
@@ -7927,14 +7872,14 @@ NGUYÊN TẮC:
 
               {/* PROGRESS BAR KHI ĐANG GHÉP HOẶC XUẤT */}
               {(isMerging || isExporting) && (
-                <div className="p-3.5 bg-[#0B1527] border border-blue-500/40 rounded-2xl space-y-2 animate-pulse">
-                  <div className="flex items-center justify-between text-xs font-bold text-white">
+                <div className="p-3.5 bg-orange-50 border border-orange-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                     <span>{isMerging ? mergeStatus : "Đang xuất video..."}</span>
-                    <span className="text-emerald-400 font-mono text-sm">{isMerging ? mergeProgress : exportProgress}%</span>
+                    <span className="text-orange-600 font-mono text-sm font-black">{isMerging ? mergeProgress : exportProgress}%</span>
                   </div>
-                  <div className="w-full bg-[#13223F] h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300 rounded-full"
+                      className="bg-gradient-to-r from-orange-500 to-amber-500 h-full transition-all duration-300 rounded-full"
                       style={{ width: `${isMerging ? mergeProgress : exportProgress}%` }}
                     />
                   </div>
@@ -7943,11 +7888,11 @@ NGUYÊN TẮC:
             </div>
 
             {/* Footer Modal */}
-            <div className="mt-4 pt-3 border-t border-[#1E3867] flex items-center justify-between gap-3 shrink-0 flex-wrap">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0 flex-wrap">
               <button
                 type="button"
                 onClick={() => setShowExportModal(false)}
-                className="px-4 py-2.5 bg-[#13223F] hover:bg-[#1A3059] text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-[#1E3867]"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
               >
                 Đóng
               </button>
@@ -7960,9 +7905,9 @@ NGUYÊN TẮC:
                         type="button"
                         onClick={handleExportAllParts}
                         disabled={!videoUrl || isExporting || isBatchExporting}
-                        className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-950/80 flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
+                        className="px-4 py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1.5 hover:scale-[1.02] disabled:opacity-50"
                       >
-                        <Download size={14} /> ⚡ TẢI TẤT CẢ {autoParts.length} TẬP
+                        <Download size={14} /> TẢI TẤT CẢ {autoParts.length} TẬP
                       </button>
                     )}
 
@@ -7982,7 +7927,7 @@ NGUYÊN TẮC:
                         }
                       }}
                       disabled={!videoUrl || isExporting || isBatchExporting}
-                      className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
                     >
                       <Download size={15} />
                       {`Xuất Tập 1 (${exportOptions.format.toUpperCase()} • ${exportOptions.resolution.toUpperCase()})`}
@@ -7995,7 +7940,7 @@ NGUYÊN TẮC:
                     type="button"
                     onClick={handleExportMergedVideo}
                     disabled={isMerging}
-                    className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-purple-950 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
+                    className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50"
                   >
                     <Layers size={15} />
                     {isMerging ? `Đang Ghép Video (${mergeProgress}%)...` : "🚀 Ghép & Xuất Video 3 Phần Ngay"}
