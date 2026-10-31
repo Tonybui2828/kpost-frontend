@@ -4291,54 +4291,49 @@ NGUYÊN TẮC:
     currentSec: number,
     logoImg: HTMLImageElement | null
   ) => {
-    // 1. VẼ DẢI CHE MỜ / XÓA SUB TIẾNG TRUNG GỐC (INPAINT BLUR MASK) TRƯỚC TIÊN
-    // Vẽ đè trực tiếp lên khung hình video gốc để che phụ đề cũ, trước khi vẽ Banner và Subtitle mới
-    if (maskConfig.enabled) {
-      ctx.save();
-      const maskY = height * (1 - maskConfig.positionYPercent / 100) - (maskConfig.heightPx * (height / 800)) / 2;
-      const maskH = maskConfig.heightPx * (height / 800);
-      ctx.fillStyle = maskConfig.bgColor || "#0e0406";
-      ctx.globalAlpha = maskConfig.opacity || 0.85;
-      ctx.roundRect(width * 0.04, maskY, width * 0.92, maskH, 16);
-      ctx.fill();
-      ctx.restore();
-    }
+    const isHorizontal = width > height;
+    let renderedBannerY = -1;
 
-    // 2. VẼ BANNER QUẢNG CÁO RỰC RỠ, NÉT CĂNG CHUẨN XÁC 100% NHƯ TRÊN TIẾN TRÌNH
-    // Nằm đè lên trên Mask để không bao giờ bị mờ hay tối màu
+    // 1. VẼ BANNER QUẢNG CÁO RỰC RỠ, NÉT CĂNG CHUẨN XÁC 100% NHƯ TRÊN TIẾN TRÌNH PREVIEW
+    // Vẽ Banner trước để phụ đề tự động nâng lên trên banner, chống đè mờ
     if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
       ctx.save();
       const bannerMarginX = Math.round(width * 0.04);
       const bannerW = width - bannerMarginX * 2;
-      const bannerH = Math.round(72 * (height / 800));
-      const bannerY = height - bannerH - Math.round(20 * (height / 800));
-      const bannerRadius = Math.round(18 * (height / 800));
+      const bannerH = Math.round(height * (isHorizontal ? 0.105 : 0.082));
+      const bannerMarginBottom = Math.round(height * (isHorizontal ? 0.035 : 0.025));
+      const bannerY = height - bannerH - bannerMarginBottom;
+      const bannerRadius = Math.round(bannerH * 0.28);
+
+      renderedBannerY = bannerY;
 
       // Bóng đổ 2XL sâu và nổi khối
       ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
-      ctx.shadowBlur = Math.round(18 * (height / 800));
-      ctx.shadowOffsetY = Math.round(5 * (height / 800));
+      ctx.shadowBlur = Math.round(bannerH * 0.25);
+      ctx.shadowOffsetY = Math.round(bannerH * 0.08);
 
-      // Dải màu gradient đỏ - hồng - cam rực rỡ chuẩn xác 100% như trên giao diện
+      // Dải màu gradient Đỏ tươi - Hồng - Cam rực rỡ chuẩn xác 100% như trên giao diện preview
       const grad = ctx.createLinearGradient(bannerMarginX, bannerY, bannerMarginX + bannerW, bannerY);
       grad.addColorStop(0, "#dc2626"); // Đỏ tươi red-600
-      grad.addColorStop(0.48, "#e11d48"); // Đỏ hồng rose-600
+      grad.addColorStop(0.5, "#e11d48"); // Đỏ hồng rose-600
       grad.addColorStop(1, "#ea580c"); // Cam hổ phách orange-600
       ctx.fillStyle = grad;
+      ctx.beginPath();
       ctx.roundRect(bannerMarginX, bannerY, bannerW, bannerH, bannerRadius);
       ctx.fill();
 
       // Viền trắng bán trong suốt sang trọng
       ctx.shadowColor = "transparent";
-      ctx.lineWidth = Math.max(1.5, Math.round(2 * (width / 400)));
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = Math.max(1.5, Math.round(bannerH * 0.025));
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
       ctx.stroke();
 
       const hasSub = Boolean(bannerConfig.subtitle && bannerConfig.subtitle.trim());
 
       // Tiêu đề chính chữ trắng đậm nét, hoa toàn bộ
+      const titleFontSize = Math.round(bannerH * (hasSub ? 0.36 : 0.48));
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = `900 ${Math.round(16 * (width / 400))}px Arial, sans-serif`;
+      ctx.font = `900 ${titleFontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const titleY = hasSub ? bannerY + bannerH * 0.38 : bannerY + bannerH * 0.5;
@@ -4346,18 +4341,36 @@ NGUYÊN TẮC:
 
       // Tiêu đề phụ chữ vàng tươi nổi bật
       if (hasSub) {
+        const subFontSize = Math.round(bannerH * 0.22);
         ctx.fillStyle = "#FEF08A";
-        ctx.font = `700 ${Math.round(11 * (width / 400))}px Arial, sans-serif`;
-        ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerH * 0.72);
+        ctx.font = `700 ${subFontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+        ctx.fillText(bannerConfig.subtitle, width / 2, bannerY + bannerH * 0.74);
       }
       ctx.restore();
     }
 
-    // 3. VẼ LOGO THƯƠNG HIỆU
+    // 2. VẼ DẢI CHE MỜ / XÓA SUB TIẾNG TRUNG GỐC (INPAINT BLUR MASK)
+    // Nếu có banner, mask chỉ che phần phía trên banner hoặc vùng chỉ định, không bao giờ che đè mờ banner
+    if (maskConfig.enabled) {
+      ctx.save();
+      let maskY = height * (1 - maskConfig.positionYPercent / 100) - (maskConfig.heightPx * (height / 800)) / 2;
+      const maskH = maskConfig.heightPx * (height / 800);
+      if (renderedBannerY > 0 && maskY + maskH > renderedBannerY) {
+        maskY = Math.max(0, renderedBannerY - maskH - 4);
+      }
+      ctx.fillStyle = maskConfig.bgColor || "#0e0406";
+      ctx.globalAlpha = maskConfig.opacity || 0.85;
+      ctx.beginPath();
+      ctx.roundRect(width * 0.04, maskY, width * 0.92, maskH, 16);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 3. VẼ LOGO THƯƠNG HIỆU (CAM TRẮNG ĐỒNG BỘ THƯƠNG HIỆU KPOST AI)
     if (logoConfig.enabled) {
       ctx.save();
       ctx.globalAlpha = logoConfig.opacity / 100;
-      const logoSize = (logoConfig.size || 40) * (width / 400);
+      const logoSize = (logoConfig.size || 40) * (height / 800);
 
       let posX = width - logoSize - 20;
       let posY = 25;
@@ -4375,15 +4388,23 @@ NGUYÊN TẮC:
       if (logoImg && logoImg.complete) {
         ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
       } else {
-        ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-        const textWidth = ctx.measureText(logoConfig.name).width + 30;
-        ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
+        // Logo cam chuẩn thương hiệu KPOST AI
+        ctx.fillStyle = "rgba(249, 115, 22, 0.95)";
+        const logoH = Math.max(34, Math.round(height * 0.042));
+        ctx.font = `900 ${Math.round(logoH * 0.44)}px "Segoe UI", sans-serif`;
+        const textWidth = ctx.measureText(logoConfig.name).width + 36;
+        const boxW = Math.max(120, textWidth);
+        const boxX = posX - boxW + logoSize;
+        ctx.beginPath();
+        ctx.roundRect(boxX, posY, boxW, logoH, Math.round(logoH * 0.35));
         ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.stroke();
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = `bold ${Math.round(15 * (width / 400))}px Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
+        ctx.fillText(logoConfig.name, boxX + boxW / 2, posY + logoH / 2);
       }
       ctx.restore();
     }
@@ -4498,12 +4519,10 @@ NGUYÊN TẮC:
         const boxCenterY = isHorizontal ? height * 0.83 : height * 0.74;
         let boxTopY = Math.round(boxCenterY - boxHeight / 2);
 
-        // Chống đè lên Banner quảng cáo nếu banner đang bật
-        if (bannerConfig.enabled && currentSec >= bannerConfig.startSec && currentSec <= bannerConfig.endSec) {
-          const bannerH = Math.round(72 * (height / 800));
-          const bannerY = height - bannerH - Math.round(20 * (height / 800));
-          if (boxTopY + boxHeight >= bannerY - 10) {
-            boxTopY = bannerY - boxHeight - Math.round(12 * (height / 800));
+        // Chống đè lên Banner quảng cáo nếu banner đang bật: phụ đề tự động nâng lên trên banner
+        if (renderedBannerY > 0) {
+          if (boxTopY + boxHeight >= renderedBannerY - 8) {
+            boxTopY = renderedBannerY - boxHeight - Math.round(height * 0.02);
           }
         }
 
@@ -4761,7 +4780,7 @@ NGUYÊN TẮC:
         }
 
         const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
           resolvePromise(false);
           throw new Error("Không thể khởi tạo Canvas 2D");
@@ -4802,70 +4821,13 @@ NGUYÊN TẮC:
         console.warn("Nối âm thanh video gốc:", e);
       }
 
-      // 2. KÊNH TIẾNG MC LỒNG TIẾNG (BOOST CLARITY + BỘ LỌC CHẤT GIỌNG ĐẶC TRƯNG)
+      // 2. KÊNH TIẾNG MC LỒNG TIẾNG (GIỮ NGUYÊN VẸN 100% ĐỘ TRONG TRẺO & TỰ NHIÊN NHƯ PREVIEW)
       const ttsGain = audioCtx.createGain();
-      ttsGain.gain.value = 1.35; // Âm lượng MC to rõ, nổi bật
-
-      const bassFilter = audioCtx.createBiquadFilter();
-      bassFilter.type = "lowshelf";
-      bassFilter.frequency.value = 180;
-
-      const midFilter = audioCtx.createBiquadFilter();
-      midFilter.type = "peaking";
-      midFilter.frequency.value = 1000;
-      midFilter.Q.value = 1.0;
-
-      const trebleFilter = audioCtx.createBiquadFilter();
-      trebleFilter.type = "highshelf";
-      trebleFilter.frequency.value = 3200;
+      ttsGain.gain.value = 1.0; // Âm lượng MC chuẩn tự nhiên 100%, không bị rè vỡ hay biến dạng
+      ttsGain.connect(destination);
 
       const activeCharId = voiceoverConfig.selectedVoiceId;
-      const activeChar = VOICE_CHARACTERS.find((c) => c.id === activeCharId) || VOICE_CHARACTERS[0];
-      const rateToUse = voiceoverConfig.rate || activeChar.rate || 1.15;
-
-      switch (activeCharId) {
-        case "cartoon":
-          bassFilter.gain.value = -8;
-          midFilter.frequency.value = 2200;
-          midFilter.gain.value = 6;
-          trebleFilter.gain.value = 10;
-          break;
-        case "adult_male_mc":
-          bassFilter.gain.value = 14;
-          midFilter.frequency.value = 380;
-          midFilter.gain.value = 5;
-          trebleFilter.gain.value = -8;
-          break;
-        case "senior":
-          bassFilter.gain.value = 12;
-          midFilter.frequency.value = 500;
-          midFilter.gain.value = 4;
-          trebleFilter.gain.value = -7;
-          break;
-        case "adult_male_reviewer":
-          bassFilter.gain.value = 8;
-          midFilter.frequency.value = 850;
-          midFilter.gain.value = 6;
-          trebleFilter.gain.value = 2;
-          break;
-        case "adult_female_sweet":
-          bassFilter.gain.value = 0;
-          midFilter.frequency.value = 1400;
-          midFilter.gain.value = 3;
-          trebleFilter.gain.value = 5;
-          break;
-        case "speed_mc":
-          bassFilter.gain.value = -2;
-          midFilter.frequency.value = 2000;
-          midFilter.gain.value = 4;
-          trebleFilter.gain.value = 6;
-          break;
-      }
-
-      ttsGain.connect(bassFilter);
-      bassFilter.connect(midFilter);
-      midFilter.connect(trebleFilter);
-      trebleFilter.connect(destination);
+      const targetLangCode = selectedTargetLang || "vi";
 
       // Đưa luồng âm thanh tổng vào Canvas Stream để MediaRecorder ghi nhận
       const audioTracks = destination.stream.getAudioTracks();
@@ -4873,7 +4835,7 @@ NGUYÊN TẮC:
         canvasStream.addTrack(audioTracks[0]);
       }
 
-      // 3. TẢI TRƯỚC TOÀN BỘ ÂM THANH CÂU THOẠI MC ĐỂ GHÉP CHÍNH XÁC 100% VÀO VIDEO XUẤT
+      // 3. TẢI TRƯỚC TOÀN BỘ ÂM THANH CÂU THOẠI MC THEO ĐÚNG NGÔN NGỮ ĐÃ CHỌN
       const cueAudioBuffers = new Map<string, AudioBuffer>();
       const spokenCueKeys = new Set<string>();
 
@@ -4891,7 +4853,7 @@ NGUYÊN TẮC:
           }
         });
 
-        // Tải theo từng đợt (batch) để không nghẽn trình duyệt, ưu tiên /api/tts nội bộ rồi tới api.kpost.vn
+        // Tải theo từng đợt (batch) để không nghẽn trình duyệt, truyền đúng lang để âm thanh đồng bộ 100% với preview
         const entries = Array.from(uniqueSentences.entries());
         const BATCH_SIZE = 12;
         for (let i = 0; i < entries.length; i += BATCH_SIZE) {
@@ -4902,13 +4864,13 @@ NGUYÊN TẮC:
                 const encoded = encodeURIComponent(text);
                 let ab: ArrayBuffer | null = null;
                 try {
-                  const r1 = await fetch(`/api/tts?text=${encoded}`);
+                  const r1 = await fetch(`/api/tts?text=${encoded}&lang=${targetLangCode}`);
                   if (r1.ok) ab = await r1.arrayBuffer();
                 } catch {}
 
                 if (!ab) {
                   try {
-                    const r2 = await fetch(`https://api.kpost.vn/ai-content/tts?text=${encoded}`);
+                    const r2 = await fetch(`https://api.kpost.vn/ai-content/tts?text=${encoded}&lang=${targetLangCode}`);
                     if (r2.ok) ab = await r2.arrayBuffer();
                   } catch {}
                 }
@@ -5144,14 +5106,17 @@ NGUYÊN TẮC:
                   try {
                     const bSource = audioCtx.createBufferSource();
                     bSource.buffer = buffer;
-                    bSource.playbackRate.value = rateToUse;
+                    // Đối với cartoon / chibi thì dùng rate hoạt hình; với các giọng người lớn tự nhiên, phát ở tốc độ chuẩn 1.0 để giữ nguyên vẹn cao độ và độ trong trẻo tự nhiên như lúc preview
+                    const isChibi = activeCharId === "cartoon" || activeCharId === "child_boy" || activeCharId === "child_girl";
+                    const bRate = isChibi ? 1.25 : 1.0;
+                    bSource.playbackRate.value = bRate;
                     bSource.connect(ttsGain);
                     bSource.start(0);
 
                     // Hạ âm lượng video gốc khi MC nói (Ducking)
                     if (videoGain && !voiceoverConfig.muteOriginal && voiceoverConfig.originalVolume > 0) {
-                      videoGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                      const speechDur = buffer.duration / rateToUse;
+                      videoGain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+                      const speechDur = buffer.duration / bRate;
                       videoGain.gain.setValueAtTime(
                         voiceoverConfig.originalVolume / 100,
                         audioCtx.currentTime + speechDur
@@ -5511,7 +5476,7 @@ NGUYÊN TẮC:
       const canvas = document.createElement("canvas");
       canvas.width = canvasW;
       canvas.height = canvasH;
-      const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
+      const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Không thể khởi tạo Canvas GPU");
 
       // Logo chuẩn bị
@@ -5650,50 +5615,67 @@ NGUYÊN TẮC:
               if (logoImg && logoImg.complete) {
                 ctx.drawImage(logoImg, posX, posY, logoSize, logoSize);
               } else {
-                ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-                const textWidth = ctx.measureText(logoConfig.name).width + 30;
-                ctx.roundRect(posX - 40, posY, Math.max(120, textWidth), 36, 12);
+                ctx.fillStyle = "rgba(249, 115, 22, 0.95)";
+                const logoH = Math.max(34, Math.round(canvasH * 0.042));
+                ctx.font = `900 ${Math.round(logoH * 0.44)}px "Segoe UI", sans-serif`;
+                const textWidth = ctx.measureText(logoConfig.name).width + 36;
+                const boxW = Math.max(120, textWidth);
+                const boxX = posX - boxW + logoSize;
+                ctx.beginPath();
+                ctx.roundRect(boxX, posY, boxW, logoH, Math.round(logoH * 0.35));
                 ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+                ctx.stroke();
                 ctx.fillStyle = "#FFFFFF";
-                ctx.font = `bold ${Math.round(15 * (canvasW / 400))}px Arial, sans-serif`;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText(logoConfig.name, posX - 40 + Math.max(120, textWidth) / 2, posY + 18);
+                ctx.fillText(logoConfig.name, boxX + boxW / 2, posY + logoH / 2);
               }
               ctx.restore();
             }
 
-            // Chèn Banner quảng cáo
+            // Chèn Banner quảng cáo rực rỡ sắc nét đồng bộ 100% với preview
             if (mergeBurnBanner && bannerConfig.enabled) {
               ctx.save();
+              const isH = canvasW > canvasH;
               const bannerMarginX = Math.round(canvasW * 0.04);
               const bW = canvasW - bannerMarginX * 2;
-              const bH = Math.round(72 * (canvasH / 800));
-              const bY = canvasH - bH - Math.round(20 * (canvasH / 800));
-              const bRadius = Math.round(18 * (canvasH / 800));
+              const bH = Math.round(canvasH * (isH ? 0.105 : 0.082));
+              const bMarginBottom = Math.round(canvasH * (isH ? 0.035 : 0.025));
+              const bY = canvasH - bH - bMarginBottom;
+              const bRadius = Math.round(bH * 0.28);
 
               ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
-              ctx.shadowBlur = Math.round(18 * (canvasH / 800));
-              ctx.shadowOffsetY = Math.round(5 * (canvasH / 800));
+              ctx.shadowBlur = Math.round(bH * 0.25);
+              ctx.shadowOffsetY = Math.round(bH * 0.08);
 
               const grad = ctx.createLinearGradient(bannerMarginX, bY, bannerMarginX + bW, bY);
               grad.addColorStop(0, "#dc2626");
-              grad.addColorStop(0.48, "#e11d48");
+              grad.addColorStop(0.5, "#e11d48");
               grad.addColorStop(1, "#ea580c");
               ctx.fillStyle = grad;
+              ctx.beginPath();
               ctx.roundRect(bannerMarginX, bY, bW, bH, bRadius);
               ctx.fill();
 
+              ctx.lineWidth = Math.max(1.5, Math.round(bH * 0.025));
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+              ctx.stroke();
+
+              const hasSub = Boolean(bannerConfig.subtitle && bannerConfig.subtitle.trim());
+              const titleFontSize = Math.round(bH * (hasSub ? 0.36 : 0.48));
               ctx.fillStyle = "#FFFFFF";
-              ctx.font = `900 ${Math.round(16 * (canvasW / 400))}px Arial, sans-serif`;
+              ctx.font = `900 ${titleFontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
-              ctx.fillText(bannerConfig.title, canvasW / 2, bannerConfig.subtitle ? bY + bH * 0.38 : bY + bH * 0.5);
+              ctx.fillText(bannerConfig.title, canvasW / 2, hasSub ? bY + bH * 0.38 : bY + bH * 0.5);
 
-              if (bannerConfig.subtitle) {
+              if (hasSub) {
+                const subFontSize = Math.round(bH * 0.22);
                 ctx.fillStyle = "#FEF08A";
-                ctx.font = `700 ${Math.round(11 * (canvasW / 400))}px Arial, sans-serif`;
-                ctx.fillText(bannerConfig.subtitle, canvasW / 2, bY + bH * 0.72);
+                ctx.font = `700 ${subFontSize}px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif`;
+                ctx.fillText(bannerConfig.subtitle, canvasW / 2, bY + bH * 0.74);
               }
               ctx.restore();
             }
